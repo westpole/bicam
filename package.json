@@ -6,6 +6,9 @@
   "author": "Stanislav Spuzyak",
   "main": "electron/main.ts",
   "type": "module",
+  "engines": {
+    "node": ">=24.22.3"
+  },
   "scripts": {
     "dev:web": "vite",
     "dev:web:mobile": "vite --host 0.0.0.0 --port 5173",

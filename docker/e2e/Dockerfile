@@ -8,7 +8,9 @@
 
 # Must match the installed @playwright/test version; the web stage fails the build on drift.
 ARG PLAYWRIGHT_VERSION=1.65.1
-ARG NODE_VERSION=24
+# Node for the electron stage only (the web stage uses the Node bundled in the Playwright image).
+# Keep in sync with docker/e2e/compose.yml and .nvmrc.
+ARG NODE_VERSION=24.22.3
 
 # ---------------------------------------------------------------------------
 # web: runs `npm run test:e2e:web` (playwright.config.ts webServer builds + previews the app)

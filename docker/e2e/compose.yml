@@ -8,7 +8,7 @@ x-e2e-common: &e2e-common
 
 x-e2e-build-args: &e2e-build-args
   PLAYWRIGHT_VERSION: '1.65.1'
-  NODE_VERSION: '24'
+  NODE_VERSION: '24.22.3'
 
 services:
   e2e-web:

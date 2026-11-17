@@ -1,21 +1,63 @@
-# Generated tickets by agent
+# Tickets: how to generate a plan and tickets
 
-> **How to use this file:** This README is the single tracker for one batch of agent-generated tickets.
-> Replace every `<placeholder>` below, create one ticket file per row in the [Tickets](#tickets) table,
-> and keep the table in sync as tickets move through their lifecycle. Leave the instructions in
-> blockquotes as-is or delete them once the batch is filled in.
+This folder holds the plan for the current batch of work and its ticket files. Agents use this README as the process
+and template guide when asked to turn a goal into a plan and tickets.
 
-> **Dev branch:** `dev-<yyyymmdd>-<batch-slug>` (e.g. `dev-20261108-settings-overlay`)
-> **Batch issue:** #<number> — GitHub issue that represents the whole batch; used for the dev → master PR.
-> **Batch status:** Draft / In Progress / In Review / Done
+| File | Purpose |
+| --- | --- |
+| `README.md` | This guide. It is generic and does not change per batch. |
+| `plan.md` | The current batch plan: goal, starting point, workflow, rules, ticket table, expected end state. |
+| `<number>-<short-slug>.md` | One file per ticket, based on [docs/AgileTicketTemplate.md](../docs/AgileTicketTemplate.md). |
+
+Only one batch is active at a time. When a batch is `Done` and merged, delete or archive its `plan.md` and ticket files
+before generating the next batch.
+
+---
+
+## Generation steps
+
+1. **Research the starting point.** Read the code, configs, and tool output that the goal touches. Record facts with
+   dates and versions (for example `npm audit` output, current dependency versions). Separate verified facts from
+   assumptions.
+2. **Split the goal into tickets.** Each ticket should be independently mergeable, owned by one layer where possible
+   (see `CLAUDE.md` → Code Ownership), and small enough to review in one sitting (target XS–M; split anything L or XL).
+3. **Number the tickets.** Use the GitHub issue number when one exists. Otherwise take the next free number after the
+   highest number used in branches, commits, and existing tickets.
+4. **Order by priority and dependencies.** Fill in **Blocked by** / **Blocks** so they agree between the plan table and
+   the ticket files. Avoid dependency cycles.
+5. **Write `plan.md`** from the [plan template](#plan-template) below.
+6. **Write each ticket file** from the ticket template, following the [ticket guidance](#ticket-file-guidance).
+7. **Cross-check.** Status, priority, size, and dependencies match between `plan.md` and every ticket file. Every
+   ticket's **Epic** links to `plan.md`. Every link resolves.
+8. **Set statuses.** New plans start as `Draft`. Mark tickets `Ready for Dev` only when their acceptance criteria are
+   unambiguous. Leave anything that needs a user decision as `Draft` and list the open question.
+9. **Stop and report.** Generating a plan does not start implementation. Summarize the tickets and open questions for
+   the user.
+
+---
+
+## Plan template
+
+Copy the block below into `tickets/plan.md` and replace every `<placeholder>`. Keep the default **Workflow**,
+**Branching rules**, and **Merge rules** unless the batch needs something different, and say so when you change them.
+
+````markdown
+# Plan: <batch goal in a few words>
+
+> **Process:** follow [README.md](./README.md) for how plans and tickets are generated.
+> **Dev branch:** `dev-<yyyymmdd>-<batch-slug>` (<created / not created yet, and from what>)
+> **Batch issue:** #<TBD> — create the GitHub issue for this batch, then fill in the number here and in each ticket's **Epic** line.
+> **Batch status:** Draft
 
 ## Goal
 
-<One or two sentences describing the outcome this batch of tickets delivers and why it matters.>
+<One or two sentences: what changes and how we know it is done (for example, a CI gate that must pass).>
 
 ### Starting point
 
-<Current state of the codebase/feature before any ticket is worked: what exists, what is missing, known constraints. Link relevant files, e.g. `src/App.tsx`.>
+- <Verified facts about the current state, with dates and tool versions.>
+- <Tables of findings, each row mapped to the ticket that addresses it.>
+- <Constraints and approaches that are ruled out, and why.>
 
 ### Workflow
 
@@ -44,8 +86,8 @@
 - Use the date the batch starts, in `yyyymmdd` format, plus a short kebab-case slug of the batch goal.
 - Use a hyphen, not a slash (`dev-...`, never `dev/...`) — git cannot hold both a `dev` branch and `dev/*` branches.
 - Never branch a ticket from `master` or from another ticket branch.
-- Never commit directly to the dev branch except for README/ticket status updates and syncing with `master`.
-- Record the dev branch name in the header of this README before the first ticket starts.
+- Never commit directly to the dev branch except for plan/ticket status updates and syncing with `master`.
+- Record the dev branch name in the header of this plan before the first ticket starts.
 
 ### Merge rules
 
@@ -55,7 +97,7 @@
   **merge commit** (no squash, no rebase) so per-ticket commits stay in `master` history.
   - PR title / merge commit: `merge: #<batch-issue> <batch-slug> into master`
     (e.g. `merge: #150 settings-overlay into master`).
-  - PR description: link this README and list the tickets included.
+  - PR description: link this plan and list the tickets included.
 - **Syncing with master:** single-developer assumption — `master` rarely moves during a batch. If it does,
   merge `master` into the dev branch before starting the next ticket. Do not rebase the dev branch.
 - **After the batch merges:** delete the dev branch and set **Batch status** to `Done`.
@@ -64,12 +106,12 @@
 
 > Cases where the agent must stop and ask instead of proceeding.
 
-- <A ticket requires changing the Electron security posture (`contextIsolation`, `nodeIntegration`).>
-- <Acceptance criteria are ambiguous or contradict another ticket.>
-- <A dependency upgrade or release is needed (`/npm-upgrade`, `/release-workflow` are user-invoked only).>
+- A ticket requires changing the Electron security posture (`contextIsolation`, `nodeIntegration`, `sandbox`).
+- Acceptance criteria are ambiguous or contradict another ticket.
+- A direct dependency upgrade or release is needed (`/npm-upgrade`, `/release-workflow` are user-invoked only).
 - The dev branch is behind `master` and merging `master` into it produces conflicts.
 - No dev branch is recorded in the header, or the recorded branch does not exist.
-- <Other batch-specific exceptions.>
+- <Batch-specific cases: decisions that belong to the user, prerequisites that must be merged first.>
 
 ### Definition of done
 
@@ -80,11 +122,11 @@
 - [ ] Dev → master PR is green in CI and merged with a merge commit
 - [ ] Desktop and mobile stories exist for any changed UI
 - [ ] Documentation updated where behavior changed
-- [ ] <Batch-specific criterion>
+- [ ] <Batch-specific checks that prove the goal is met.>
 
 ### Tickets
 
-> - One row per ticket. Ticket files live next to this README as `tickets/<number>-<short-slug>.md`
+> - One row per ticket. Ticket files live next to this plan as `tickets/<number>-<short-slug>.md`
 >   and follow [docs/AgileTicketTemplate.md](../docs/AgileTicketTemplate.md).
 > - Link the **Ticket** cell to the ticket file.
 > - **Type:** Feature / Bug / Chore / Refactor / Test / Docs / Spike
@@ -95,25 +137,28 @@
 
 | Ticket | Title | Type | Priority | Size | Status | Blocked by |
 | --- | --- | --- | --- | --- | --- | --- |
-| [#<number>](./<number>-<short-slug>.md) | <Concise, action-oriented title> | Feature | P1 | M | Draft | — |
+| [#<n>](./<n>-<short-slug>.md) | <title> | <type> | <priority> | <size> | Draft | — |
 
 ### Expected end state
 
-<Describe what the product and codebase look like once every ticket is Done: user-visible behavior, new/changed modules, tests and stories added.>
+- <User-visible changes, or "No user-visible change".>
+- <Config, code, and docs that will exist when the batch is done.>
+- <Which existing checks act as regression coverage, and which new tests or stories are added.>
+````
 
 ---
 
-## Ticket file template
+## Ticket file guidance
 
-> Copy [docs/AgileTicketTemplate.md](../docs/AgileTicketTemplate.md) into `tickets/<number>-<short-slug>.md` for each ticket.
-> Agent-specific guidance when filling it in:
+Copy [docs/AgileTicketTemplate.md](../docs/AgileTicketTemplate.md) into `tickets/<number>-<short-slug>.md` for each
+ticket, then:
 
 - **Title:** replace `[FEATURE]` with the ticket type (`[BUG]`, `[CHORE]`, …) when it is not a feature.
-- **Header fields:** `Status`, `Priority`, and `Estimate` must match the row in the table above.
-- **Epic:** link back to this README and the batch issue.
+- **Header fields:** `Status`, `Priority`, and `Estimate` must match the row in the plan's ticket table.
+- **Epic:** link back to [plan.md](./plan.md) and the batch issue.
 - **Sprint:** the dev branch name.
 - **User stories:** keep each story independently testable; always fill in **Out of scope**.
 - **Design & reference assets:** prefer repo paths (`docs/assets/...`) or existing components/stories under `src/ui/components/**`, with a text fallback for every visual.
 - **Technical notes:** name the owning layer (React/MUI UI in `src/ui/**`, Zustand store in `src/store/**`, translations in `src/i18n/**`, Electron in `electron/**`) and which test lane covers it.
-- **Dependencies:** `Blocked by` / `Blocks` must match the table above.
+- **Dependencies:** `Blocked by` / `Blocks` must match the plan's ticket table.
 - **Definition of done:** drop items that do not apply (e.g. analytics, PM sign-off) rather than leaving them unchecked.
