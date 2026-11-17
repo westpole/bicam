@@ -1,7 +1,7 @@
 # [CHORE] Remove vulnerable glob 13 from the Storybook docgen chain
 
 > **Ticket type:** Chore
-> **Status:** Draft
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [npm audit remediation batch](./plan.md) — batch issue #<TBD>
 > **Sprint:** `dev-20261117-npm-audit-fixes`
@@ -42,17 +42,20 @@ affects `glob >=9.0.0 <=14.0.1`). The upgrade should leave Storybook working as 
 **So that** the dev toolchain has no known `glob` advisory
 
 **Acceptance Criteria:**
-- [ ] Given `package.json`, when the fix is applied, then an `overrides` entry is scoped to `@storybook/react-vite` and pins
+- [x] Given `package.json`, when the fix is applied, then an `overrides` entry is scoped to `@storybook/react-vite` and pins
       `@joshwooding/vite-plugin-react-docgen-typescript` to `^0.9.1`.
       Fallback if 0.9.x is incompatible: scope a `glob` override `>=14.0.2` to the plugin instead.
-- [ ] Given a clean install (`rm -rf node_modules && npm install`), when `npm ls glob --all` runs, then no `glob` in
+- [x] Given a clean install (`rm -rf node_modules && npm install`), when `npm ls glob --all` runs, then no `glob` in
       `>=9.0.0 <=14.0.1` remains.
 - [ ] Given the updated lockfile, when `npm audit` runs, then `glob` and `@joshwooding/vite-plugin-react-docgen-typescript`
-      are no longer listed.
+      are no longer listed. *(Partly met: `glob` is gone. The plugin, `@rollup/pluginutils` and `@storybook/react-vite` are
+      still listed, now only through `picomatch` via `tinyglobby`, which is #4's scope.)*
 - [ ] Given Storybook, when `npm run test:storybook` and `npm run build-storybook` run, then both succeed and the autodocs
       prop tables still render component props (spot check one component's Docs page in `npm run storybook`).
+      *(Both commands pass. The spot check was replaced by a config check; see Outcome.)*
 - [ ] Edge case: if Storybook releases a version that already depends on the fixed plugin, upgrade Storybook instead of adding
       the override. Upgrades go through `/npm-upgrade`, so stop and ask before running one.
+      *(n/a: did not trigger. `@storybook/react-vite@10.6.7` is latest and still requires plugin `^0.7.0`.)*
 
 **Out of scope:** the `minimatch` advisory (#3), the `picomatch` advisory (#4), and any Storybook major or minor upgrade.
 
@@ -85,10 +88,25 @@ No UI change. Existing stories under `src/ui/components/**` are the regression s
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:storybook` pass locally
-- [ ] `code-reviewer` subagent run and findings addressed
+- [x] All acceptance criteria met, except the two partial ones noted above (marked Done at the user's direction)
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:storybook` pass locally
+- [x] `code-reviewer` subagent run and findings addressed
 - [ ] Squash-merged into `dev-20261117-npm-audit-fixes` as `chore: #2 remove vulnerable glob from storybook docgen`
+      *(Not applicable: at the user's direction this ticket is committed directly on `1-initial-setup` and marked Done.
+      The dev branch does not exist yet.)*
+
+### Outcome (2026-11-17)
+
+- Added `overrides["@storybook/react-vite"]["@joshwooding/vite-plugin-react-docgen-typescript"] = "^0.9.1"`, which resolved
+  to 0.9.1 (deps: `tinyglobby`, `react-docgen-typescript`; peer `vite` up to `^8`, `typescript` `<7`). The lockfile
+  dropped `glob@13.0.7`, its `minimatch@10.2.6`, `path-scurry` and its `lru-cache`.
+- The remaining `glob@7.2.3` copies (under `@electron/asar` and `rimraf@2`) are outside the affected range.
+- `npm audit` (`metadata.vulnerabilities` from `npm audit --json`, before and after): 46 → 45 (moderate 7 → 5, high 39 → 40). The extra high is the plugin's new `tinyglobby` → `picomatch`
+  path, which #4 covers.
+- Prop tables: `.storybook/main.ts` sets no `typescript.reactDocgen`, so Storybook 10 uses its default, `react-docgen`,
+  and this plugin is not loaded at runtime. Docs output therefore cannot change. No manual spot check was done.
+- **Remove the override when** `@storybook/react-vite` depends on plugin `>=0.9.0` (10.6.7 still requires `^0.7.0`).
+- Fallback (`glob >=14.0.2` override) was not needed, so #3 does not need to handle a `glob` copy.
 
 ---
 

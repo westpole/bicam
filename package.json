@@ -157,5 +157,10 @@
       "!electron/**/__tests__/**",
       "package.json"
     ]
+  },
+  "overrides": {
+    "@storybook/react-vite": {
+      "@joshwooding/vite-plugin-react-docgen-typescript": "^0.9.1"
+    }
   }
 }

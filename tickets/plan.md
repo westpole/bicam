@@ -121,15 +121,21 @@ Clear the `npm audit` findings in the dev toolchain after the switch to Node 24.
 | Ticket | Title | Type | Priority | Size | Status | Blocked by |
 | --- | --- | --- | --- | --- | --- | --- |
 | [#4](./4-picomatch-redos-audit-gate.md) | Resolve picomatch ReDoS advisory and unblock the CI audit gate | Spike | P0 | XS | Draft | — |
-| [#2](./2-remove-vulnerable-glob.md) | Remove vulnerable glob 13 from the Storybook docgen chain | Chore | P1 | S | Draft | — |
+| [#2](./2-remove-vulnerable-glob.md) | Remove vulnerable glob 13 from the Storybook docgen chain | Chore | P1 | S | Done | — |
 | [#3](./3-override-vulnerable-minimatch.md) | Override transitive minimatch 9.x/10.x to a patched 11.x | Chore | P1 | S | Draft | 2 |
 
 ### Expected end state
 
 - No user-visible change. The shipped web and Electron app is the same, because runtime dependencies were already clean.
 - `package.json` has a scoped `overrides` block: the docgen plugin under `@storybook/react-vite` (#2), and `minimatch@^11.0.1`
-  under `app-builder-lib`, `@electron/universal` and `type-coverage-core` (#3). Each entry notes the upstream release that
-  makes it removable.
+  under `app-builder-lib`, `@electron/universal` and `type-coverage-core` (#3). npm `overrides` cannot hold comments, so
+  removal conditions are tracked in [Override removal](#override-removal) below.
+
+### Override removal
+
+| Override (in `package.json` → `overrides`) | Added by | Remove when |
+| --- | --- | --- |
+| `@storybook/react-vite` → `@joshwooding/vite-plugin-react-docgen-typescript: ^0.9.1` | [#2](./2-remove-vulnerable-glob.md) | `@storybook/react-vite` depends on the plugin `>=0.9.0` (10.6.7 still requires `^0.7.0`) |
 - `npm audit` shows no `glob` or `minimatch` findings. `picomatch` is either patched (lockfile refresh) or explicitly handled
   by the CI audit policy chosen in #4.
 - The CI `Dependency audit` step passes, and the dev → master PR is green.
