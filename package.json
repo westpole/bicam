@@ -161,6 +161,12 @@
   "overrides": {
     "@storybook/react-vite": {
       "@joshwooding/vite-plugin-react-docgen-typescript": "^0.9.1"
+    },
+    "app-builder-lib": {
+      "minimatch@>=7.0.0 <11.0.1": "^11.0.1"
+    },
+    "type-coverage-core": {
+      "minimatch": "^11.0.1"
     }
   }
 }
