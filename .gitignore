@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+reports
+.vitest
+*storybook.log
+storybook-static
+test-results
+.claude/settings.local.json
+playwright-report

@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "erasableSyntaxOnly": true,
+    "types": [
+      "vitest/globals",
+      "@testing-library/jest-dom"
+    ],
+    "paths": {
+      "@electron/*": ["./electron/*"],
+      "@store/*": ["./src/store/*"],
+      "@ui/*": ["./src/ui/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@assets/*": ["./src/assets/*"]
+    },
+  },
+  "include": [
+    "src",
+    "electron",
+    "e2e"
+  ],
+  "exclude": [
+    "tools"
+  ]
+}

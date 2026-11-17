@@ -1,0 +1,22 @@
+[
+  {
+    "id": "react-trigger-1",
+    "expectedSkill": "react-frontend-expert",
+    "prompt": "Build a settings dialog with save, reset, and cancel actions using React components and the existing screen layout."
+  },
+  {
+    "id": "storybook-trigger-1",
+    "expectedSkill": "storybook-expert",
+    "prompt": "Write Storybook stories for the component list, empty state, and loading screen so the UI states can be previewed quickly."
+  },
+  {
+    "id": "electron-trigger-1",
+    "expectedSkill": "electron-expert",
+    "prompt": "Update the Electron desktop window behavior so the close confirmation flow appears before the app exits with unsaved changes."
+  },
+  {
+    "id": "release-trigger-1",
+    "expectedSkill": "release-workflow",
+    "prompt": "Prepare the next production release with the right version bump, changelog, build checks, and release validation steps."
+  }
+]

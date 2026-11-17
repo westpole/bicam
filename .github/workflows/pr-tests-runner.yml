@@ -1,0 +1,86 @@
+name: PR Verify code quality and Run all Tests
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  run-tests:
+    name: Run All Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Fails the PR when any high or critical advisory exists in the dependency tree
+      - name: Dependency audit
+        run: npm run deps:audit:ci
+
+      # This step installs the missing browsers and system dependencies
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run all unit/component tests
+        run: npm run test:all
+
+  # E2E runs in the Docker images from docker/e2e/Dockerfile, one target per matrix job.
+  e2e:
+    name: E2E (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: web
+            command: npm run test:e2e:web
+          - target: electron
+            command: npm run test:e2e:electron
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build e2e image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/e2e/Dockerfile
+          target: ${{ matrix.target }}
+          tags: bicam-e2e-${{ matrix.target }}
+          load: true
+          cache-from: type=gha,scope=e2e-${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=e2e-${{ matrix.target }}
+
+      - name: Run e2e tests
+        run: |
+          mkdir -p e2e-artifacts && chmod 777 e2e-artifacts
+          docker run --rm --ipc=host --init \
+            -v "${{ github.workspace }}/e2e-artifacts:/app/e2e-artifacts" \
+            bicam-e2e-${{ matrix.target }} ${{ matrix.command }}
+
+      - name: Upload e2e artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.target }}-report
+          path: e2e-artifacts/
+          retention-days: 7
