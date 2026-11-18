@@ -1,0 +1,17 @@
+[
+  {
+    "id": "ambiguous-2",
+    "expectedSkill": "react-frontend-expert",
+    "prompt": "The settings screen looks wrong after a recent change. Can you inspect the app and fix the visible UI issue without touching store logic?"
+  },
+  {
+    "id": "ambiguous-3",
+    "expectedSkill": "storybook-expert",
+    "prompt": "I need a quick preview of the main screens and dialogs to validate the states before release."
+  },
+  {
+    "id": "ambiguous-4",
+    "expectedSkill": "electron-expert",
+    "prompt": "The desktop app closes unexpectedly when the user exits from the menu, even though a form still has unsaved changes."
+  }
+]
