@@ -120,7 +120,7 @@ Clear the `npm audit` findings in the dev toolchain after the switch to Node 24.
 
 | Ticket | Title | Type | Priority | Size | Status | Blocked by |
 | --- | --- | --- | --- | --- | --- | --- |
-| [#4](./4-picomatch-redos-audit-gate.md) | Resolve picomatch ReDoS advisory and unblock the CI audit gate | Spike | P0 | XS | Draft | — |
+| [#4](./4-picomatch-redos-audit-gate.md) | Resolve picomatch ReDoS advisory and unblock the CI audit gate | Spike | P0 | XS | Done | — |
 | [#2](./2-remove-vulnerable-glob.md) | Remove vulnerable glob 13 from the Storybook docgen chain | Chore | P1 | S | Done | — |
 | [#3](./3-override-vulnerable-minimatch.md) | Override transitive minimatch 9.x/10.x to a patched 11.x | Chore | P1 | S | Done | 2 |
 
@@ -133,6 +133,8 @@ Clear the `npm audit` findings in the dev toolchain after the switch to Node 24.
 - `npm audit` shows no `glob` or `minimatch` findings. `picomatch` is either patched (lockfile refresh) or explicitly handled
   by the CI audit policy chosen in #4.
 - The CI `Dependency audit` step passes, and the dev → master PR is green.
+  *(As of 2026-11-17, `test:all` has 3 failures that happen without this batch's changes; see #3's Outcome. Until a
+  separate ticket fixes them, the PR will be red on the unit-test step even though the audit step passes.)*
 - No new tests or stories. The existing `test:all`, `test:storybook`, `types:coverage` and `build:e2e` act as regression checks.
 
 ### Override removal
@@ -142,4 +144,5 @@ Clear the `npm audit` findings in the dev toolchain after the switch to Node 24.
 | `@storybook/react-vite` → `@joshwooding/vite-plugin-react-docgen-typescript: ^0.9.1` | [#2](./2-remove-vulnerable-glob.md) | `@storybook/react-vite` depends on the plugin `>=0.9.0` (10.6.7 still requires `^0.7.0`) |
 | `app-builder-lib` → `minimatch@>=7.0.0 <11.0.1: ^11.0.1` (covers its own `^10` and `@electron/universal`'s `^9`) | [#3](./3-override-vulnerable-minimatch.md) | `app-builder-lib` and the `@electron/universal` version it pins both require `minimatch >=11.0.1` |
 | `type-coverage-core` → `minimatch: ^11.0.1` | [#3](./3-override-vulnerable-minimatch.md) | `type-coverage-core` allows `minimatch >=11.0.1` (2.31.2 allows up to `10`) |
+| Interim CI audit gate: `deps:audit:ci` uses `--omit=dev`, plus the informational full-audit step in `pr-tests-runner.yml` (not an override) | [#4](./4-picomatch-redos-audit-gate.md) | `picomatch > 4.0.7` ships: refresh the lockfile, drop `--omit=dev`, delete the informational step and its comment |
 

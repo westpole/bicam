@@ -52,7 +52,7 @@
     "quality:unused": "knip",
     "quality:all": "npm run lint && npm run typecheck && npm run test:all:coverage && npm run types:coverage && npm run quality:unused",
     "deps:audit": "npm audit",
-    "deps:audit:ci": "npm audit --audit-level=high",
+    "deps:audit:ci": "npm audit --omit=dev --audit-level=high",
     "deps:signatures": "npm audit signatures",
     "deps:outdated": "npm outdated --long",
     "deps:unused": "knip --dependencies",
