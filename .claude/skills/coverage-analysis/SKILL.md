@@ -44,8 +44,11 @@ For each identified line or branch gap:
   2. Re-run coverage for the specific file to confirm resolution:
 
 ```sh
-npx vitest run path/to/file.test.ts --coverage
+node scripts/vitest.mjs run --config vitest.config.ts path/to/file.test.ts --coverage
 ```
+
+  Use `scripts/vitest.mjs` rather than `npx vitest`: on Windows it avoids loading Vitest twice when the shell's drive
+  letter is lower-case (see `tickets/5-fix-failing-unit-tests.md`).
 
   3. Confirm that missing lines/branches in ./reports/coverage/coverage-final.json are now cleared and metrics meet the required threshold.
 

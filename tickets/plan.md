@@ -123,6 +123,7 @@ Clear the `npm audit` findings in the dev toolchain after the switch to Node 24.
 | [#4](./4-picomatch-redos-audit-gate.md) | Resolve picomatch ReDoS advisory and unblock the CI audit gate | Spike | P0 | XS | Done | — |
 | [#2](./2-remove-vulnerable-glob.md) | Remove vulnerable glob 13 from the Storybook docgen chain | Chore | P1 | S | Done | — |
 | [#3](./3-override-vulnerable-minimatch.md) | Override transitive minimatch 9.x/10.x to a patched 11.x | Chore | P1 | S | Done | 2 |
+| [#5](./5-fix-failing-unit-tests.md) | Fix the 3 failing unit tests in test:all (mock reset and jest-dom matchers) | Bug | P1 | S | Done | — |
 
 ### Expected end state
 
@@ -133,8 +134,9 @@ Clear the `npm audit` findings in the dev toolchain after the switch to Node 24.
 - `npm audit` shows no `glob` or `minimatch` findings. `picomatch` is either patched (lockfile refresh) or explicitly handled
   by the CI audit policy chosen in #4.
 - The CI `Dependency audit` step passes, and the dev → master PR is green.
-  *(As of 2026-11-17, `test:all` has 3 failures that happen without this batch's changes; see #3's Outcome. Until a
-  separate ticket fixes them, the PR will be red on the unit-test step even though the audit step passes.)*
+  *(The 3 `test:all` failures recorded in #3's Outcome turned out to be Windows-only. They happen when Vitest starts
+  from a lower-case drive letter, and [#5](./5-fix-failing-unit-tests.md) fixes them locally with `scripts/vitest.mjs`.
+  As far as known, Linux CI is not affected. That is inferred from the root cause and not yet confirmed by a CI run.)*
 - No new tests or stories. The existing `test:all`, `test:storybook`, `types:coverage` and `build:e2e` act as regression checks.
 
 ### Override removal
