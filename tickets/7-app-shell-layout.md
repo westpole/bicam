@@ -1,7 +1,7 @@
 # [FEATURE] Two-row app shell with pinned header and scrollable main viewport
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) — #4
 > **Sprint:** `4-ui-introduce-application-grid-and-theme-setup`
@@ -36,10 +36,10 @@ that scrolls vertically.
 **So that** the title (and, later, the menu) is always reachable
 
 **Acceptance Criteria:**
-- [ ] Given the app loads, then a `<header>` (banner landmark) sits at the top, containing the `<h1>` "Bicam" (`t('app.title')`, `Typography variant="h6" component="h1" noWrap`).
-- [ ] Given `<main>` has more content than fits, when I scroll it, then the header's position does not change.
-- [ ] The header uses `AppBar component="header" position="static"` + `Toolbar`, so its height comes from the MUI Toolbar mixins: 56px by default, 48px in landscape under 600px wide, and 64px at 600px wide and up (including the 915 × 412 e2e landscape viewport). No height is hard-coded in the component or in tests.
-- [ ] Edge case: a very long title truncates with an ellipsis instead of wrapping (`noWrap`).
+- [x] Given the app loads, then a `<header>` (banner landmark) sits at the top, containing the `<h1>` "Bicam" (`t('app.title')`, `Typography variant="h6" component="h1" noWrap`).
+- [x] Given `<main>` has more content than fits, when I scroll it, then the header's position does not change.
+- [x] The header uses `AppBar component="header" position="static"` + `Toolbar`, so its height comes from the MUI Toolbar mixins: 56px by default, 48px in landscape under 600px wide, and 64px at 600px wide and up (including the 915 × 412 e2e landscape viewport). No height is hard-coded in the component or in tests.
+- [x] Edge case: a very long title truncates with an ellipsis instead of wrapping (`noWrap`).
 
 **Out of scope:** The menu button (#8), navigation, and actions on the right side of the header.
 
@@ -51,13 +51,13 @@ that scrolls vertically.
 **So that** nothing is cut off and the page never jumps when the mobile browser bar hides
 
 **Acceptance Criteria:**
-- [ ] The shell is a `Box` with `display: grid`, `gridTemplateRows: 'auto minmax(0, 1fr)'`, `height: 100vh` with a `@supports (height: 100dvh)` override to `100dvh`, and `overflow: hidden`.
-- [ ] `<main>` has `overflowY: 'auto'`, `overscrollBehaviorY: 'contain'`, `minHeight: 0`, and responsive padding `p: { xs: 2, sm: 3 }`.
-- [ ] `<main>` has `tabIndex={0}` and a visible `:focus-visible` outline. Given keyboard focus on `<main>`, when I press ↓ / Page Down, then it scrolls (axe `scrollable-region-focusable` passes even with non-focusable content).
-- [ ] Given content shorter than the viewport, then `<main>` still stretches to the bottom edge (no gap under it).
-- [ ] Given content taller than the viewport, then only `<main>` shows a scrollbar and `<body>` does not scroll.
-- [ ] `App.tsx` renders `<AppShell>` and keeps syncing `document.title` with `t('app.title')`.
-- [ ] The existing `src/__tests__/App.test.tsx` keeps passing unchanged.
+- [x] The shell is a `Box` with `display: grid`, `gridTemplateRows: 'auto minmax(0, 1fr)'`, `height: 100vh` with a `@supports (height: 100dvh)` override to `100dvh`, and `overflow: hidden`.
+- [x] `<main>` has `overflowY: 'auto'`, `overscrollBehaviorY: 'contain'`, `minHeight: 0`, and responsive padding `p: { xs: 2, sm: 3 }`.
+- [x] `<main>` has `tabIndex={0}` and a visible `:focus-visible` outline. Given keyboard focus on `<main>`, when I press ↓ / Page Down, then it scrolls (axe `scrollable-region-focusable` passes even with non-focusable content).
+- [x] Given content shorter than the viewport, then `<main>` still stretches to the bottom edge (no gap under it).
+- [x] Given content taller than the viewport, then only `<main>` shows a scrollbar and `<body>` does not scroll.
+- [x] `App.tsx` renders `<AppShell>` and keeps syncing `document.title` with `t('app.title')`.
+- [x] The existing `src/__tests__/App.test.tsx` keeps passing unchanged.
 
 **Out of scope:** Real content for `<main>` (stories use placeholder fixtures), Zustand state, and safe-area insets.
 
@@ -109,15 +109,15 @@ surface (dark mode). Below it, a padded area fills the rest of the screen and sc
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Unit tests and story play tests written and passing (`npm run test:react`, `npm run test:storybook`)
-- [ ] `npm run test:all:coverage` meets the `src/ui/**` and `src/App.tsx` thresholds (90/85/90/90)
-- [ ] `npm run typecheck` and `npm run lint` pass
+- [x] All acceptance criteria met
+- [x] Unit tests and story play tests written and passing (`npm run test:react`, `npm run test:storybook`)
+- [x] `npm run test:all:coverage` meets the `src/ui/**` and `src/App.tsx` thresholds (90/85/90/90)
+- [x] `npm run typecheck` and `npm run lint` pass
 - [ ] Design review: matches the wireframes in the design doc's §2
-- [ ] Accessibility check passed (`a11y.test: 'error'` on the new stories: landmarks, scrollable region focusable)
-- [ ] Desktop, mobile, and dark stories added
-- [ ] `code-reviewer` subagent run, findings addressed
-- [ ] Committed directly on `4-ui-introduce-application-grid-and-theme-setup` (no ticket branch) as `<type>: #4 <description>`
+- [x] Accessibility check passed (`a11y.test: 'error'` on the new stories: landmarks, scrollable region focusable)
+- [x] Desktop, mobile, and dark stories added
+- [x] `code-reviewer` subagent run, findings addressed
+- [x] Committed directly on `4-ui-introduce-application-grid-and-theme-setup` (no ticket branch) as `<type>: #4 <description>`
 
 ---
 

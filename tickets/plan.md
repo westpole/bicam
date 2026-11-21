@@ -141,7 +141,7 @@ Verified on 2026-11-21 on branch `4-ui-introduce-application-grid-and-theme-setu
 | Ticket | Title | Type | Priority | Size | Status | Blocked by |
 | --- | --- | --- | --- | --- | --- | --- |
 | [#6](./6-light-dark-theme.md) | Light/dark MUI theme that follows the OS | Feature | P1 | S | Done | — |
-| [#7](./7-app-shell-layout.md) | Two-row app shell with pinned header and scrollable main viewport | Feature | P1 | M | Ready for Dev | 6 |
+| [#7](./7-app-shell-layout.md) | Two-row app shell with pinned header and scrollable main viewport | Feature | P1 | M | Done | 6 |
 | [#8](./8-header-menu-button.md) | Header menu button with a scalable SVG icon | Feature | P1 | S | Ready for Dev | 7 |
 | [#9](./9-e2e-app-shell-alignment.md) | Align e2e specs and visual snapshots with the app shell | Test | P1 | S | Ready for Dev | 8 |
 

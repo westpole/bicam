@@ -36,13 +36,13 @@ Bicam palette for light and dark mode, following the OS preference, plus a Story
 **So that** it is comfortable to read in a bright workshop or at night
 
 **Acceptance Criteria:**
-- [ ] Given the OS prefers light, when the app loads, then `background.default`, `background.paper`, `primary.main`, and `secondary.main` equal the **Light** column of the design doc's §4.2.
-- [ ] Given the OS prefers dark, when the app loads, then the same tokens equal the **Dark** column of §4.2.
-- [ ] Given the app is open, when the OS scheme changes, then the colors switch without a reload (the existing e2e test "follows the system dark color scheme" still passes).
-- [ ] The theme uses `cssVariables: { colorSchemeSelector: 'class' }` and defines both `colorSchemes.light.palette` and `colorSchemes.dark.palette` with the §4.2 tokens. The values live in a sibling `constants.ts` so a palette change touches one file.
-- [ ] `shape.borderRadius` is `8`. `MuiAppBar` defaults to `color: 'primary'` and `elevation: 0`, with a 1px `divider` bottom border.
-- [ ] The theme leaves `enableColorOnDark` off, so in dark mode an AppBar uses MUI's dark default: the dark `background.paper` background and `text.primary` text (MUI wires these through `palette.AppBar.darkBg`/`darkColor`), not `primary.main`. This ticket only asserts the theme's AppBar defaults, including that `enableColorOnDark` is not enabled (unit test). The app has no AppBar until #7, so the computed dark `background-color` is checked in #7's `AppShell` `Dark` story.
-- [ ] Edge case: if the browser does not support `prefers-color-scheme`, the light scheme is used.
+- [x] Given the OS prefers light, when the app loads, then `background.default`, `background.paper`, `primary.main`, and `secondary.main` equal the **Light** column of the design doc's §4.2.
+- [x] Given the OS prefers dark, when the app loads, then the same tokens equal the **Dark** column of §4.2.
+- [x] Given the app is open, when the OS scheme changes, then the colors switch without a reload (the existing e2e test "follows the system dark color scheme" still passes).
+- [x] The theme uses `cssVariables: { colorSchemeSelector: 'class' }` and defines both `colorSchemes.light.palette` and `colorSchemes.dark.palette` with the §4.2 tokens. The values live in a sibling `constants.ts` so a palette change touches one file.
+- [x] `shape.borderRadius` is `8`. `MuiAppBar` defaults to `color: 'primary'` and `elevation: 0`, with a 1px `divider` bottom border.
+- [x] The theme leaves `enableColorOnDark` off, so in dark mode an AppBar uses MUI's dark default: the dark `background.paper` background and `text.primary` text (MUI wires these through `palette.AppBar.darkBg`/`darkColor`), not `primary.main`. This ticket only asserts the theme's AppBar defaults, including that `enableColorOnDark` is not enabled (unit test). The app has no AppBar until #7, so the computed dark `background-color` is checked in #7's `AppShell` `Dark` story.
+- [x] Edge case: if the browser does not support `prefers-color-scheme`, the light scheme is used.
 
 **Out of scope:** A manual theme toggle, storing the user's choice in Zustand, custom fonts, and per-component overrides beyond `MuiAppBar`.
 
@@ -54,11 +54,11 @@ Bicam palette for light and dark mode, following the OS preference, plus a Story
 **So that** every component can be checked in both modes
 
 **Acceptance Criteria:**
-- [ ] Given Storybook is open, when I choose `dark` in the color-scheme toolbar, then the story re-renders with the dark palette.
-- [ ] Given a story sets `globals: { colorScheme: 'dark' }`, when it runs in `npm run test:storybook`, then it renders in dark mode.
-- [ ] Given a story with no `colorScheme` global, when it renders after a dark story, then it uses `system` mode: the decorator's effect always calls `setMode`, defaulting to `'system'`, so a mode MUI saved to `localStorage` from an earlier story or toolbar choice never leaks into it.
-- [ ] `src/App.stories.tsx` gains a `Dark` story (desktop viewport) with a play assertion that the `<h1>` is visible.
-- [ ] The App `Desktop`, `Mobile`, and `Dark` stories set `parameters: { a11y: { test: 'error' } }`. The repo-wide default stays `'todo'`.
+- [x] Given Storybook is open, when I choose `dark` in the color-scheme toolbar, then the story re-renders with the dark palette.
+- [x] Given a story sets `globals: { colorScheme: 'dark' }`, when it runs in `npm run test:storybook`, then it renders in dark mode.
+- [x] Given a story with no `colorScheme` global, when it renders after a dark story, then it uses `system` mode: the decorator's effect always calls `setMode`, defaulting to `'system'`, so a mode MUI saved to `localStorage` from an earlier story or toolbar choice never leaks into it.
+- [x] `src/App.stories.tsx` gains a `Dark` story (desktop viewport) with a play assertion that the `<h1>` is visible.
+- [x] The App `Desktop`, `Mobile`, and `Dark` stories set `parameters: { a11y: { test: 'error' } }`. The repo-wide default stays `'todo'`.
 
 **Out of scope:** Changing existing story viewports and adding new components.
 
@@ -110,14 +110,14 @@ mode uses a lighter teal, a light orange, and a near-black teal-tinted backgroun
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Unit tests written and passing (`npm run test:react`, `npm run test:storybook`)
-- [ ] `npm run test:all:coverage` meets the `src/ui/**` thresholds (90/85/90/90) for the theme files
-- [ ] `npm run typecheck` and `npm run lint` pass
-- [ ] Accessibility check passed (`a11y.test: 'error'` on the App Desktop/Mobile/Dark stories)
-- [ ] Desktop, mobile, and dark stories updated
-- [ ] `code-reviewer` subagent run, findings addressed
-- [ ] Committed directly on `4-ui-introduce-application-grid-and-theme-setup` (no ticket branch) as `<type>: #4 <description>`
+- [x] All acceptance criteria met
+- [x] Unit tests written and passing (`npm run test:react`, `npm run test:storybook`)
+- [x] `npm run test:all:coverage` meets the `src/ui/**` thresholds (90/85/90/90) for the theme files
+- [x] `npm run typecheck` and `npm run lint` pass
+- [x] Accessibility check passed (`a11y.test: 'error'` on the App Desktop/Mobile/Dark stories)
+- [x] Desktop, mobile, and dark stories updated
+- [x] `code-reviewer` subagent run, findings addressed
+- [x] Committed directly on `4-ui-introduce-application-grid-and-theme-setup` (no ticket branch) as `<type>: #4 <description>`
 
 ---
 
