@@ -5,14 +5,9 @@ import { playwright } from '@vitest/browser-playwright';
 
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 
+import { aliases } from './aliases.config';
+
 const dirname = import.meta.dirname;
-const aliases = {
-  '@electron': path.resolve(dirname, './electron'),
-  '@store': path.resolve(dirname, './src/store'),
-  '@ui': path.resolve(dirname, './src/ui'),
-  '@shared': path.resolve(dirname, './src/shared'),
-  '@assets': path.resolve(dirname, './src/assets'),
-};
 
 const isElectronOnlyRun = process.argv.some((arg, index, argv) => {
   return arg === '--project=electron' || (arg === '--project' && argv[index + 1] === 'electron');
