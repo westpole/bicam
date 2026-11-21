@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { expectMenuButtonBesideTitle, expectShellLayout } from '../fixtures/shell';
+
 /** Mobile web (portrait and landscape projects): the app shell renders the project name. */
 test.describe('web app shell', () => {
   test('shows the project name as heading and document title', async ({ page }) => {
@@ -33,6 +35,19 @@ test.describe('web app shell', () => {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
     expect(overflow).toBeLessThanOrEqual(0);
+  });
+
+  test('pins the header and scrolls only <main>', async ({ page }) => {
+    await page.goto('/');
+
+    // Landscape (915 × 412) is ≥ 600px wide, so its toolbar is 64px; the checks use the measured header.
+    await expectShellLayout(page);
+  });
+
+  test('shows the menu button beside the title', async ({ page }) => {
+    await page.goto('/');
+
+    await expectMenuButtonBesideTitle(page);
   });
 
   test('caches the detected language', async ({ page }) => {

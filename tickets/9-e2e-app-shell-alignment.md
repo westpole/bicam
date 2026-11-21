@@ -1,7 +1,7 @@
 # [TEST] Align e2e specs and visual snapshots with the app shell
 
 > **Ticket type:** Test
-> **Status:** Ready for Dev
+> **Status:** In Progress
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) — #4
 > **Sprint:** `4-ui-introduce-application-grid-and-theme-setup`

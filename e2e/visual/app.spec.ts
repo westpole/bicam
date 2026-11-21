@@ -7,7 +7,10 @@ import { expect, test } from '../fixtures/electron';
 test.describe('main window visuals', () => {
   test.beforeEach(async ({ electronApp, mainWindow }) => {
     await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setContentSize(1200, 800));
-    await expect.poll(() => mainWindow.evaluate(() => window.innerWidth)).toBe(1200);
+    await expect
+      .poll(() => mainWindow.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight })))
+      .toEqual({ width: 1200, height: 800 });
+    await expect(mainWindow.getByRole('banner')).toBeVisible();
     await expect(mainWindow.getByRole('heading', { level: 1, name: 'Bicam' })).toBeVisible();
     await mainWindow.evaluate(() => document.fonts.ready.then(() => undefined));
   });
