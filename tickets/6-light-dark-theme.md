@@ -1,7 +1,7 @@
 # [FEATURE] Light/dark MUI theme that follows the OS
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) — #4
 > **Sprint:** `4-ui-introduce-application-grid-and-theme-setup`
