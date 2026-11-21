@@ -1,7 +1,7 @@
 # [FEATURE] Header menu button with a scalable SVG icon
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) — #4
 > **Sprint:** `4-ui-introduce-application-grid-and-theme-setup`
@@ -36,12 +36,12 @@ icon package is added.
 **So that** I know where navigation will live
 
 **Acceptance Criteria:**
-- [ ] Given the app loads, then the header shows, in order: the menu button, then the `<h1>` "Bicam".
-- [ ] The button is `IconButton edge="start" color="inherit" size="large"` (a hit area of at least 48 × 48px).
-- [ ] The button's accessible name is `t('header.menuButton.label')` = "Open menu" (key added to `src/i18n/locales/en/translation.json` first).
-- [ ] Given keyboard navigation, when I press Tab from page load, then the menu button is the first element to get focus and shows the MUI focus ring. The next Tab moves to `<main>` (from #7).
-- [ ] Given I click the button, then nothing breaks: no navigation, no console error. `AppHeader` accepts an optional `onMenuClick` prop for the future drawer.
-- [ ] Edge case: on a 320px-wide viewport, the button and title stay on one line (the title truncates and the button never shrinks).
+- [x] Given the app loads, then the header shows, in order: the menu button, then the `<h1>` "Bicam".
+- [x] The button is `IconButton edge="start" color="inherit" size="large"` (a hit area of at least 48 × 48px).
+- [x] The button's accessible name is `t('header.menuButton.label')` = "Open menu" (key added to `src/i18n/locales/en/translation.json` first).
+- [x] Given keyboard navigation, when I press Tab from page load, then the menu button is the first element to get focus and shows the MUI focus ring. The next Tab moves to `<main>` (from #7).
+- [x] Given I click the button, then nothing breaks: no navigation, no console error. `AppHeader` accepts an optional `onMenuClick` prop for the future drawer.
+- [x] Edge case: on a 320px-wide viewport, the button and title stay on one line (the title truncates and the button never shrinks).
 
 **Out of scope:** Drawer/navigation behavior, `aria-expanded`/`aria-controls` (added together with the drawer), and Zustand menu state.
 
@@ -53,11 +53,11 @@ icon package is added.
 **So that** I can size and color it through the theme, `fontSize`, or `sx`
 
 **Acceptance Criteria:**
-- [ ] `src/ui/components/icons/MenuIcon.tsx` exports a `MenuIcon` built with `createSvgIcon` (display name `Menu`) and has JSDoc.
-- [ ] It renders an inline `<svg viewBox="0 0 24 24">` that draws three equal horizontal bars (see the design doc's §5 for a reference path), with `fill: currentColor` and `aria-hidden="true"`.
-- [ ] Given `fontSize="small" | "medium" | "large"` or `sx={{ fontSize: 40 }}`, then the rendered size changes accordingly.
-- [ ] Given light and dark schemes, then the icon color equals the AppBar text color.
-- [ ] `package.json` dependencies are unchanged.
+- [x] `src/ui/components/icons/MenuIcon.tsx` exports a `MenuIcon` built with `createSvgIcon` (display name `Menu`) and has JSDoc.
+- [x] It renders an inline `<svg viewBox="0 0 24 24">` that draws three equal horizontal bars (see the design doc's §5 for a reference path), with `fill: currentColor` and `aria-hidden="true"`.
+- [x] Given `fontSize="small" | "medium" | "large"` or `sx={{ fontSize: 40 }}`, then the rendered size changes accordingly.
+- [x] Given light and dark schemes, then the icon color equals the AppBar text color.
+- [x] `package.json` dependencies are unchanged.
 
 **Out of scope:** Other icons, and an icon registry.
 
@@ -97,15 +97,15 @@ title text, followed by the "Bicam" title.
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Unit tests and story play tests written and passing (`npm run test:react`, `npm run test:storybook`)
-- [ ] `npm run test:all:coverage` meets the `src/ui/**` thresholds (90/85/90/90) for `MenuIcon` and `AppHeader`
-- [ ] `npm run typecheck` and `npm run lint` pass
-- [ ] Accessibility check passed (`a11y.test: 'error'`: accessible name, focus order, contrast)
-- [ ] Desktop, mobile, and dark stories updated
-- [ ] No new dependencies
-- [ ] `code-reviewer` subagent run, findings addressed
-- [ ] Committed directly on `4-ui-introduce-application-grid-and-theme-setup` (no ticket branch) as `<type>: #4 <description>`
+- [x] All acceptance criteria met
+- [x] Unit tests and story play tests written and passing (`npm run test:react`, `npm run test:storybook`)
+- [x] `npm run test:all:coverage` meets the `src/ui/**` thresholds (90/85/90/90) for `MenuIcon` and `AppHeader`
+- [x] `npm run typecheck` and `npm run lint` pass
+- [x] Accessibility check passed (`a11y.test: 'error'`: accessible name, focus order, contrast)
+- [x] Desktop, mobile, and dark stories updated
+- [x] No new dependencies
+- [x] `code-reviewer` subagent run, findings addressed
+- [x] Committed directly on `4-ui-introduce-application-grid-and-theme-setup` (no ticket branch) as `<type>: #4 <description>`
 
 ---
 

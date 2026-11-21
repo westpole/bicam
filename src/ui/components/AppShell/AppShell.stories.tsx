@@ -47,7 +47,9 @@ const meta = {
     await expect(banner.getBoundingClientRect().top).toBe(bannerTopBefore);
     await expect(Math.abs(banner.getBoundingClientRect().top)).toBeLessThanOrEqual(1);
 
-    // Keyboard users reach <main> and see a focus outline.
+    // Keyboard users reach <main> as the second tab stop (after the menu button) and see a focus outline.
+    await userEvent.tab();
+    await expect(canvas.getByRole('button', { name: 'Open menu' })).toHaveFocus();
     await userEvent.tab();
     await expect(main).toHaveFocus();
     await expect(getComputedStyle(main).outlineStyle).not.toBe('none');

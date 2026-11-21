@@ -20,6 +20,7 @@ export const Desktop: Story = {
   globals: { viewport: { value: 'desktop', isRotated: false } },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('banner')).toBeVisible();
+    await expect(canvas.getByRole('button', { name: 'Open menu' })).toBeVisible();
     await expect(canvas.getByRole('heading', { level: 1, name: 'Bicam' })).toBeVisible();
   },
 };
@@ -28,6 +29,7 @@ export const Mobile: Story = {
   globals: { viewport: { value: 'mobile1', isRotated: false } },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('banner')).toBeVisible();
+    await expect(canvas.getByRole('button', { name: 'Open menu' })).toBeVisible();
     await expect(canvas.getByRole('heading', { level: 1, name: 'Bicam' })).toBeVisible();
   },
 };
@@ -38,6 +40,7 @@ export const Dark: Story = {
     // The preview decorator applies the mode in an effect, so wait for the switch.
     await waitFor(() => expect(canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
     await expect(canvas.getByRole('banner')).toBeVisible();
+    await expect(canvas.getByRole('button', { name: 'Open menu' })).toBeVisible();
     await expect(canvas.getByRole('heading', { level: 1, name: 'Bicam' })).toBeVisible();
   },
 };

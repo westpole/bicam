@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, waitFor } from 'storybook/test';
+import Box from '@mui/material/Box';
+import { expect, fn, waitFor } from 'storybook/test';
 
 import { AppHeader } from './AppHeader';
 
@@ -11,9 +12,38 @@ const meta = {
     layout: 'fullscreen',
     a11y: { test: 'error' },
   },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByRole('banner')).toBeVisible();
-    await expect(canvas.getByRole('heading', { level: 1, name: 'Bicam' })).toBeVisible();
+  args: {
+    onMenuClick: fn(),
+  },
+  play: async ({ args, canvas, userEvent }) => {
+    const banner = canvas.getByRole('banner');
+    const button = canvas.getByRole('button', { name: 'Open menu' });
+    const heading = canvas.getByRole('heading', { level: 1, name: 'Bicam' });
+
+    await expect(banner).toBeVisible();
+    await expect(button).toBeVisible();
+    await expect(heading).toBeVisible();
+
+    // Button then title, on one row, and the button keeps its 48 × 48 hit area.
+    const buttonBox = button.getBoundingClientRect();
+    const headingBox = heading.getBoundingClientRect();
+    await expect(buttonBox.right).toBeLessThanOrEqual(headingBox.left);
+    await expect(
+      Math.abs(buttonBox.top + buttonBox.height / 2 - (headingBox.top + headingBox.height / 2)),
+    ).toBeLessThanOrEqual(4);
+    await expect(buttonBox.width).toBeGreaterThanOrEqual(48);
+    await expect(buttonBox.height).toBeGreaterThanOrEqual(48);
+
+    // The icon takes the AppBar text color in either scheme.
+    const icon = canvas.getByTestId('MenuIcon');
+    await expect(getComputedStyle(icon).color).toBe(getComputedStyle(banner).color);
+
+    // The menu button is the first tab stop, shows the MUI focus ring, and calls the handler.
+    await userEvent.tab();
+    await expect(button).toHaveFocus();
+    await waitFor(() => expect(button).toHaveClass('Mui-focusVisible'));
+    await userEvent.click(button);
+    await expect(args.onMenuClick).toHaveBeenCalledTimes(1);
   },
 } satisfies Meta<typeof AppHeader>;
 
@@ -26,6 +56,36 @@ export const Desktop: Story = {
 
 export const Mobile: Story = {
   globals: { viewport: { value: 'mobile1', isRotated: false } },
+};
+
+/**
+ * Edge case: too little room for the title. The header sits in a 100px-wide box (narrower than any phone), so
+ * "Bicam" overflows: the title truncates with an ellipsis while the button keeps its size, on one row.
+ */
+export const TruncatedTitle: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  decorators: [
+    (Story) => (
+      <Box sx={{ width: 100 }}>
+        <Story />
+      </Box>
+    ),
+  ],
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'Open menu' });
+    const heading = canvas.getByRole('heading', { level: 1, name: 'Bicam' });
+
+    await expect(heading.scrollWidth).toBeGreaterThan(heading.clientWidth);
+    await expect(getComputedStyle(heading).textOverflow).toBe('ellipsis');
+    await expect(getComputedStyle(heading).whiteSpace).toBe('nowrap');
+
+    const buttonBox = button.getBoundingClientRect();
+    const headingBox = heading.getBoundingClientRect();
+    await expect(buttonBox.width).toBeGreaterThanOrEqual(48);
+    await expect(
+      Math.abs(buttonBox.top + buttonBox.height / 2 - (headingBox.top + headingBox.height / 2)),
+    ).toBeLessThanOrEqual(4);
+  },
 };
 
 export const Dark: Story = {
