@@ -1,5 +1,17 @@
 import { INITIAL_APP_STATE } from '../constants';
+import type { AppStoreState } from '../types';
 import { useAppStore } from '../useAppStore';
+
+/**
+ * Returns the store's data fields only (every non-function value), so a test can compare the whole state strictly.
+ *
+ * @returns The current store state without its actions.
+ */
+function getStateData(): Partial<AppStoreState> {
+  return Object.fromEntries(
+    Object.entries(useAppStore.getState()).filter(([, value]) => typeof value !== 'function'),
+  ) as Partial<AppStoreState>;
+}
 
 describe('useAppStore', () => {
   beforeEach(() => {
@@ -8,7 +20,22 @@ describe('useAppStore', () => {
 
   it('starts with the menu closed on the home screen', () => {
     expect(useAppStore.getState()).toMatchObject({ isMenuOpen: false, activeScreen: 'home' });
-    expect(INITIAL_APP_STATE).toEqual({ isMenuOpen: false, activeScreen: 'home' });
+  });
+
+  it('starts with an empty bicycle collection and empty placeholder slices', () => {
+    expect(INITIAL_APP_STATE).toEqual({
+      isMenuOpen: false,
+      activeScreen: 'home',
+      bicycle: { byId: {}, allIds: [] },
+      events: {},
+      components: {},
+      history: {},
+    });
+    expect(getStateData()).toEqual(INITIAL_APP_STATE);
+  });
+
+  it('keeps the initial state plain JSON', () => {
+    expect(JSON.parse(JSON.stringify(INITIAL_APP_STATE))).toEqual(INITIAL_APP_STATE);
   });
 
   it('toggles the menu open and closed', () => {
@@ -58,11 +85,28 @@ describe('useAppStore', () => {
     expect(useAppStore.getState()).toMatchObject({ isMenuOpen: false, activeScreen: 'beforeRideCheckIn' });
   });
 
-  it('resets to the initial state', () => {
-    useAppStore.setState({ activeScreen: 'addClothesSet', isMenuOpen: true });
+  it('resets to the initial state, including domain data', () => {
+    useAppStore.setState({
+      activeScreen: 'addClothesSet',
+      isMenuOpen: true,
+      bicycle: {
+        byId: {
+          Roadie: {
+            id: 'Roadie',
+            company: 'Canyon',
+            model: 'Ultimate',
+            purchased: null,
+            size: null,
+            frameGeometry: null,
+            components: [],
+          },
+        },
+        allIds: ['Roadie'],
+      },
+    });
 
     useAppStore.getState().reset();
 
-    expect(useAppStore.getState()).toMatchObject(INITIAL_APP_STATE);
+    expect(getStateData()).toEqual(INITIAL_APP_STATE);
   });
 });

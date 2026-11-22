@@ -5,7 +5,8 @@ import type { AppStore } from './types';
 
 /**
  * The app's single global store: shared UI state (menu visibility, active screen) that the header, the menu, and the
- * main viewport all depend on. Not persisted, so the app always starts on `home` with the menu closed.
+ * main viewport all depend on, plus the domain data (`bicycle`; `events`, `components`, `history` are placeholders).
+ * Not persisted, so the app always starts empty on `home` with the menu closed. See `docs/store/README.md`.
  *
  * Read it with atomic selectors so components only re-render for the fields they use.
  *

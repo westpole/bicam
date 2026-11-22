@@ -67,7 +67,7 @@ Ruled out:
 
 | Ticket | Title | Type | Priority | Size | Status | Blocked by |
 | --- | --- | --- | --- | --- | --- | --- |
-| [#16](./16-store-root-structure.md) | Add domain root keys (`bicycle`, `events`, `components`, `history`) to `useAppStore` | Feature | P1 | S | Ready for Dev | — |
+| [#16](./16-store-root-structure.md) | Add domain root keys (`bicycle`, `events`, `components`, `history`) to `useAppStore` | Feature | P1 | S | Done | — |
 | [#17](./17-bicycle-validation.md) | Add bicycle input normalization and validation utilities | Feature | P1 | S | Ready for Dev | #16 |
 | [#18](./18-bicycle-actions.md) | Add `addBicycle`, `updateBicycle`, `removeBicycle` store actions | Feature | P1 | S | Ready for Dev | #16, #17 |
 

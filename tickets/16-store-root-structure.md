@@ -1,7 +1,7 @@
 # [FEATURE] Add domain root keys (`bicycle`, `events`, `components`, `history`) to `useAppStore`
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (#8)
 > **Sprint:** `8-store-bicycle-entity`
