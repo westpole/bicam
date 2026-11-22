@@ -1,6 +1,6 @@
 # Bicycle slice
 
-> **Status:** Planned (batch #8)
+> **Status:** Implemented (batch #8)
 > **Owner layer:** Zustand, `src/store/bicycle/`
 > **Root key:** `bicycle` (see [README.md](./README.md))
 

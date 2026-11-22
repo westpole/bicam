@@ -1,6 +1,6 @@
 # App store
 
-> **Status:** Planned (batch #8)
+> **Status:** Implemented (batch #8)
 > **Owner layer:** Zustand, `src/store/`
 
 Bicam keeps all shared state in one Zustand store, `useAppStore` (`src/store/useAppStore.ts`). This folder documents
