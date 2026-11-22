@@ -1,7 +1,7 @@
 # [TEST] Align e2e specs and visual snapshots with the app shell
 
 > **Ticket type:** Test
-> **Status:** In Progress
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) — #4
 > **Sprint:** `4-ui-introduce-application-grid-and-theme-setup`
@@ -44,15 +44,15 @@ design doc's §2.2). Compare with a 1px tolerance.
 - (c) After injecting tall content into `<main>` (via `page.evaluate`) and scrolling it, the header's bounding box is unchanged, `main.scrollTop > 0`, and `document.scrollingElement.scrollTop === 0`.
 
 **Acceptance Criteria — Electron (`e2e/ui/layout.spec.ts`, project `electron-ui`):**
-- [ ] The two "centered title" tests are replaced by the shell checks (a)–(c), run at the default window size and again after `setContentSize(480, 640)`.
-- [ ] The existing "follows the system dark color scheme" test still passes. Extend it to also assert that the `banner` background color changes.
+- [x] The two "centered title" tests are replaced by the shell checks (a)–(c), run at the default window size and again after `setContentSize(480, 640)`.
+- [x] The existing "follows the system dark color scheme" test still passes. Extend it to also assert that the `banner` background color changes.
 
 **Acceptance Criteria — web mobile (`e2e/mobile/app.spec.ts`, projects `web-mobile-portrait` 412 × 915 and `web-mobile-landscape` 915 × 412):**
-- [ ] The shell checks (a)–(c) pass in both projects. In landscape the measured header is 64px, because the viewport is ≥ 600px wide; the test must not assume 48px.
-- [ ] The menu button (`name: 'Open menu'`) and the h1 are visible and on the same row (vertical centers within 4px).
+- [x] The shell checks (a)–(c) pass in both projects. In landscape the measured header is 64px, because the viewport is ≥ 600px wide; the test must not assume 48px.
+- [x] The menu button (`name: 'Open menu'`) and the h1 are visible and on the same row (vertical centers within 4px).
 
 **Acceptance Criteria — unchanged specs:**
-- [ ] Existing h1-based checks in `e2e/electron/smoke.spec.ts` and `e2e/integration/security.spec.ts` pass unchanged.
+- [x] Existing h1-based checks in `e2e/electron/smoke.spec.ts` and `e2e/integration/security.spec.ts` pass unchanged.
 
 **Out of scope:** New Electron behavior, and tests for the menu drawer.
 
@@ -64,9 +64,9 @@ design doc's §2.2). Compare with a 1px tolerance.
 **So that** visual regressions are caught against the right baseline
 
 **Acceptance Criteria:**
-- [ ] `e2e/visual/app.spec.ts` already has `light theme` and `dark theme` tests (using `emulateMedia({ colorScheme })`). Keep both, and only adjust their waits and locators if the shell needs it (for example, wait for the `banner` instead of a centered h1).
-- [ ] **Regenerate both existing baselines** in `e2e/visual/app.spec.ts-snapshots/` with `npm run test:e2e:docker:update-snapshots` (never on the host OS, to match CI rendering).
-- [ ] The regenerated light and dark PNGs are reviewed by eye against the design doc's §2 wireframes before committing.
+- [x] `e2e/visual/app.spec.ts` already has `light theme` and `dark theme` tests (using `emulateMedia({ colorScheme })`). Keep both, and only adjust their waits and locators if the shell needs it (for example, wait for the `banner` instead of a centered h1).
+- [x] **Regenerate both existing baselines** in `e2e/visual/app.spec.ts-snapshots/` with `npm run test:e2e:docker:update-snapshots` (never on the host OS, to match CI rendering).
+- [x] The regenerated light and dark PNGs are reviewed by eye against the design doc's §2 wireframes before committing.
 
 **Out of scope:** Visual tests for individual components (Storybook covers those). Web visual snapshots: none exist, and
 `test:e2e:docker:update-snapshots` only runs the `electron-visual` project.
@@ -106,12 +106,12 @@ design doc's §2.2). Compare with a 1px tolerance.
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] `npm run test:e2e:docker` passes locally
-- [ ] Snapshot diffs reviewed and committed
-- [ ] `npm run typecheck` and `npm run lint` pass
-- [ ] `code-reviewer` subagent run, findings addressed
-- [ ] Committed directly on `4-ui-introduce-application-grid-and-theme-setup` (no ticket branch) as `<type>: #4 <description>`
+- [x] All acceptance criteria met
+- [x] `npm run test:e2e:docker` passes locally
+- [x] Snapshot diffs reviewed and committed
+- [x] `npm run typecheck` and `npm run lint` pass
+- [x] `code-reviewer` subagent run, findings addressed
+- [x] Committed directly on `4-ui-introduce-application-grid-and-theme-setup` (no ticket branch) as `<type>: #4 <description>`
 
 ---
 

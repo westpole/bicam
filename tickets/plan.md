@@ -118,15 +118,15 @@ Verified on 2026-11-21 on branch `4-ui-introduce-application-grid-and-theme-setu
 
 > Applies to the batch as a whole. Each ticket also has its own Definition of Done (section 7 of the ticket template).
 
-- [ ] All tickets in the table are `Done` and committed on `4-ui-introduce-application-grid-and-theme-setup` as `<type>: #4 <description>`
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all`, and `npm run test:all:coverage` (thresholds met) pass locally on the batch branch
+- [x] All tickets in the table are `Done` and committed on `4-ui-introduce-application-grid-and-theme-setup` as `<type>: #4 <description>`
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all`, and `npm run test:all:coverage` (thresholds met) pass locally on the batch branch
 - [ ] Batch → master PR is green in CI (including both e2e jobs) and merged with a merge commit
-- [ ] Desktop and mobile stories exist for any changed UI, plus a dark-scheme story for the shell. The new stories pass with `a11y.test: 'error'`
-- [ ] Documentation updated where behavior changed ([design doc](../docs/design/app-shell-and-theme.md) status set to `Implemented`)
-- [ ] With a long list in `<main>`, on Storybook `mobile1` (320 × 568) and the e2e web portrait/landscape viewports, the header stays visible while the content scrolls, and `<body>` itself does not scroll
-- [ ] `<main>` is keyboard-scrollable (`tabIndex={0}`, the second tab stop after the menu button)
-- [ ] Switching the OS color scheme switches the app between the light and dark palettes without a reload
-- [ ] No new runtime dependencies in `package.json`
+- [x] Desktop and mobile stories exist for any changed UI, plus a dark-scheme story for the shell. The new stories pass with `a11y.test: 'error'`
+- [x] Documentation updated where behavior changed ([design doc](../docs/design/app-shell-and-theme.md) status set to `Implemented`)
+- [x] With a long list in `<main>`, on Storybook `mobile1` (320 × 568) and the e2e web portrait/landscape viewports, the header stays visible while the content scrolls, and `<body>` itself does not scroll
+- [x] `<main>` is keyboard-scrollable (`tabIndex={0}`, the second tab stop after the menu button)
+- [x] Switching the OS color scheme switches the app between the light and dark palettes without a reload
+- [x] No new runtime dependencies in `package.json`
 
 ### Tickets
 
@@ -143,7 +143,7 @@ Verified on 2026-11-21 on branch `4-ui-introduce-application-grid-and-theme-setu
 | [#6](./6-light-dark-theme.md) | Light/dark MUI theme that follows the OS | Feature | P1 | S | Done | — |
 | [#7](./7-app-shell-layout.md) | Two-row app shell with pinned header and scrollable main viewport | Feature | P1 | M | Done | 6 |
 | [#8](./8-header-menu-button.md) | Header menu button with a scalable SVG icon | Feature | P1 | S | Done | 7 |
-| [#9](./9-e2e-app-shell-alignment.md) | Align e2e specs and visual snapshots with the app shell | Test | P1 | S | In Progress | 8 |
+| [#9](./9-e2e-app-shell-alignment.md) | Align e2e specs and visual snapshots with the app shell | Test | P1 | S | Done | 8 |
 
 Each feature ticket is a vertical slice: it changes what the user sees, and it ships with its own translations, unit
 tests, and desktop/mobile stories, so it can be merged and demoed on its own.

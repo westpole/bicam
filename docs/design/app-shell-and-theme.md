@@ -1,6 +1,6 @@
 # Design: Application shell and theme
 
-> **Status:** Draft
+> **Status:** Implemented
 > **Batch:** [tickets/plan.md](../../tickets/plan.md) (#4)
 > **Tickets:** [#6 theme](../../tickets/6-light-dark-theme.md) · [#7 app shell](../../tickets/7-app-shell-layout.md) ·
 > [#8 menu button](../../tickets/8-header-menu-button.md) · [#9 e2e alignment](../../tickets/9-e2e-app-shell-alignment.md)
