@@ -18,6 +18,7 @@ interface AppStoreState {
   // UI state (not domain data)
   isMenuOpen: boolean;          // app menu visibility
   activeScreen: ScreenView;     // screen shown in <main>
+  selectedBicycleId: BicycleId | null; // bicycle on the bicycleDetails screen
 
   // Domain data
   bicycle: BicycleCollection;   // implemented, see bicycle.md
@@ -30,7 +31,8 @@ interface AppStoreState {
 | Key | Status | Type | Initial value | Notes |
 | --- | --- | --- | --- | --- |
 | `isMenuOpen` | Implemented | `boolean` | `false` | UI only. |
-| `activeScreen` | Implemented | `ScreenView` | `'home'` | UI only. |
+| `activeScreen` | Implemented | `ScreenView` | `'home'` | UI only. `'home' \| 'addBicycle' \| 'addComponent' \| 'addClothesSet' \| 'beforeRideCheckIn' \| 'bicycleDetails'`. `navigateTo` accepts every screen except `'bicycleDetails'`, which only `openBicycleDetails(id)` opens. |
+| `selectedBicycleId` | Implemented | `BicycleId \| null` | `null` | UI only. After each action completes, `activeScreen === 'bicycleDetails'` exactly when this is a stored bicycle id. Set by `openBicycleDetails`; cleared by `navigateTo` and by removing the selected bicycle. |
 | `bicycle` | Implemented | `BicycleCollection` | `{ byId: {}, allIds: [] }` | The user's bicycles. See [bicycle.md](./bicycle.md). |
 | `events` | Placeholder | `ReservedSlice` | `{}` | Reserved for maintenance and ride events. |
 | `components` | Placeholder | `ReservedSlice` | `{}` | Reserved for components. `Bicycle.components` will reference ids from here. |
@@ -72,8 +74,8 @@ These rules apply to every domain slice, now and in the future.
 
 ```text
 src/store/
-├── useAppStore.ts          # create() + UI actions, composes slices
-├── types.ts                # AppStoreState, AppStoreActions, ReservedSlice, ScreenView
+├── useAppStore.ts          # create() + UI actions, composes slices, wraps slice actions with navigation effects
+├── types.ts                # AppStoreState, AppStoreActions, ReservedSlice, ScreenView, MenuScreen
 ├── constants.ts            # INITIAL_APP_STATE
 ├── __tests__/
 └── bicycle/
@@ -101,6 +103,7 @@ persistence is added:
 | Decision | Reason |
 | --- | --- |
 | Bicycles are keyed by a generated UUID `id`; the user-typed title is a separate, unique `name`. | Other slices will reference bicycles by key. A user-typed key would break those references (and old history entries) on rename. With a generated id, renaming is a plain field update. |
+| Navigation side effects of domain actions live in `useAppStore.ts` wrappers, not in slices (e.g. removing the selected bicycle returns to `home`). | Each slice owns only its domain key; the UI fields belong to the root store. The wrapper calls the slice action, then updates the UI fields in a second `set`. React batches both into one render; a non-React subscriber can see one in-between notification. |
 
 ## 6. Open questions
 

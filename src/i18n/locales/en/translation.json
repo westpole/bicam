@@ -17,6 +17,11 @@
       "beforeRideCheckIn": "Before ride check-in"
     }
   },
+  "home": {
+    "bicycleList": {
+      "label": "Bicycles"
+    }
+  },
   "screens": {
     "addBicycle": {
       "title": "Add bicycle"

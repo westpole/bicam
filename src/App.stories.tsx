@@ -5,6 +5,7 @@ import { expect, waitFor, within } from 'storybook/test';
 import { INITIAL_APP_STATE } from '@store/constants';
 import type { AppStoreState } from '@store/types';
 import { useAppStore } from '@store/useAppStore';
+import { BICYCLES, MANY_BICYCLES, toBicycleCollection } from '@ui/components/screens/Home/__mocks__/bicycles';
 
 import { App } from './App';
 
@@ -120,5 +121,73 @@ export const MenuOpenDark: Story = {
     const menu = await canvas.findByRole('navigation', { name: 'Main menu' });
     await expect(canvas.getByRole('button', { name: 'Close menu' })).toBeVisible();
     await expect(within(menu).getByRole('button', { current: 'page' })).toHaveAccessibleName('Add bicycle');
+  },
+};
+
+/** Seeded from the store: the home screen lists the stored bicycles as cards under the header. */
+export const HomeWithBicycles: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  args: { initialState: { bicycle: toBicycleCollection(BICYCLES) } },
+  play: async ({ canvas, canvasElement }) => {
+    await expectClosedShell(canvas);
+    const main = canvasElement.querySelector('main') as HTMLElement;
+    const list = await within(main).findByRole('list', { name: 'Bicycles' });
+    await expect(within(list).getAllByRole('listitem').map((card) => card.textContent)).toEqual([
+      'Gravel Grinder',
+      'Roadie',
+      'Commuter',
+    ]);
+    // The list starts below the header.
+    const header = canvas.getByRole('banner').getBoundingClientRect();
+    await expect(list.getBoundingClientRect().top).toBeGreaterThanOrEqual(header.bottom);
+  },
+};
+
+/**
+ * Home → details flow: click the second card, see its details placeholder, then leave it through the menu.
+ *
+ * @param context - The story context.
+ */
+async function playHomeToDetails({ canvas, canvasElement, userEvent }: Parameters<NonNullable<Story['play']>>[0]) {
+  const main = canvasElement.querySelector('main') as HTMLElement;
+  await within(main).findByRole('list', { name: 'Bicycles' });
+
+  await userEvent.click(canvas.getByRole('button', { name: 'Roadie' }));
+  await expect(within(main).getByRole('heading', { level: 2, name: 'Roadie' })).toBeVisible();
+  await expect(within(main).getByText('This screen is coming soon.')).toBeVisible();
+  await expect(within(main).queryByRole('list', { name: 'Bicycles' })).not.toBeInTheDocument();
+  await expect(canvas.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+
+  await userEvent.click(canvas.getByRole('button', { name: 'Open menu' }));
+  await userEvent.click(await canvas.findByRole('button', { name: 'Add bicycle' }));
+  await waitFor(() => expect(canvas.queryByRole('navigation')).not.toBeInTheDocument());
+  await expect(within(main).getByRole('heading', { level: 2, name: 'Add bicycle' })).toBeVisible();
+}
+
+export const HomeToDetails: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  args: { initialState: { bicycle: toBicycleCollection(BICYCLES) } },
+  play: playHomeToDetails,
+};
+
+export const HomeToDetailsMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  args: { initialState: { bicycle: toBicycleCollection(BICYCLES) } },
+  play: playHomeToDetails,
+};
+
+/** More cards than fit: `<main>` scrolls while the header stays put. */
+export const HomeScrollsMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  args: { initialState: { bicycle: toBicycleCollection(MANY_BICYCLES) } },
+  play: async ({ canvas, canvasElement }) => {
+    const main = canvasElement.querySelector('main') as HTMLElement;
+    await within(main).findByRole('list', { name: 'Bicycles' });
+    await expect(main.scrollHeight).toBeGreaterThan(main.clientHeight);
+
+    const headerTop = canvas.getByRole('banner').getBoundingClientRect().top;
+    main.scrollTop = main.scrollHeight;
+    await waitFor(() => expect(main.scrollTop).toBeGreaterThan(0));
+    await expect(canvas.getByRole('banner').getBoundingClientRect().top).toBe(headerTop);
   },
 };
