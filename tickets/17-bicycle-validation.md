@@ -1,7 +1,7 @@
 # [FEATURE] Add bicycle input normalization and validation utilities
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (#8)
 > **Sprint:** `8-store-bicycle-entity`
@@ -35,10 +35,10 @@ documented limits, so store actions (#18) can reject invalid data.
 **So that** stored data never has stray whitespace, empty strings, or missing lists
 
 **Acceptance Criteria:**
-- [ ] Every string, including each component id, is trimmed.
-- [ ] Optional text (`purchased`, `size`, `frameGeometry`) that is missing, `null`, or empty after trimming becomes `null`.
-- [ ] A missing `components` list becomes `[]`.
-- [ ] The input object is not mutated.
+- [x] Every string, including each component id, is trimmed.
+- [x] Optional text (`purchased`, `size`, `frameGeometry`) that is missing, `null`, or empty after trimming becomes `null`.
+- [x] A missing `components` list becomes `[]`.
+- [x] The input object is not mutated.
 
 **Out of scope:** Changing case, removing duplicate components, adding units.
 
@@ -48,16 +48,16 @@ documented limits, so store actions (#18) can reject invalid data.
 **So that** a form can mark every invalid field at once
 
 **Acceptance Criteria:**
-- [ ] A valid bicycle returns `[]`.
-- [ ] `id`, `company`, `model`: empty → `required`; over 40/60/60 chars → `tooLong`; control characters → `invalidFormat`.
-- [ ] `purchased`: not `YYYY-MM-DD` or not a real date (`2023-02-30`, `2023-13-01`) → `invalidFormat`; leap days
+- [x] A valid bicycle returns `[]`.
+- [x] `id`, `company`, `model`: empty → `required`; over 40/60/60 chars → `tooLong`; control characters → `invalidFormat`.
+- [x] `purchased`: not `YYYY-MM-DD` or not a real date (`2023-02-30`, `2023-13-01`) → `invalidFormat`; leap days
   (`2024-02-29`) are accepted, `2023-02-29` is not.
-- [ ] `size`: `'ML'`, `'M/L'`, `'51'`, `'56.5'`, `'S-M'` pass; over 10 chars → `tooLong`; other characters → `invalidFormat`.
-- [ ] `frameGeometry`: over 500 chars → `tooLong`; line breaks allowed, other control characters → `invalidFormat`.
-- [ ] `components`: over 100 ids → `tooMany`; an empty id → `required`; an id over 64 chars → `tooLong`; control
+- [x] `size`: `'ML'`, `'M/L'`, `'51'`, `'56.5'`, `'S-M'` pass; over 10 chars → `tooLong`; other characters → `invalidFormat`.
+- [x] `frameGeometry`: over 500 chars → `tooLong`; line breaks allowed, other control characters → `invalidFormat`.
+- [x] `components`: over 100 ids → `tooMany`; an empty id → `required`; an id over 64 chars → `tooLong`; control
   characters → `invalidFormat`; a repeated id → `duplicate`.
-- [ ] At most one error per field, in `Bicycle` field order.
-- [ ] Edge case: limits apply after trimming (a 40-char id with surrounding spaces passes).
+- [x] At most one error per field, in `Bicycle` field order.
+- [x] Edge case: limits apply after trimming (a 40-char id with surrounding spaces passes).
 
 **Out of scope:** Id uniqueness across the store and unknown ids (both in #18), checking components against the
 `components` slice, rejecting future dates.
@@ -95,9 +95,9 @@ documented limits, so store actions (#18) can reject invalid data.
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Unit tests written and passing (`npm run test:store`)
-- [ ] JSDoc on every function
+- [x] All acceptance criteria met
+- [x] Unit tests written and passing (`npm run test:store`)
+- [x] JSDoc on every function
 
 ---
 

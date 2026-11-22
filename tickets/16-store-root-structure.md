@@ -35,13 +35,13 @@ placeholders `events`, `components`, `history`. Later tickets fill in the bicycl
 **So that** later slices plug in without changing the store's shape
 
 **Acceptance Criteria:**
-- [ ] Given a fresh store, then `bicycle` is `{ byId: {}, allIds: [] }` and `events`, `components`, `history` are `{}`.
-- [ ] `isMenuOpen` and `activeScreen` keep their names, positions, and initial values.
-- [ ] `AppStoreState` types `bicycle` as `BicycleCollection` and the placeholders as `ReservedSlice`
+- [x] Given a fresh store, then `bicycle` is `{ byId: {}, allIds: [] }` and `events`, `components`, `history` are `{}`.
+- [x] `isMenuOpen` and `activeScreen` keep their names, positions, and initial values.
+- [x] `AppStoreState` types `bicycle` as `BicycleCollection` and the placeholders as `ReservedSlice`
   (`Readonly<Record<string, never>>`).
-- [ ] `Bicycle`, `BicycleId`, `ComponentId`, `IsoDate`, and `BicycleCollection` are exported from
+- [x] `Bicycle`, `BicycleId`, `ComponentId`, `IsoDate`, and `BicycleCollection` are exported from
   `src/store/bicycle/types.ts` as in [docs/store/bicycle.md §1](../docs/store/bicycle.md#1-shape).
-- [ ] Given bicycle data was changed, when `reset()` runs, then the whole state equals `INITIAL_APP_STATE`.
+- [x] Given bicycle data was changed, when `reset()` runs, then the whole state equals `INITIAL_APP_STATE`.
 
 **Out of scope:** Bicycle actions, validation, persistence, any UI.
 
@@ -77,9 +77,9 @@ placeholders `events`, `components`, `history`. Later tickets fill in the bicycl
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Unit tests written and passing (`npm run test:store`)
-- [ ] JSDoc on every exported type and constant
+- [x] All acceptance criteria met
+- [x] Unit tests written and passing (`npm run test:store`)
+- [x] JSDoc on every exported type and constant
 
 ---
 

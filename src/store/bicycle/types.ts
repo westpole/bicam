@@ -28,6 +28,47 @@ export interface Bicycle {
   components: ComponentId[];
 }
 
+/**
+ * Raw bicycle data as a form provides it. Normalized by `normalizeBicycleInput` before validation: strings are
+ * trimmed, empty optional text becomes `null`, and a missing `components` list becomes `[]`.
+ */
+export interface BicycleInput {
+  /** User-defined id; see {@link Bicycle.id}. */
+  id: string;
+  /** See {@link Bicycle.company}. */
+  company: string;
+  /** See {@link Bicycle.model}. */
+  model: string;
+  /** `YYYY-MM-DD`; missing, `null`, or blank means unknown. */
+  purchased?: string | null;
+  /** Missing, `null`, or blank means unknown. */
+  size?: string | null;
+  /** Missing, `null`, or blank means unknown. */
+  frameGeometry?: string | null;
+  /** Installed component ids; missing means none. */
+  components?: string[];
+}
+
+/** Changes for `updateBicycle`: any input field except `id`. Omitted keys stay unchanged; `null` clears a field. */
+export type BicycleUpdate = Partial<Omit<BicycleInput, 'id'>>;
+
+/** A field of {@link Bicycle} that a validation error can point at. */
+export type BicycleField = keyof Bicycle;
+
+/** Why a field failed validation. Codes, not text: the UI translates them. See `docs/store/bicycle.md` §5. */
+export type BicycleErrorCode = 'required' | 'tooLong' | 'invalidFormat' | 'tooMany' | 'duplicate' | 'notFound';
+
+/** One failing field. Validation reports at most one error per field. */
+export interface BicycleValidationError {
+  /** The failing field. */
+  field: BicycleField;
+  /** Why it failed. */
+  code: BicycleErrorCode;
+}
+
+/** Result of a bicycle write: the stored bicycle on success, every failing field otherwise. */
+export type BicycleResult = { ok: true; bicycle: Bicycle } | { ok: false; errors: BicycleValidationError[] };
+
 /** Normalized bicycle collection. `allIds` holds the display (insertion) order. */
 export interface BicycleCollection {
   /** Bicycles keyed by their exact id. */
