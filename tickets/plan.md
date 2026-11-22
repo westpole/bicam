@@ -1,83 +1,96 @@
-# Plan: npm audit fixes after Node 24.22.3
+# Plan: Application grid and MUI theme
 
 > **Process:** follow [README.md](./README.md) for how plans and tickets are generated.
-> **Dev branch:** `dev-20261117-npm-audit-fixes` (not created yet; create it from `master` once `1-initial-setup` is merged)
-> **Batch issue:** #<TBD> — create the GitHub issue for this batch, then fill in the number here and in each ticket's **Epic** line.
+> **Batch branch:** `4-ui-introduce-application-grid-and-theme-setup` (already exists, created from `master` at `eda0272`). All work is committed directly on this branch with ticket number `#4`; there are no ticket branches. It intentionally does not follow the README's `dev-<yyyymmdd>-<slug>` convention.
+> **Batch issue:** #4
 > **Batch status:** Draft
+> **Design:** [docs/design/app-shell-and-theme.md](../docs/design/app-shell-and-theme.md)
 
 ## Goal
 
-Clear the `npm audit` findings in the dev toolchain after the switch to Node 24.22.3, so the CI `Dependency audit` gate
-(`npm run deps:audit:ci`, high level) passes on PRs to `master`.
+Replace the centered splash screen with a mobile-first app shell and set up the MUI theme. The shell is a two-row grid:
+a header pinned to the top with a menu button (SVG icon) and the `Bicam` title, and a main viewport that fills the
+remaining height and scrolls vertically. Light and dark color schemes follow the OS. The batch is done when the
+batch → master PR is green in CI, including the e2e jobs.
 
 ### Starting point
 
-- **Node:** pinned to 24.22.3 in `.nvmrc` and `package.json` → `engines.node` (`>=24.22.3`). CI workflows read
-  `.nvmrc` through `node-version-file`. In Docker, only the **electron** e2e image is pinned
-  (`NODE_VERSION=24.22.3` in `docker/e2e/Dockerfile` and `docker/e2e/compose.yml`). The **web** image uses whatever Node
-  ships in `mcr.microsoft.com/playwright:v<PLAYWRIGHT_VERSION>-noble`, so `npm ci` there may print an `engines` warning.
-  It does not fail, because `engine-strict` is not set.
-- **`npm audit` (2026-11-17, npm 11.19.1):** 46 vulnerabilities (7 moderate, 39 high, 0 critical), all coming from three
-  root advisories in **dev or build dependencies only**. `npm audit --omit=dev` reports 0. Confirmed against an
-  installed `node_modules`: all 39 high findings come from `picomatch` (the only high root), and the 7 moderate ones come
-  from `glob` and `minimatch`.
+Verified on 2026-11-21 on branch `4-ui-introduce-application-grid-and-theme-setup` (`011907c`):
 
-  | Root package | Advisory | Severity | Patched release? | Ticket |
-  | --- | --- | --- | --- | --- |
-  | `glob@13.0.7` | [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4) | moderate | yes (`>=14.0.2`, or remove via docgen plugin 0.9.x) | #2 |
-  | `minimatch@9.0.9`, `@10.2.6` | [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) | moderate | yes (`>=11.0.1`, major for consumers) | #3 |
-  | `picomatch@4.0.7` | [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) | high | **no**: 4.0.7 is latest | #4 |
+- Stack: React 19, `@mui/material` ^9.5.0 (Emotion), i18next 26, Vite 8, Electron 45, Storybook 10, Vitest 5.
+- `@mui/icons-material` is **not** installed. The menu icon will be a local `createSvgIcon` component, so no dependency is added.
+- [src/ui/theme/index.ts](../src/ui/theme/index.ts) is `createTheme({ colorSchemes: { light: true, dark: true } })` with no palette, no CSS variables, and no component overrides.
+- [src/App.tsx](../src/App.tsx) renders `<main>` with `minHeight: 100vh` and a centered `h3`-styled `<h1>` "Bicam". It also syncs `document.title`.
+- `src/ui/components/` does not exist yet. `src/store/` is empty.
+- Translations: only `app.title` = "Bicam".
+- Storybook decorator ([.storybook/preview.tsx](../.storybook/preview.tsx)) wraps stories in `ThemeProvider` + `CssBaseline`. It cannot switch color schemes yet.
+- These tests depend on the current layout:
 
-- Every direct dependency is already on its latest version, so there is no plain `npm upgrade` to run. The `fixAvailable`
-  versions npm suggests (`vite@6.2.7`, `vitest@3.1.4`, `electron-builder@25.1.0`, `@storybook/react-vite@8.5.3`, …) are
-  **downgrades**, so never run `npm audit fix --force`. A non-forced `npm audit fix` rewrites the lockfile and fixes nothing.
-- Fixes therefore use scoped `overrides` in `package.json` plus a lockfile refresh. No `src/**` or `electron/**` code changes
-  are expected.
+  | Test | Dependency | Addressed by |
+  | --- | --- | --- |
+  | `src/__tests__/App.test.tsx` | `<h1>` "Bicam", `document.title` | #7 (must keep passing) |
+  | `src/App.stories.tsx` | `<h1>` "Bicam" on Desktop/Mobile | #6 (adds the `Dark` story and `a11y.test: 'error'`), #7 (adds `banner` assertions), #8 (adds menu button assertions) |
+  | `e2e/ui/layout.spec.ts` | Title **centered** in the window, before and after resize | #9 (rewrite) |
+  | `e2e/ui/layout.spec.ts` | Body background changes with `prefers-color-scheme` | #6 must keep it working; #9 verifies |
+  | `e2e/visual/app.spec.ts` + snapshots | Existing `light theme` / `dark theme` baselines show the splash screen | #9 (regenerate both in Docker) |
+  | `e2e/mobile/app.spec.ts`, `e2e/electron/smoke.spec.ts`, `e2e/integration/security.spec.ts` | `<h1>` exists / named "Bicam" | Kept passing by keeping the title as `<h1>` |
+
+- Storybook a11y is configured as `a11y: { test: 'todo' }` (warn only). Stories added in this batch set `parameters: { a11y: { test: 'error' } }` so contrast and landmark violations actually fail. The repo-wide default is not changed.
+- Coverage thresholds in `vitest.config.ts`: `src/ui/**` and `src/App.tsx` at 90/85/90/90 (statements/branches/functions/lines). All new UI files fall under them.
+- MUI Toolbar height: 56px by default, 48px in landscape **under 600px wide**, 64px at ≥ 600px. The e2e landscape project (915 × 412) therefore gets 64px. Tests measure the header instead of hard-coding a height.
+- Reference viewports: Storybook `mobile1` (320 × 568) for mobile stories; e2e `web-mobile-portrait` (412 × 915) and `web-mobile-landscape` (915 × 412).
+- CI (`.github/workflows/pr-tests-runner.yml`) runs lint, typecheck, `test:all`, **and** e2e (web + electron, in Docker) on PRs to `master`. That is why e2e alignment is its own ticket rather than skipped.
+- Ruled out: the MUI `Grid` component for the outer shell. It is a 12-column flex grid and cannot express "auto row + remaining-height row" cleanly. The shell uses MUI System CSS grid on `Box`; see the design doc, §3.
+- Ruled out: `AppBar position="fixed"`. It needs an offset spacer, and content can slide under it. The grid row already pins the header.
 
 ### Workflow
 
-> Default workflow for an agent picking up tickets from this batch. Adjust if the batch needs something different.
-> Assumes a small project with a single developer: one ticket in progress at a time, no parallel ticket branches.
+> Workflow for an agent picking up tickets from this batch. **For this batch, this plan overrides
+> [README.md](./README.md)'s default workflow, branching, and merge rules** (dev branch, ticket branches, squash-merge,
+> "Dev → master" PR). It differs from the README default mainly in two ways (the other differences, such as no
+> per-ticket `In Review` status and `Done` being set at commit time, follow from these):
+> - **Single branch, single ticket number:** all work is committed directly on the current branch
+>   `4-ui-introduce-application-grid-and-theme-setup`, and every commit uses ticket number **#4**. There are no ticket
+>   branches and no squash-merges. Ticket numbers #6–#9 only identify the ticket files for tracking; they are never used as the
+>   `#<ticket>` prefix of a commit message or in branch names. A plain-text suffix such as `(ticket 6)` is encouraged
+>   for traceability. Keep it as plain text, not `#6`: on GitHub `#6` autolinks to issue/PR #6, which is unrelated.
+> - **e2e gate:** step 5 makes ticket #9 the e2e gate for the batch (the README default skips e2e entirely).
+>
+> Assumes a small project with a single developer: one ticket in progress at a time.
 
-0. Before the first ticket starts, run `npm view picomatch version`. If it is still `4.0.7`, ask the user for the #4
-   Story 2 decision up front. #4 is first in priority order and cannot be finished without it.
 1. Pick the highest-priority ticket in the [Tickets](#tickets) table whose status is `Ready for Dev` and whose **Blocked by** tickets are all `Done`.
 2. Set its status to `In Progress` in both the ticket file and the table.
-3. Check out the dev branch, pull it, and create the ticket branch from it (see [Branching rules](#branching-rules)).
+3. Check out `4-ui-introduce-application-grid-and-theme-setup` and pull it. Do **not** create a ticket branch (see [Branching rules](#branching-rules)).
 4. Implement the ticket in its owning layer (see `CLAUDE.md` → Code Ownership), add/update tests and stories.
-5. Run verification locally — CI only runs on PRs to `master`, so the local run is the gate for ticket merges:
-   `npm run typecheck`, `npm run lint`, the narrowest test lane, then `npm run test:all` if cross-cutting.
-   Skip e2e (`npm run test:e2e*`) for now; it needs a Docker image to match the CI environment.
+5. Run verification locally — CI only runs on PRs to `master`, so the local run is the gate for each ticket's commit:
+   `npm run typecheck`, `npm run lint`, the narrowest test lane, then `npm run test:all` if cross-cutting, and
+   `npm run test:all:coverage` for tickets that add `src/ui/**` files.
+   **Deviation from the README default:** skip e2e (`npm run test:e2e*`) for tickets #6–#8; it needs a Docker image to match the CI environment. Ticket #9 is the e2e gate for this batch.
 6. Run the `code-reviewer` subagent and address findings.
-7. Commit using `<type>: #<ticket> <description>`, then set status to `In Review`.
-8. Merge into the dev branch (see [Merge rules](#merge-rules)), set status to `Done`, and unblock dependent tickets.
-9. When every ticket is `Done`, open the dev → master PR and set **Batch status** to `In Review`.
+7. Commit on `4-ui-introduce-application-grid-and-theme-setup` using `<type>: #4 <description>`. Mention the ticket file in the description, for example `feat: #4 add light/dark theme (ticket 6)`. Include the ticket's status update to `Done` in the same commit, then unblock dependent tickets.
+8. When every ticket is `Done`, push the branch, open the PR to `master`, and set **Batch status** to `In Review`.
 
 ### Branching rules
 
 | Branch | Name | Created from | Merges into |
 | --- | --- | --- | --- |
-| Dev (batch bucket) | `dev-<yyyymmdd>-<batch-slug>` | `master`, when the batch starts | `master`, once per batch |
-| Ticket | `<ticket-number>-<short-slug>` (e.g. `142-add-settings-overlay`) | the dev branch | the dev branch |
+| Batch (the only branch) | `4-ui-introduce-application-grid-and-theme-setup` (existing) | `master` | `master`, once per batch |
 
-- Use the date the batch starts, in `yyyymmdd` format, plus a short kebab-case slug of the batch goal.
-- Use a hyphen, not a slash (`dev-...`, never `dev/...`) — git cannot hold both a `dev` branch and `dev/*` branches.
-- Never branch a ticket from `master` or from another ticket branch.
-- Never commit directly to the dev branch except for plan/ticket status updates and syncing with `master`.
-- Record the dev branch name in the header of this plan before the first ticket starts.
+- All commits for tickets #6–#9, plus plan/ticket status updates, go directly on this branch.
+- Do not create ticket branches, and do not commit to `master` or any other branch.
+- Every commit message uses ticket number **#4** (from the branch name, per `CLAUDE.md` → Commits), never #6–#9:
+  `<type>: #4 <description>`.
 
 ### Merge rules
 
-- **Ticket → dev:** squash-merge, so the dev branch has exactly one commit per ticket:
-  `<type>: #<ticket> <description>`. Delete the ticket branch afterwards.
-- **Dev → master:** open a PR from the dev branch to `master` (this is where CI runs) and merge with a
-  **merge commit** (no squash, no rebase) so per-ticket commits stay in `master` history.
-  - PR title / merge commit: `merge: #<batch-issue> <batch-slug> into master`
-    (e.g. `merge: #150 settings-overlay into master`).
-  - PR description: link this plan and list the tickets included.
+- **Within the batch:** no merges except syncing with `master` (below); commits land on the batch branch in order, one or more per ticket.
+- **Batch → master:** open a PR from `4-ui-introduce-application-grid-and-theme-setup` to `master` (this is where CI
+  runs) and merge with a **merge commit** (no squash, no rebase) so the batch's commits stay in `master` history.
+  - PR title / merge commit: `merge: #4 app-shell-and-theme into master`.
+  - PR description: link this plan and the design doc, and list tickets #6–#9.
 - **Syncing with master:** single-developer assumption — `master` rarely moves during a batch. If it does,
-  merge `master` into the dev branch before starting the next ticket. Do not rebase the dev branch.
-- **After the batch merges:** delete the dev branch and set **Batch status** to `Done`.
+  merge `master` into the batch branch before starting the next ticket. Do not rebase it.
+- **After the batch merges:** delete the batch branch and set **Batch status** to `Done`.
 
 ### Exceptions
 
@@ -86,32 +99,39 @@ Clear the `npm audit` findings in the dev toolchain after the switch to Node 24.
 - A ticket requires changing the Electron security posture (`contextIsolation`, `nodeIntegration`, `sandbox`).
 - Acceptance criteria are ambiguous or contradict another ticket.
 - A direct dependency upgrade or release is needed (`/npm-upgrade`, `/release-workflow` are user-invoked only).
-  Scoped `overrides` for transitive packages are in scope.
-- An override breaks a consumer (build, packaging, Storybook, type-coverage) and can't be fixed within the ticket.
-- No patched `picomatch` exists when #4 starts, so the interim CI audit policy is the user's decision. Ask at batch
-  start (Workflow step 0), not mid-batch.
-- `1-initial-setup` is not merged into `master` yet. Do not create the dev branch from a `master` that lacks it.
-- The dev branch is behind `master` and merging `master` into it produces conflicts.
-- No dev branch is recorded in the header, or the recorded branch does not exist.
+- The batch branch is behind `master` and merging `master` into it produces conflicts.
+- The batch branch recorded in the header does not exist, or the current branch is not that branch when about to commit.
+- Adding any dependency (including `@mui/icons-material`). The menu icon must be a local SVG component.
+- Loosening the Content-Security-Policy in `index.html` (for example to load web fonts or external images).
+- The palette in the design doc's §4.2 fails WCAG AA in the Storybook a11y check (`a11y.test: 'error'` on the new stories). Ask before choosing other colors.
+
+### Open questions
+
+| # | Question | Default if unanswered | Blocks |
+| --- | --- | --- | --- |
+| 1 | ~~Keep the existing branch or create `dev-20261121-app-shell-and-theme`?~~ **Resolved:** commit everything on `4-ui-introduce-application-grid-and-theme-setup` with ticket number `#4`. | — | — |
+| 2 | Is the teal/orange palette in the design doc's §4.2 acceptable? | Use the proposal | — (#6's acceptance criteria refer to the §4.2 tokens, not hex codes, so a different palette only edits §4.2 and `src/ui/theme/constants.ts`; #6 stays `Ready for Dev`) |
+| 3 | What should the menu button open (a drawer with navigation? which items?) | Button renders, clicking does nothing; a later batch adds the behavior | — (out of scope here) |
+| 4 | Is a manual light/dark toggle wanted, or is following the OS enough? | Follow the OS only | — (out of scope here) |
 
 ### Definition of done
 
 > Applies to the batch as a whole. Each ticket also has its own Definition of Done (section 7 of the ticket template).
 
-- [ ] All tickets in the table are `Done` and squash-merged into the dev branch
-- [ ] `npm run typecheck`, `npm run lint`, and `npm run test:all` pass locally on the dev branch
-- [ ] Dev → master PR is green in CI and merged with a merge commit
-- [ ] Desktop and mobile stories exist for any changed UI
-- [ ] Documentation updated where behavior changed
-- [ ] `npm audit` lists no `glob` or `minimatch` advisories, and `picomatch` is either patched or covered by the documented #4 decision
-- [ ] `npm run deps:audit:ci` passes locally and in CI
-- [ ] `npm run build:e2e` still packages the Electron app with the expected `build.files` contents
+- [x] All tickets in the table are `Done` and committed on `4-ui-introduce-application-grid-and-theme-setup` as `<type>: #4 <description>`
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all`, and `npm run test:all:coverage` (thresholds met) pass locally on the batch branch
+- [ ] Batch → master PR is green in CI (including both e2e jobs) and merged with a merge commit
+- [x] Desktop and mobile stories exist for any changed UI, plus a dark-scheme story for the shell. The new stories pass with `a11y.test: 'error'`
+- [x] Documentation updated where behavior changed ([design doc](../docs/design/app-shell-and-theme.md) status set to `Implemented`)
+- [x] With a long list in `<main>`, on Storybook `mobile1` (320 × 568) and the e2e web portrait/landscape viewports, the header stays visible while the content scrolls, and `<body>` itself does not scroll
+- [x] `<main>` is keyboard-scrollable (`tabIndex={0}`, the second tab stop after the menu button)
+- [x] Switching the OS color scheme switches the app between the light and dark palettes without a reload
+- [x] No new runtime dependencies in `package.json`
 
 ### Tickets
 
 > - One row per ticket. Ticket files live next to this plan as `tickets/<number>-<short-slug>.md`
 >   and follow [docs/AgileTicketTemplate.md](../docs/AgileTicketTemplate.md).
-> - Link the **Ticket** cell to the ticket file.
 > - **Type:** Feature / Bug / Chore / Refactor / Test / Docs / Spike
 > - **Priority:** P0 (critical) / P1 (high) / P2 (medium) / P3 (low)
 > - **Size:** XS / S / M / L / XL
@@ -120,31 +140,22 @@ Clear the `npm audit` findings in the dev toolchain after the switch to Node 24.
 
 | Ticket | Title | Type | Priority | Size | Status | Blocked by |
 | --- | --- | --- | --- | --- | --- | --- |
-| [#4](./4-picomatch-redos-audit-gate.md) | Resolve picomatch ReDoS advisory and unblock the CI audit gate | Spike | P0 | XS | Done | — |
-| [#2](./2-remove-vulnerable-glob.md) | Remove vulnerable glob 13 from the Storybook docgen chain | Chore | P1 | S | Done | — |
-| [#3](./3-override-vulnerable-minimatch.md) | Override transitive minimatch 9.x/10.x to a patched 11.x | Chore | P1 | S | Done | 2 |
-| [#5](./5-fix-failing-unit-tests.md) | Fix the 3 failing unit tests in test:all (mock reset and jest-dom matchers) | Bug | P1 | S | Done | — |
+| [#6](./6-light-dark-theme.md) | Light/dark MUI theme that follows the OS | Feature | P1 | S | Done | — |
+| [#7](./7-app-shell-layout.md) | Two-row app shell with pinned header and scrollable main viewport | Feature | P1 | M | Done | 6 |
+| [#8](./8-header-menu-button.md) | Header menu button with a scalable SVG icon | Feature | P1 | S | Done | 7 |
+| [#9](./9-e2e-app-shell-alignment.md) | Align e2e specs and visual snapshots with the app shell | Test | P1 | S | Done | 8 |
+
+Each feature ticket is a vertical slice: it changes what the user sees, and it ships with its own translations, unit
+tests, and desktop/mobile stories, so it can be merged and demoed on its own.
 
 ### Expected end state
 
-- No user-visible change. The shipped web and Electron app is the same, because runtime dependencies were already clean.
-- `package.json` has a scoped `overrides` block: the docgen plugin under `@storybook/react-vite` (#2), and `minimatch@^11.0.1`
-  under `app-builder-lib` (which also covers `@electron/universal`) and `type-coverage-core` (#3). npm `overrides` cannot
-  hold comments, so removal conditions are tracked in [Override removal](#override-removal) below.
-- `npm audit` shows no `glob` or `minimatch` findings. `picomatch` is either patched (lockfile refresh) or explicitly handled
-  by the CI audit policy chosen in #4.
-- The CI `Dependency audit` step passes, and the dev → master PR is green.
-  *(The 3 `test:all` failures recorded in #3's Outcome turned out to be Windows-only. They happen when Vitest starts
-  from a lower-case drive letter, and [#5](./5-fix-failing-unit-tests.md) fixes them locally with `scripts/vitest.mjs`.
-  As far as known, Linux CI is not affected. That is inferred from the root cause and not yet confirmed by a CI run.)*
-- No new tests or stories. The existing `test:all`, `test:storybook`, `types:coverage` and `build:e2e` act as regression checks.
-
-### Override removal
-
-| Override (in `package.json` → `overrides`) | Added by | Remove when |
-| --- | --- | --- |
-| `@storybook/react-vite` → `@joshwooding/vite-plugin-react-docgen-typescript: ^0.9.1` | [#2](./2-remove-vulnerable-glob.md) | `@storybook/react-vite` depends on the plugin `>=0.9.0` (10.6.7 still requires `^0.7.0`) |
-| `app-builder-lib` → `minimatch@>=7.0.0 <11.0.1: ^11.0.1` (covers its own `^10` and `@electron/universal`'s `^9`) | [#3](./3-override-vulnerable-minimatch.md) | `app-builder-lib` and the `@electron/universal` version it pins both require `minimatch >=11.0.1` |
-| `type-coverage-core` → `minimatch: ^11.0.1` | [#3](./3-override-vulnerable-minimatch.md) | `type-coverage-core` allows `minimatch >=11.0.1` (2.31.2 allows up to `10`) |
-| Interim CI audit gate: `deps:audit:ci` uses `--omit=dev`, plus the informational full-audit step in `pr-tests-runner.yml` (not an override) | [#4](./4-picomatch-redos-audit-gate.md) | `picomatch > 4.0.7` ships: refresh the lockfile, drop `--omit=dev`, delete the informational step and its comment |
-
+- User-visible: the app opens to a header with `≡  Bicam` pinned at the top and an empty, scrollable main area. Colors follow the OS light/dark setting.
+- Code:
+  - `src/ui/theme/index.ts`: CSS-variables theme with light/dark palettes, AppBar defaults, and mobile-first conventions documented in JSDoc.
+  - `src/ui/components/AppShell/`, `src/ui/components/AppHeader/`, `src/ui/components/icons/MenuIcon.tsx`: each with tests and stories.
+  - `src/App.tsx`: composes `AppShell` and keeps the `document.title` sync.
+  - `src/i18n/locales/en/translation.json`: adds `header.menuButton.label`.
+  - `.storybook/preview.tsx`: a color-scheme toolbar global (light/dark/system).
+- Tests: the existing `App.test.tsx` keeps passing unchanged. It renders without `ThemeProvider`, so the new React tests render inside the app theme to cover the theme, shell, header, and icon. Storybook play tests cover Desktop/Mobile/Dark with the a11y gate. `e2e/ui/layout.spec.ts` (Electron) is rewritten and `e2e/mobile/app.spec.ts` (web) is extended with the same shell checks. The two existing visual baselines (light/dark) are regenerated.
+- No change to Electron main, security posture, CSP, or dependencies.

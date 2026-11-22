@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-/** Root application view. Currently renders only the project name. */
+import { AppHeader } from '@ui/components/AppHeader/AppHeader';
+import { AppShell } from '@ui/components/AppShell/AppShell';
+
+/** Root application view: the app shell with its header and an (empty, for now) main viewport. */
 export function App() {
   const { t } = useTranslation();
   const title = t('app.title');
@@ -12,11 +13,5 @@ export function App() {
     document.title = title;
   }, [title]);
 
-  return (
-    <Box component="main" sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', p: 2 }}>
-      <Typography variant="h3" component="h1">
-        {title}
-      </Typography>
-    </Box>
-  );
+  return <AppShell header={<AppHeader />} />;
 }

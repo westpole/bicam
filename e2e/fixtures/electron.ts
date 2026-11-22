@@ -1,11 +1,15 @@
+import { realpathSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { test as base, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
 
-/** Repository root; Electron is launched with it as the app path so `package.json#main` is used. */
-const repoRoot = path.resolve(import.meta.dirname, '..', '..');
+/**
+ * Repository root with its real on-disk casing (Electron reports `file:///E:/...` even when the shell started in
+ * `e:/...`). Electron is launched with it as the app path so `package.json#main` is used.
+ */
+const repoRoot = realpathSync.native(path.resolve(import.meta.dirname, '..', '..'));
 
 /** URL of the bundled renderer that `electron/main.ts` loads when no `--renderer-url` is given. */
 export const bundledRendererUrl = pathToFileURL(path.join(repoRoot, 'build', 'index.html')).href;

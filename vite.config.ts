@@ -2,7 +2,8 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
-import { fileURLToPath, URL } from 'node:url';
+
+import { aliases } from './aliases.config';
 
 export default defineConfig(({ mode }) => {
   const isE2E = mode === 'e2e';
@@ -55,13 +56,8 @@ export default defineConfig(({ mode }) => {
     },
   },
   resolve: {
-    alias: {
-      '@electron': fileURLToPath(new URL('./electron', import.meta.url)),
-      '@store': fileURLToPath(new URL('./src/store', import.meta.url)),
-      '@ui': fileURLToPath(new URL('./src/ui', import.meta.url)),
-      '@shared': fileURLToPath(new URL('./src/shared', import.meta.url)),
-      '@assets': fileURLToPath(new URL('./src/assets', import.meta.url)),
-    },
+    // Shared with vitest.config.ts; built from the repo root's real path (see aliases.config.ts).
+    alias: aliases,
   },
   server: {
     host: true,      // or '0.0.0.0'
