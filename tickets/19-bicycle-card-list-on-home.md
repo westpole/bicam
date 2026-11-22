@@ -1,7 +1,7 @@
 # [FEATURE] Show bicycles as a card list on the home screen
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #10)
 > **Sprint:** `10-ui-introduce-bicycle-list`
@@ -33,22 +33,22 @@ event icons (deferred, see the design doc §8.1). Cards are not clickable yet (#
 **So that** I can find a bicycle at a glance
 
 **Acceptance Criteria:**
-- [ ] Given the store holds bicycles, when `home` is shown, then `<main>` contains a list named "Bicycles"
+- [x] Given the store holds bicycles, when `home` is shown, then `<main>` contains a list named "Bicycles"
       (`home.bicycleList.label`) with one `<li>` card per bicycle, in `bicycle.allIds` order.
-- [ ] Given a card, then it is an MUI `Paper` (elevation 1) showing a 56 × 56 rounded avatar with the `DirectionsBike`
+- [x] Given a card, then it is an MUI `Paper` (elevation 1) showing a 56 × 56 rounded avatar with the `DirectionsBike`
       icon on the left and, on the right, the bicycle name (row 1) above an empty icon row that is 24px tall (row 2).
-- [ ] Given a card, then its content sits in one flex container inside the `Paper`: a `Box` with `display: 'flex'`,
+- [x] Given a card, then its content sits in one flex container inside the `Paper`: a `Box` with `display: 'flex'`,
       `alignItems: 'center'`, `gap: 2`, `p: 2` (design doc §4.1). #21 replaces this `Box` with a `ButtonBase` that keeps
       the same styles, so the card looks identical before and after.
-- [ ] Given several bicycles, then the cards are stacked vertically with a 12px gap (`spacing: 1.5`), each spanning the
+- [x] Given several bicycles, then the cards are stacked vertically with a 12px gap (`spacing: 1.5`), each spanning the
       content width.
-- [ ] Given more cards than fit, when the user scrolls, then `<main>` scrolls and the header stays put (existing shell
+- [x] Given more cards than fit, when the user scrolls, then `<main>` scrolls and the header stays put (existing shell
       behavior).
-- [ ] Edge case: a 40-character name on the 320px `mobile1` viewport stays on one line with an ellipsis, and nothing
+- [x] Edge case: a 40-character name on the 320px `mobile1` viewport stays on one line with an ellipsis, and nothing
       overflows horizontally.
-- [ ] Edge case: given no bicycles, then `home` renders nothing (no empty `<ul>`), so `<main>` looks exactly as it does
+- [x] Edge case: given no bicycles, then `home` renders nothing (no empty `<ul>`), so `<main>` looks exactly as it does
       today.
-- [ ] Given a bicycle is added, renamed, or removed through the store, then the list updates without a reload.
+- [x] Given a bicycle is added, renamed, or removed through the store, then the list updates without a reload.
 
 **Out of scope:** clicking a card (#21); event icons (deferred to the `events` batch); an empty-state message; adding bicycles from the UI.
 
@@ -60,12 +60,12 @@ event icons (deferred, see the design doc §8.1). Cards are not clickable yet (#
 **So that** components, clothes sets, and other entities can use the same card layout later
 
 **Acceptance Criteria:**
-- [ ] Given `CardList` with `items: { id, title, media }[]`, then it renders a `<ul>` (`Stack component="ul"`,
+- [x] Given `CardList` with `items: { id, title, media }[]`, then it renders a `<ul>` (`Stack component="ul"`,
       no bullets, no margin/padding) of `Paper component="li"` cards in item order.
-- [ ] Given an item's `media`, then it is rendered in an `aria-hidden` slot on the left that does not shrink.
-- [ ] Given an `aria-label` prop, then it is set on the `<ul>`.
-- [ ] `CardList` does not import anything from `src/store/**` or bicycle-specific code.
-- [ ] Props and item types are generic over the id type (`CardListItem<Id extends string = string>`), matching
+- [x] Given an item's `media`, then it is rendered in an `aria-hidden` slot on the left that does not shrink.
+- [x] Given an `aria-label` prop, then it is set on the `<ul>`.
+- [x] `CardList` does not import anything from `src/store/**` or bicycle-specific code.
+- [x] Props and item types are generic over the id type (`CardListItem<Id extends string = string>`), matching
       `VerticalList`.
 
 **Out of scope:** click handling (#21). Do not declare an `icons` field yet; it would be unused (design doc §4.1).
@@ -128,12 +128,12 @@ Text fallback for the wireframes:
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Unit tests written and passing (`npm run test:react`)
-- [ ] Desktop, Mobile, and Dark stories added and passing (`npm run test:storybook`), with `a11y.test: 'error'`
-- [ ] `npm run typecheck` and `npm run lint` pass
-- [ ] New `src/ui/**` files meet the coverage thresholds
-- [ ] `code-reviewer` subagent run and findings addressed
+- [x] All acceptance criteria met
+- [x] Unit tests written and passing (`npm run test:react`)
+- [x] Desktop, Mobile, and Dark stories added and passing (`npm run test:storybook`), with `a11y.test: 'error'`
+- [x] `npm run typecheck` and `npm run lint` pass
+- [x] New `src/ui/**` files meet the coverage thresholds
+- [x] `code-reviewer` subagent run and findings addressed
 
 ---
 

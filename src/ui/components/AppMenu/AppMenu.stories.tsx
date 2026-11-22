@@ -82,11 +82,15 @@ const meta = {
     // Once settled, the panel exactly covers <main>'s cell and focus is on the first option.
     const first = within(menu).getByRole('button', { name: 'Add bicycle' });
     await waitFor(() => expect(first).toHaveFocus());
-    const menuBox = menu.getBoundingClientRect();
-    const mainBox = main.getBoundingClientRect();
-    await expect(Math.abs(menuBox.top - mainBox.top)).toBeLessThanOrEqual(1);
-    await expect(Math.abs(menuBox.height - mainBox.height)).toBeLessThanOrEqual(1);
-    await expect(Math.abs(menuBox.width - mainBox.width)).toBeLessThanOrEqual(1);
+    // MUI's Slide ends on a timer, not on `transitionend`, so under CPU load the CSS transform can still be a few
+    // pixels short when focus moves. Wait for the panel to settle instead of measuring once.
+    await waitFor(() => {
+      const menuBox = menu.getBoundingClientRect();
+      const mainBox = main.getBoundingClientRect();
+      expect(Math.abs(menuBox.top - mainBox.top)).toBeLessThanOrEqual(1);
+      expect(Math.abs(menuBox.height - mainBox.height)).toBeLessThanOrEqual(1);
+      expect(Math.abs(menuBox.width - mainBox.width)).toBeLessThanOrEqual(1);
+    });
     await expect(within(menu).getAllByRole('button').map((button) => button.textContent)).toEqual([
       'Add bicycle',
       'Add component',
