@@ -7,5 +7,22 @@
       "label": "Open menu",
       "closeLabel": "Close menu"
     }
+  },
+  "screens": {
+    "addBicycle": {
+      "title": "Add bicycle"
+    },
+    "addComponent": {
+      "title": "Add component"
+    },
+    "addClothesSet": {
+      "title": "Add clothes set"
+    },
+    "beforeRideCheckIn": {
+      "title": "Before ride check-in"
+    },
+    "placeholder": {
+      "body": "This screen is coming soon."
+    }
   }
 }
