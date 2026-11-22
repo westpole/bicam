@@ -28,9 +28,22 @@ describe('Home', () => {
     renderHome(BICYCLES);
 
     const list = screen.getByRole('list', { name: 'Bicycles' });
-    const cards = within(list).getAllByRole('listitem');
+    const names = ['Gravel Grinder', 'Roadie', 'Commuter'];
 
-    expect(cards.map((card) => card.textContent)).toEqual(['Gravel Grinder', 'Roadie', 'Commuter']);
+    expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(list).getAllByRole('button')).toEqual(names.map((name) => within(list).getByRole('button', { name })));
+  });
+
+  it('shows an "events placeholder" second row on each card, hidden from assistive tech', () => {
+    renderHome(BICYCLES);
+
+    const placeholders = screen.getAllByText('events placeholder');
+
+    expect(placeholders).toHaveLength(3);
+    for (const placeholder of placeholders) {
+      expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+      expect(placeholder.parentElement?.previousElementSibling).toHaveClass('MuiTypography-subtitle1');
+    }
   });
 
   it('shows the DirectionsBike icon in a rounded avatar on each card', () => {

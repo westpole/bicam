@@ -104,11 +104,9 @@ describe('App', () => {
 
     const list = within(screen.getByRole('main')).getByRole('list', { name: 'Bicycles' });
 
-    expect(within(list).getAllByRole('listitem').map((card) => card.textContent)).toEqual([
-      'Gravel Grinder',
-      'Roadie',
-      'Commuter',
-    ]);
+    const names = ['Gravel Grinder', 'Roadie', 'Commuter'];
+
+    expect(within(list).getAllByRole('button')).toEqual(names.map((name) => within(list).getByRole('button', { name })));
   });
 
   it('updates the list when bicycles are added, renamed, or removed through the store', () => {
@@ -196,7 +194,9 @@ describe('App', () => {
     });
 
     const list = within(screen.getByRole('main')).getByRole('list', { name: 'Bicycles' });
-    expect(within(list).getAllByRole('listitem').map((card) => card.textContent)).toEqual(['Roadie', 'Commuter']);
+    expect(within(list).getAllByRole('button')).toEqual(
+      ['Roadie', 'Commuter'].map((name) => within(list).getByRole('button', { name })),
+    );
   });
 
   it('renders nothing on the details screen if the selection points at no stored bicycle', () => {

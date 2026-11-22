@@ -50,7 +50,9 @@ export const TEXT_COLUMN_SX: SxProps<Theme> = {
   minWidth: 0,
 };
 
-/** Second content row, reserved for event icons; keeps its height while empty so cards do not change size later. */
+/** Second content row; keeps its height while empty so cards are the same size with or without it. */
 export const SECONDARY_ROW_SX: SxProps<Theme> = {
+  display: 'flex',
+  alignItems: 'center',
   minHeight: 24,
 };

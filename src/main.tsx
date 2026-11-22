@@ -5,7 +5,13 @@ import { ThemeProvider } from '@mui/material/styles';
 
 import './i18n/config';
 import { App } from './App';
+import { installE2EHooks } from './e2eHooks';
 import { theme } from '@ui/theme';
+
+// E2E builds only (`vite build --mode e2e`). `__E2E__` is false in production builds, so this branch is removed.
+if (__E2E__) {
+  installE2EHooks();
+}
 
 const rootElement = document.getElementById('root');
 

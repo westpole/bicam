@@ -25,9 +25,13 @@ const meta = {
   play: async ({ args, canvas, canvasElement, userEvent }) => {
     const list = canvas.getByRole('list', { name: 'Bicycles' });
     const cards = within(list).getAllByRole('listitem');
-    await expect(cards.map((card) => card.textContent)).toEqual(args.bicycles.map((bicycle) => bicycle.name));
+    // Cards are named by the bicycle only; the events placeholder is hidden from assistive tech.
+    await expect(within(list).getAllByRole('button')).toEqual(
+      args.bicycles.map((bicycle) => within(list).getByRole('button', { name: bicycle.name })),
+    );
     for (const card of cards) {
       await expect(within(card).getByTestId('DirectionsBikeIcon')).toBeVisible();
+      await expect(within(card).getByText('events placeholder')).toBeVisible();
     }
 
     const doc = canvasElement.ownerDocument.documentElement;
