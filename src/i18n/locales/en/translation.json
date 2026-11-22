@@ -19,7 +19,8 @@
   },
   "home": {
     "bicycleList": {
-      "label": "Bicycles"
+      "label": "Bicycles",
+      "eventsPlaceholder": "events placeholder"
     }
   },
   "screens": {

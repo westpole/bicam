@@ -17,7 +17,7 @@ import type { CardListProps } from './types';
 
 /**
  * Reusable list of cards stacked vertically. Each card is an MUI `Paper` with an image on the left and two content
- * rows on the right: the title, and a second row reserved for icons (empty for now, but it keeps its height).
+ * rows on the right: the title, and an optional second row that keeps its height even when empty.
  * The whole card is one native `<button>` named by its title, so Enter and Space work without extra handlers.
  * Domain-agnostic: callers map their data to items.
  *
@@ -48,7 +48,9 @@ export function CardList<Id extends string = string>({
               <Typography variant="subtitle1" component="span" noWrap>
                 {item.title}
               </Typography>
-              <Box component="span" sx={SECONDARY_ROW_SX} />
+              <Box component="span" sx={SECONDARY_ROW_SX}>
+                {item.secondary}
+              </Box>
             </Box>
           </ButtonBase>
         </Paper>

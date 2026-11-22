@@ -117,6 +117,12 @@ describe('CardList', () => {
     expect(secondRow).toHaveStyle({ minHeight: '24px' });
   });
 
+  it('renders the optional secondary content in the second row', () => {
+    renderList({ items: [{ id: 'one', title: 'First', media: null, secondary: <span>Extra</span> }] });
+
+    expect(screen.getByText('First').nextElementSibling).toHaveTextContent('Extra');
+  });
+
   it('renders an empty list when there are no items', () => {
     renderList({ items: [] });
 

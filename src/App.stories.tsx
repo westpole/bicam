@@ -132,11 +132,9 @@ export const HomeWithBicycles: Story = {
     await expectClosedShell(canvas);
     const main = canvasElement.querySelector('main') as HTMLElement;
     const list = await within(main).findByRole('list', { name: 'Bicycles' });
-    await expect(within(list).getAllByRole('listitem').map((card) => card.textContent)).toEqual([
-      'Gravel Grinder',
-      'Roadie',
-      'Commuter',
-    ]);
+    await expect(within(list).getAllByRole('button')).toEqual(
+      ['Gravel Grinder', 'Roadie', 'Commuter'].map((name) => within(list).getByRole('button', { name })),
+    );
     // The list starts below the header.
     const header = canvas.getByRole('banner').getBoundingClientRect();
     await expect(list.getBoundingClientRect().top).toBeGreaterThanOrEqual(header.bottom);

@@ -8,7 +8,7 @@ Playwright tests for the web build (mobile viewports) and the Electron app. Proj
 | `electron-smoke` | `electron/` | App starts, one visible window, loads `build/index.html`, quits on last window close |
 | `electron-ui` | `ui/` | Main window layout and light/dark color scheme |
 | `electron-integration` | `integration/` | Security posture: no Node globals, `window.open`/navigation blocked, permissions denied, CSP enforced |
-| `electron-visual` | `visual/` | Screenshot baselines (Linux/Docker only) |
+| `electron-visual` | `visual/` | Screenshot baselines (Linux/Docker only), light and dark: empty home, open menu, home with the shared bicycle fixtures |
 
 ## Running locally
 
@@ -25,6 +25,7 @@ Electron tests use the fixture in `fixtures/electron.ts`:
 
 - Each test launches a fresh app with its own temporary `--user-data-dir`. This isolates storage and keeps parallel workers from tripping the app's single-instance lock.
 - `ELECTRON_RUN_AS_NODE` is removed from the environment. VS Code sets it, and it would make Electron run as plain Node.
+- To seed app state, use `window.__BICAM_E2E_STORE__` (the Zustand store; `setState`/`getState`). `src/e2eHooks.ts` sets it, and `src/main.tsx` calls that only in E2E builds (`vite build --mode e2e`), so production builds never expose it. Reuse the fixtures in `src/**/__mocks__/` rather than inventing new data (see `visual/app.spec.ts`).
 - `stubOpenExternal()` replaces `shell.openExternal` in the main process so tests never open the system browser.
 
 On the host, visual tests run but skip snapshot assertions (`ignoreSnapshots` outside Docker).

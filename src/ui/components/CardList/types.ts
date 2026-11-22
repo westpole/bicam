@@ -11,6 +11,8 @@ export interface CardListItem<Id extends string = string> {
    * `<button>`, so use phrasing elements (e.g. `Avatar component="span"`), not `<div>`s.
    */
   media: ReactNode;
+  /** Second content row (event icons later). Rendered inside the card's `<button>`, so use phrasing elements. */
+  secondary?: ReactNode;
 }
 
 /** Props for {@link CardList}. */

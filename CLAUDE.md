@@ -38,6 +38,7 @@ Run the `code-reviewer` subagent (`.claude/agents/`) before committing. A projec
 
 - Use MUI components for UI; do not add another component library or CSS framework.
 - All user-facing text goes through `t()`; add keys to the English translation file first.
+- `window.__BICAM_E2E_STORE__` (E2E builds only, set by `src/e2eHooks.ts`) is the sole store access outside `src/App.tsx`; use it only from `e2e/`.
 - Treat Zustand as the integration boundary between React and other layers. Do not duplicate shared state in React local state.
 - Before editing, identify the owning layer; if a change crosses layers, update shared store contracts first, then adapters and consumers.
 - Stories live beside components in `src/ui/components/**`; use the `storybook-expert` skill instead of inventing a new store-mocking pattern.
