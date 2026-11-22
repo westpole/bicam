@@ -1,10 +1,8 @@
 # Design: Bicycle card list
 
-> **Status:** Draft
-> **Batch:** [tickets/plan.md](../../tickets/plan.md) (#10, branch `10-ui-introduce-bicycle-list`)
-> **Tickets:** [#19 card list on home](../../tickets/19-bicycle-card-list-on-home.md) ·
-> [#20 selected bicycle in the store](../../tickets/20-store-selected-bicycle.md) ·
-> [#21 details placeholder](../../tickets/21-open-bicycle-details-from-card.md) · event icons deferred (§8.1)
+> **Status:** Implemented (event icons deferred, §8.1)
+> **Batch:** #10 (tickets #19 card list on home · #20 selected bicycle in the store · #21 details placeholder;
+> plan and ticket files removed after completion)
 > **Builds on:** [app-shell-and-theme.md](./app-shell-and-theme.md), [app-menu.md](./app-menu.md),
 > [docs/store/bicycle.md](../store/bicycle.md)
 > **Last updated:** 2026-11-22
@@ -121,8 +119,8 @@ show, so the store gets one more UI field.
 Invariant: after each action completes, `activeScreen === 'bicycleDetails'` ⇔ `selectedBicycleId` is a stored bicycle id.
 
 - **Why wrap `removeBicycle` instead of changing the slice:** each slice owns its own keys; the UI fields belong to the
-  root store (`useAppStore.ts`). The wrapper is the one place where domain and navigation state meet. Record this in
-  [docs/store/README.md](../store/README.md) §5 (Decisions) when #20 lands.
+  root store (`useAppStore.ts`). The wrapper is the one place where domain and navigation state meet. Recorded in
+  [docs/store/README.md](../store/README.md) §5 (Decisions).
 - **Two `set` calls:** the wrapper updates `bicycle` first, then the UI fields, both synchronously inside one action.
   React batches them into one render, so the UI never shows the in-between state. A non-React subscriber could see it
   for one notification; `App`'s guard (§4.5) also covers that case.
@@ -138,13 +136,13 @@ Domain-agnostic: it knows nothing about bicycles. Callers map their data to item
 ```ts
 interface CardListItem<Id extends string = string> {
   id: Id;           // React key and value passed to onItemClick
-  title: string;    // row 1; already translated or user text
-  media: ReactNode; // left image; decorative
+  title: string;    // row 1; already translated or user text; the card button's accessible name
+  media: ReactNode; // left image; decorative; phrasing elements only (it renders inside a <button>)
 }
 
 interface CardListProps<Id extends string = string> {
   items: readonly CardListItem<Id>[];
-  onItemClick: (id: Id) => void;   // added in #21
+  onItemClick: (id: Id) => void;   // click, Enter, or Space
   'aria-label'?: string;
 }
 ```
@@ -156,22 +154,21 @@ flag it). The event-icons work adds it (§8.1).
 | --- | --- | --- |
 | List | `Stack component="ul"` | `spacing: 1.5`, `listStyle: 'none'`, `m: 0`, `p: 0` (vertical stack; `<main>` already pads and scrolls) |
 | Card | `Paper component="li" elevation={1}` | `overflow: 'hidden'` so the button's ripple and focus ring follow the 8px radius |
-| Click target (#21) | `ButtonBase component="button" type="button"` | `width: '100%'`, `display: 'flex'`, `alignItems: 'center'`, `justifyContent: 'flex-start'`, `gap: 2`, `p: 2`, `textAlign: 'left'`, visible `:focus-visible` outline (`2px solid` `primary.main`, `outlineOffset: -2px`) |
-| Media slot | `Box` wrapping `media` | `flexShrink: 0`, `aria-hidden` |
-| Text column | `Box` | `minWidth: 0`, `flex: 1`, `display: 'flex'`, `flexDirection: 'column'` |
+| Click target | `ButtonBase component="button" type="button"` | `width: '100%'`, `display: 'flex'`, `alignItems: 'center'`, `justifyContent: 'flex-start'`, `gap: 2`, `p: 2`, `textAlign: 'left'`, `borderRadius: 'inherit'`, visible `:focus-visible` outline (`2px solid` `primary.main`, `outlineOffset: -2px`) that follows the rounded corners |
+| Media slot | `Box component="span"` wrapping `media` | `flexShrink: 0`, `aria-hidden` |
+| Text column | `Box component="span"` | `minWidth: 0`, `flex: 1`, `display: 'flex'`, `flexDirection: 'column'` |
 | Row 1 | `Typography variant="subtitle1" component="span" noWrap` | Ellipsis for long names; the full name stays the accessible name |
-| Row 2 | `Box` | `minHeight: 24`; empty in this batch |
+| Row 2 | `Box component="span"` | `minHeight: 24`; empty until event icons are added (§8.1) |
 
-- Before #21 the flex container is a plain `Box` with the same layout styles (`display: 'flex'`,
-  `alignItems: 'center'`, `gap: 2`, `p: 2`); #21 replaces that `Box` with `ButtonBase` and adds the button-only styles
-  (`width`, `justifyContent`, `textAlign`, focus outline).
+- Everything inside the button is a `<span>` (including the avatar), because a `<button>` may only contain phrasing
+  content.
 - Enter/Space work because the click target is a native `<button>`. The card is ≥ 88px tall, well above the 44px touch
   target.
 - Empty `items` renders an empty `<ul>`; whether to render the list at all is the caller's choice (see §4.3).
 
 ### 4.2 `BicycleAvatar` media
 
-The left image for a bicycle card: `Avatar variant="rounded"` 56 × 56, `bgcolor: 'primary.main'`,
+The left image for a bicycle card: `Avatar component="span" variant="rounded"` 56 × 56, `bgcolor: 'primary.main'`,
 `color: 'primary.contrastText'`, containing `DirectionsBike` (`fontSize: 32`). Decorative (inside the `aria-hidden`
 media slot). It lives next to the `Home` screen (`screens/Home/BicycleAvatar.tsx`) because only bicycle cards use it.
 
@@ -186,7 +183,7 @@ When real bicycle photos exist, this becomes `Avatar src=…` with the icon as t
 | Prop | Type | Notes |
 | --- | --- | --- |
 | `bicycles` | `readonly Bicycle[]` | In display order (`allIds`). Type-only import from `@store/bicycle/types`. |
-| `onBicycleClick` | `(id: BicycleId) => void` | Added in #21. |
+| `onBicycleClick` | `(id: BicycleId) => void` | Passed to `CardList` as `onItemClick`. |
 
 - Maps each bicycle to `{ id, title: bicycle.name, media: <BicycleAvatar /> }` and renders
   `<CardList aria-label={t('home.bicycleList.label')} … />`.
@@ -194,7 +191,7 @@ When real bicycle photos exist, this becomes `Avatar src=…` with the icon as t
   baselines do not change. An empty-state message is an open question (§8).
 - `home` stays out of `SCREEN_COMPONENTS` because it needs props; `App` renders it directly.
 
-### 4.4 `BicycleDetails` screen (`src/ui/components/screens/BicycleDetails/`) — ticket #21
+### 4.4 `BicycleDetails` screen (`src/ui/components/screens/BicycleDetails/`)
 
 | Prop | Type | Notes |
 | --- | --- | --- |
@@ -207,21 +204,23 @@ No new translation keys.
 
 ```tsx
 const bicycleCollection = useAppStore((s) => s.bicycle);           // stable reference until it changes
-const selectedBicycleId = useAppStore((s) => s.selectedBicycleId);  // #21
+const selectedBicycleId = useAppStore((s) => s.selectedBicycleId);
 const openBicycleDetails = useAppStore((s) => s.openBicycleDetails);
 
 const bicycles = useMemo(
   () => bicycleCollection.allIds.map((id) => bicycleCollection.byId[id]),
   [bicycleCollection],
 );
-const selectedBicycle = selectedBicycleId ? bicycleCollection.byId[selectedBicycleId] : undefined;
+// The selection may briefly point at a removed bicycle, so the details screen is only rendered when it resolves.
+const selectedBicycle = selectedBicycleId === null ? undefined : bicycleCollection.byId[selectedBicycleId];
 
-let screen: ReactNode;
-if (activeScreen === 'home') screen = <Home bicycles={bicycles} onBicycleClick={openBicycleDetails} />;
-// The store invariant (§3) keeps selectedBicycle defined here; the guard only covers the in-between notification of
-// the removeBicycle wrapper, which the types cannot rule out.
-else if (activeScreen === 'bicycleDetails') screen = selectedBicycle && <BicycleDetails name={selectedBicycle.name} />;
-else { const Screen = SCREEN_COMPONENTS[activeScreen]; screen = <Screen />; }
+const isMenuScreen = activeScreen !== 'home' && activeScreen !== 'bicycleDetails';
+const ActiveScreen = isMenuScreen ? SCREEN_COMPONENTS[activeScreen] : null;
+
+// inside <AppShell>:
+{ActiveScreen && <ActiveScreen />}
+{activeScreen === 'home' && <Home bicycles={bicycles} onBicycleClick={openBicycleDetails} />}
+{activeScreen === 'bicycleDetails' && selectedBicycle && <BicycleDetails name={selectedBicycle.name} />}
 ```
 
 Selecting the whole `bicycle` slice and mapping it in `useMemo` follows the store rule in

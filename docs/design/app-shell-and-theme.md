@@ -149,7 +149,8 @@ Storybook a11y setting is `test: 'todo'` (warn only), so stories added in this b
 - Fill is `currentColor`, so the icon picks up the AppBar text color in both schemes. Size is in `em` (`fontSize`
   `small | medium | large` or an `sx` value), so it scales with CSS and stays crisp at any DPI.
 - Decorative: `SvgIcon` sets `aria-hidden`. The accessible name comes from the `IconButton`'s `aria-label`.
-- No new dependency: `@mui/icons-material` is **not** added just for one icon.
+- No new dependency: `@mui/icons-material` is **not** added just for one icon. (Since added for the bicycle card
+  image: see [bicycle-card-list.md](./bicycle-card-list.md) §6.)
 - Allowed by the current CSP, because an inline SVG is DOM rather than an `img-src` request.
 
 ## 6. Accessibility and i18n

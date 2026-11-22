@@ -127,7 +127,8 @@ A thin wrapper over MUI `List` that renders items stacked vertically, each as a 
 
 Same approach as `MenuIcon`: `createSvgIcon`, inline 24 × 24 SVG, `currentColor`, decorative (`aria-hidden`). Path:
 `M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z` (an `X` made of
-two crossing bars). `@mui/icons-material` is still not added.
+two crossing bars). `@mui/icons-material` is still not added. (Since added for the bicycle card image: see
+[bicycle-card-list.md](./bicycle-card-list.md) §6; `MenuIcon` and `CloseIcon` stay hand-made.)
 
 ### 4.3 `AppHeader` changes
 
