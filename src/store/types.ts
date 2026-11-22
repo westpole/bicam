@@ -1,3 +1,5 @@
+import type { BicycleActions, BicycleCollection } from './bicycle/types';
+
 /**
  * Top-level screens shown in the `<main>` viewport. `home` is the start screen (empty for now); the others are
  * the destinations of the app menu.
@@ -7,16 +9,27 @@ export type ScreenView = 'home' | 'addBicycle' | 'addComponent' | 'addClothesSet
 /** Screens reachable from the app menu (every screen except `home`). */
 export type MenuScreen = Exclude<ScreenView, 'home'>;
 
-/** Data held by {@link useAppStore}. */
+/** Placeholder type for a domain slice that is not implemented yet: an empty object that holds nothing. */
+export type ReservedSlice = Readonly<Record<string, never>>;
+
+/** Data held by {@link useAppStore}. Structure documented in `docs/store/README.md`. */
 export interface AppStoreState {
   /** Whether the app menu screen is open. */
   isMenuOpen: boolean;
   /** The screen rendered in `<main>`. */
   activeScreen: ScreenView;
+  /** The user's bicycles. */
+  bicycle: BicycleCollection;
+  /** Reserved for maintenance and ride events. */
+  events: ReservedSlice;
+  /** Reserved for components. */
+  components: ReservedSlice;
+  /** Reserved for the change and maintenance log. */
+  history: ReservedSlice;
 }
 
-/** Actions exposed by {@link useAppStore}. */
-export interface AppStoreActions {
+/** Actions exposed by {@link useAppStore}: UI actions plus the bicycle actions. */
+export interface AppStoreActions extends BicycleActions {
   /** Opens the app menu. Idempotent. */
   openMenu: () => void;
   /** Closes the app menu. Idempotent. */
@@ -25,7 +38,7 @@ export interface AppStoreActions {
   toggleMenu: () => void;
   /** Shows `screen` in `<main>` and closes the menu in the same update. */
   navigateTo: (screen: ScreenView) => void;
-  /** Restores the initial state. */
+  /** Restores the initial state, including all domain data. */
   reset: () => void;
 }
 
