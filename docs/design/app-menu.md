@@ -1,10 +1,8 @@
 # Design: App menu screen
 
-> **Status:** Approved for implementation
-> **Batch:** [tickets/plan.md](../../tickets/plan.md) (#6)
-> **Tickets:** [#10 store](../../tickets/10-app-store-menu-state.md) · [#11 vertical list](../../tickets/11-vertical-list-component.md) ·
-> [#12 header toggle](../../tickets/12-header-menu-toggle.md) · [#13 placeholders](../../tickets/13-menu-screen-placeholders.md) ·
-> [#14 menu screen](../../tickets/14-app-menu-screen.md) · [#15 wiring](../../tickets/15-wire-menu-into-app.md)
+> **Status:** Implemented
+> **Batch:** #6 (tickets #10 store · #11 vertical list · #12 header toggle · #13 placeholders · #14 menu screen ·
+> #15 wiring; plan and ticket files removed after completion)
 > **Builds on:** [app-shell-and-theme.md](./app-shell-and-theme.md)
 > **Last updated:** 2026-11-21
 
@@ -117,7 +115,7 @@ A thin wrapper over MUI `List` that renders items stacked vertically, each as a 
 | --- | --- | --- |
 | `items` | `readonly VerticalListItem[]` (`{ id: string; label: string }`) | Rendered in order. `id` is the React key and the value passed to `onItemClick`. |
 | `onItemClick` | `(id: string) => void` | Called with the clicked item's `id`. Enter/Space work because each row is a real `<button>` (`ListItemButton`). |
-| `selectedId` | `string` (optional) | The matching row gets MUI `selected` styling **and** `aria-current="page"`, so the state is not shown by color alone. |
+| `selectedId` | `string` (optional) | The matching row gets MUI `selected` styling **and** `aria-current="page"`, so the state is not shown by color alone. Typed as plain `string` so callers can pass a value that matches no row (the menu passes `home`). |
 | `aria-label` | `string` (optional) | Passed to the `<ul>` for screen readers. |
 | `dense`, `divided` | `boolean` (optional) | `divided` adds a bottom divider to each row (used by the menu); `dense` is MUI's compact density. |
 
@@ -136,6 +134,7 @@ two crossing bars). `@mui/icons-material` is still not added.
 | Prop | Change |
 | --- | --- |
 | `menuOpen?: boolean` | New, default `false`. Chooses the icon and the label. |
+| `menuId?: string` | New. Set as `aria-controls`; `App` passes `APP_MENU_ID`, so the header does not import the menu's constants. Omitted → no `aria-controls`. |
 | `onMenuClick?: () => void` | Unchanged. |
 
 | State | Icon | `aria-label` | `aria-expanded` | `aria-controls` |
@@ -164,7 +163,7 @@ blocks clicks on `<main>`; the panel sets `pointerEvents: 'auto'`). `<main>` get
 | `open` | `boolean` | Drives the transition. |
 | `activeScreen` | `ScreenView` | Passed to `VerticalList` as `selectedId`. |
 | `onSelect` | `(screen: MenuScreen) => void` | Called with the chosen option. |
-| `onClose` | `() => void` | Called on <kbd>Escape</kbd>. |
+| `onClose` | `() => void` | Called on <kbd>Escape</kbd> anywhere in the document while the menu is open (a `keydown` listener added only while `open`), so it also works when focus is on the header button. |
 
 - Options come from `MENU_ITEMS` in `AppMenu/constants.ts`: an ordered array of `{ id: MenuScreen, labelKey }` where
   `MenuScreen = Exclude<ScreenView, 'home'>`. Labels are translated at render time.
@@ -176,9 +175,11 @@ blocks clicks on `<main>`; the panel sets `pointerEvents: 'auto'`). `<main>` get
     ease-out curve. Using the theme token instead of the bare `ease-out` keyword keeps all motion in one place.
   - `container` is the overlay box, so the slide distance is the box's height (it starts right above the box's top
     edge, hidden by the box's clipping).
-  - `prefers-reduced-motion: reduce` → `timeout={0}` (the menu appears and disappears without movement).
+  - `prefers-reduced-motion: reduce` → `timeout={0}` (the menu appears and disappears without movement). Read with
+    `useMediaQuery(..., { noSsr: true })` so the very first open already respects it.
   - Closed = unmounted, so menu items are never in the tab order or the accessibility tree when hidden.
-- Focus: after the enter transition, focus moves to the first menu option. On exit, if focus was inside the menu (or
+- Focus: after the enter transition, focus moves to the first menu option, unless the user already moved focus
+  elsewhere during the slide. On exit, if focus was inside the menu (or
   was dropped to `<body>` when the panel unmounted), it returns to the element that had focus when the menu opened
   (normally the menu button). No focus trap: the header button stays reachable to close the menu, and `<main>` is
   `inert`.
@@ -205,7 +206,7 @@ props down:
 
 ```tsx
 <AppShell
-  header={<AppHeader menuOpen={isMenuOpen} onMenuClick={toggleMenu} />}
+  header={<AppHeader menuOpen={isMenuOpen} menuId={APP_MENU_ID} onMenuClick={toggleMenu} />}
   overlay={<AppMenu open={isMenuOpen} activeScreen={activeScreen} onSelect={navigateTo} onClose={closeMenu} />}
   overlayOpen={isMenuOpen}
 >
