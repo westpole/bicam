@@ -99,7 +99,7 @@ Normalization (`normalizeBicycleInput`) runs before validation and returns `Bicy
 | --- | --- | --- |
 | `addBicycle(input: BicycleInput)` | `BicycleResult` | Normalizes and validates `input`, then generates an `id`, stores the bicycle, and appends the id to `allIds`. Fails with `{ field: 'name', code: 'duplicate' }` when another bicycle has the same name (case-insensitive). No id is generated on failure. |
 | `updateBicycle(id: BicycleId, changes: BicycleUpdate)` | `BicycleResult` | `BicycleUpdate` is `Partial<BicycleInput>`. Merges `changes` into the stored bicycle, then normalizes and validates the result. Renaming is allowed: the new name must not match another bicycle's name (changing the case of its own name is fine). The `id` and position in `allIds` are kept. Fails with `{ field: 'id', code: 'notFound' }` for an unknown id. Passing `null` (or blank text) clears an optional field; omitting a key, or passing `undefined`, leaves it unchanged. An `id` key in `changes` is ignored. |
-| `removeBicycle(id: BicycleId)` | `boolean` | Removes the bicycle from `byId` and `allIds`. Returns `false` (and leaves state unchanged) for an unknown id. |
+| `removeBicycle(id: BicycleId)` | `boolean` | Removes the bicycle from `byId` and `allIds`. Returns `false` (and leaves state unchanged) for an unknown id. When the removed bicycle is the one on the details screen (`selectedBicycleId`), the store's wrapper in `useAppStore.ts` also sets `selectedBicycleId: null` and `activeScreen: 'home'` (see [README.md](./README.md) §5). |
 
 Ids are matched exactly. Name clashes are checked case-insensitively. A failed action never changes state.
 

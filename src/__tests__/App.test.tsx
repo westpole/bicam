@@ -145,4 +145,14 @@ describe('App', () => {
     expect(within(main).getByRole('heading', { level: 2, name: 'Add bicycle' })).toBeInTheDocument();
     expect(within(main).queryByRole('list', { name: 'Bicycles' })).not.toBeInTheDocument();
   });
+
+  it('shows neither the bicycle list nor a menu screen on the details screen (placeholder comes in ticket 21)', () => {
+    useAppStore.setState({ bicycle: toBicycleCollection(BICYCLES) });
+    act(() => {
+      useAppStore.getState().openBicycleDetails(BICYCLES[1].id);
+    });
+    render(<App />);
+
+    expect(screen.getByRole('main')).toBeEmptyDOMElement();
+  });
 });

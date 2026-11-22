@@ -1,7 +1,7 @@
 # [FEATURE] Track the selected bicycle in the store
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #10)
 > **Sprint:** `10-ui-introduce-bicycle-list`
@@ -34,17 +34,17 @@ UI (#21) can open the details screen for one bicycle and the store guarantees th
 **So that** the details screen can never show the wrong or a missing bicycle
 
 **Acceptance Criteria:**
-- [ ] `ScreenView` stays a literal union and adds `'bicycleDetails'`:
+- [x] `ScreenView` stays a literal union and adds `'bicycleDetails'`:
       `'home' | 'addBicycle' | 'addComponent' | 'addClothesSet' | 'beforeRideCheckIn' | 'bicycleDetails'`.
-- [ ] `MenuScreen` becomes `Exclude<ScreenView, 'home' | 'bicycleDetails'>`, so the menu still lists exactly its four
+- [x] `MenuScreen` becomes `Exclude<ScreenView, 'home' | 'bicycleDetails'>`, so the menu still lists exactly its four
       options.
-- [ ] New root UI field `selectedBicycleId: BicycleId | null`, `null` in `INITIAL_APP_STATE`.
-- [ ] New action `openBicycleDetails(id): boolean`: for a stored id it sets `activeScreen: 'bicycleDetails'`,
+- [x] New root UI field `selectedBicycleId: BicycleId | null`, `null` in `INITIAL_APP_STATE`.
+- [x] New action `openBicycleDetails(id): boolean`: for a stored id it sets `activeScreen: 'bicycleDetails'`,
       `selectedBicycleId: id`, `isMenuOpen: false` in one update and returns `true`.
-- [ ] Edge case: for an unknown id (including `'__proto__'` / `'toString'`, checked with `hasBicycle`)
+- [x] Edge case: for an unknown id (including `'__proto__'` / `'toString'`, checked with `hasBicycle`)
       `openBicycleDetails` returns `false` and changes nothing.
-- [ ] `navigateTo(screen)` takes `Exclude<ScreenView, 'bicycleDetails'>` and also sets `selectedBicycleId: null`.
-- [ ] `reset()` restores `selectedBicycleId: null`.
+- [x] `navigateTo(screen)` takes `Exclude<ScreenView, 'bicycleDetails'>` and also sets `selectedBicycleId: null`.
+- [x] `reset()` restores `selectedBicycleId: null`.
 
 **Out of scope:** any UI change (#21); persisting the selection (it is UI state; when persistence arrives it is excluded
 by `partialize`).
@@ -57,12 +57,12 @@ by `partialize`).
 **So that** I never see a details screen for a bicycle that no longer exists
 
 **Acceptance Criteria:**
-- [ ] Given `activeScreen: 'bicycleDetails'` with `selectedBicycleId: X`, when `removeBicycle(X)` succeeds, then
+- [x] Given `activeScreen: 'bicycleDetails'` with `selectedBicycleId: X`, when `removeBicycle(X)` succeeds, then
       `selectedBicycleId` is `null` and `activeScreen` is `'home'`, and it returns `true`.
-- [ ] Given the same state, when `removeBicycle(Y)` removes a different bicycle, then the selection and screen are
+- [x] Given the same state, when `removeBicycle(Y)` removes a different bicycle, then the selection and screen are
       unchanged.
-- [ ] Given an unknown id, `removeBicycle` still returns `false` and changes nothing.
-- [ ] The bicycle slice (`src/store/bicycle/createBicycleSlice.ts`) is **not** changed: the navigation reset lives in a
+- [x] Given an unknown id, `removeBicycle` still returns `false` and changes nothing.
+- [x] The bicycle slice (`src/store/bicycle/createBicycleSlice.ts`) is **not** changed: the navigation reset lives in a
       `removeBicycle` wrapper in `src/store/useAppStore.ts`.
 
 **Out of scope:** a confirmation dialog or any UI for deleting bicycles.
@@ -121,11 +121,11 @@ No visual assets (store-only ticket).
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Store tests written and passing (`npm run test:store`); `src/store/**` meets the 90% branch threshold
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:react` pass
-- [ ] Store docs updated
-- [ ] `code-reviewer` subagent run and findings addressed
+- [x] All acceptance criteria met
+- [x] Store tests written and passing (`npm run test:store`); `src/store/**` meets the 90% branch threshold
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:react` pass
+- [x] Store docs updated
+- [x] `code-reviewer` subagent run and findings addressed
 
 ---
 

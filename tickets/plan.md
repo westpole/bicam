@@ -138,7 +138,7 @@ cleanup on removal). Inside a ticket, follow the `CLAUDE.md` order: store contra
 | Ticket | Title | Type | Priority | Size | Status | Blocked by |
 | --- | --- | --- | --- | --- | --- | --- |
 | [#19](./19-bicycle-card-list-on-home.md) | Show bicycles as a card list on the home screen | Feature | P1 | M | Done | — |
-| [#20](./20-store-selected-bicycle.md) | Track the selected bicycle in the store | Feature | P1 | S | Ready for Dev | — |
+| [#20](./20-store-selected-bicycle.md) | Track the selected bicycle in the store | Feature | P1 | S | Done | — |
 | [#21](./21-open-bicycle-details-from-card.md) | Open a Bicycle details placeholder from a card | Feature | P1 | M | Ready for Dev | 19, 20 |
 
 ### Expected end state

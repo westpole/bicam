@@ -39,7 +39,9 @@ export function App() {
     document.title = title;
   }, [title]);
 
-  const ActiveScreen = activeScreen === 'home' ? null : SCREEN_COMPONENTS[activeScreen];
+  // `home` and `bicycleDetails` are not menu screens. The details screen renders nothing until ticket 21 adds it.
+  const isMenuScreen = activeScreen !== 'home' && activeScreen !== 'bicycleDetails';
+  const ActiveScreen = isMenuScreen ? SCREEN_COMPONENTS[activeScreen] : null;
 
   return (
     <AppShell
@@ -47,7 +49,8 @@ export function App() {
       overlay={<AppMenu open={isMenuOpen} activeScreen={activeScreen} onSelect={navigateTo} onClose={closeMenu} />}
       overlayOpen={isMenuOpen}
     >
-      {ActiveScreen ? <ActiveScreen /> : <Home bicycles={bicycles} />}
+      {ActiveScreen && <ActiveScreen />}
+      {activeScreen === 'home' && <Home bicycles={bicycles} />}
     </AppShell>
   );
 }
