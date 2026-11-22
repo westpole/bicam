@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import Box from '@mui/material/Box';
-import { expect, waitFor, within } from 'storybook/test';
+import { expect, fn, waitFor, within } from 'storybook/test';
 
 import { BICYCLES, LONG_NAME_BICYCLE, MANY_BICYCLES } from './__mocks__/bicycles';
 import { Home } from './Home';
@@ -21,8 +21,8 @@ const meta = {
       </Box>
     ),
   ],
-  args: { bicycles: BICYCLES },
-  play: async ({ args, canvas, canvasElement }) => {
+  args: { bicycles: BICYCLES, onBicycleClick: fn() },
+  play: async ({ args, canvas, canvasElement, userEvent }) => {
     const list = canvas.getByRole('list', { name: 'Bicycles' });
     const cards = within(list).getAllByRole('listitem');
     await expect(cards.map((card) => card.textContent)).toEqual(args.bicycles.map((bicycle) => bicycle.name));
@@ -32,6 +32,10 @@ const meta = {
 
     const doc = canvasElement.ownerDocument.documentElement;
     await expect(doc.scrollWidth).toBeLessThanOrEqual(doc.clientWidth);
+
+    const first = args.bicycles[0];
+    await userEvent.click(canvas.getByRole('button', { name: first.name }));
+    await expect(args.onBicycleClick).toHaveBeenCalledWith(first.id);
   },
 } satisfies Meta<typeof Home>;
 

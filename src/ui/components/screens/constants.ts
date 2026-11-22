@@ -8,8 +8,9 @@ import { AddComponent } from './AddComponent/AddComponent';
 import { BeforeRideCheckIn } from './BeforeRideCheckIn/BeforeRideCheckIn';
 
 /**
- * The component rendered in `<main>` for each screen reachable from the app menu. `home` has no entry on purpose:
- * `App` renders the `Home` screen itself because it needs props (the user's bicycles).
+ * The component rendered in `<main>` for each screen reachable from the app menu. `home` and `bicycleDetails` have
+ * no entry on purpose: `App` renders `Home` and `BicycleDetails` itself because they need props (the user's bicycles,
+ * the selected bicycle).
  */
 export const SCREEN_COMPONENTS: Readonly<Record<MenuScreen, ComponentType>> = {
   addBicycle: AddBicycle,

@@ -6,12 +6,14 @@ import { AppHeader } from '@ui/components/AppHeader/AppHeader';
 import { AppMenu } from '@ui/components/AppMenu/AppMenu';
 import { APP_MENU_ID } from '@ui/components/AppMenu/constants';
 import { AppShell } from '@ui/components/AppShell/AppShell';
+import { BicycleDetails } from '@ui/components/screens/BicycleDetails/BicycleDetails';
 import { SCREEN_COMPONENTS } from '@ui/components/screens/constants';
 import { Home } from '@ui/components/screens/Home/Home';
 
 /**
  * Root application view: the app shell with its header, the app menu in the shell's overlay slot, and the active
- * screen in the main viewport (on `home`, the user's bicycles as cards; empty when there are none).
+ * screen in the main viewport: on `home`, the user's bicycles as cards (empty when there are none); on
+ * `bicycleDetails`, the selected bicycle's details placeholder; otherwise the chosen menu screen.
  *
  * `App` is the only component that reads `useAppStore`; it passes state and actions down as props, so the header,
  * menu, and screens stay presentational.
@@ -24,9 +26,11 @@ export function App() {
   const isMenuOpen = useAppStore((state) => state.isMenuOpen);
   const activeScreen = useAppStore((state) => state.activeScreen);
   const bicycleCollection = useAppStore((state) => state.bicycle);
+  const selectedBicycleId = useAppStore((state) => state.selectedBicycleId);
   const toggleMenu = useAppStore((state) => state.toggleMenu);
   const closeMenu = useAppStore((state) => state.closeMenu);
   const navigateTo = useAppStore((state) => state.navigateTo);
+  const openBicycleDetails = useAppStore((state) => state.openBicycleDetails);
 
   // Select the whole slice (a stable reference until it changes) and map it here, so the selector never returns a
   // new array on each call.
@@ -35,11 +39,14 @@ export function App() {
     [bicycleCollection],
   );
 
+  // The selection may briefly point at a removed bicycle, so the details screen is only rendered when it resolves.
+  const selectedBicycle = selectedBicycleId === null ? undefined : bicycleCollection.byId[selectedBicycleId];
+
   useEffect(() => {
     document.title = title;
   }, [title]);
 
-  // `home` and `bicycleDetails` are not menu screens. The details screen renders nothing until ticket 21 adds it.
+  // `home` and `bicycleDetails` are not menu screens: they are rendered below with props.
   const isMenuScreen = activeScreen !== 'home' && activeScreen !== 'bicycleDetails';
   const ActiveScreen = isMenuScreen ? SCREEN_COMPONENTS[activeScreen] : null;
 
@@ -50,7 +57,8 @@ export function App() {
       overlayOpen={isMenuOpen}
     >
       {ActiveScreen && <ActiveScreen />}
-      {activeScreen === 'home' && <Home bicycles={bicycles} />}
+      {activeScreen === 'home' && <Home bicycles={bicycles} onBicycleClick={openBicycleDetails} />}
+      {activeScreen === 'bicycleDetails' && selectedBicycle && <BicycleDetails name={selectedBicycle.name} />}
     </AppShell>
   );
 }

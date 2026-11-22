@@ -1,9 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
-import { expect, waitFor, within } from 'storybook/test';
+import { expect, fn, waitFor, within } from 'storybook/test';
 
 import { CardList } from './CardList';
+
+/** 56 × 56 rounded square in the primary color, like the real bicycle avatar. */
+const LETTER_MEDIA_SX = { width: 56, height: 56, bgcolor: 'primary.main', color: 'primary.contrastText' } as const;
 
 /**
  * Neutral stand-in image, so the generic component's stories do not depend on any domain icon.
@@ -13,7 +16,7 @@ import { CardList } from './CardList';
  */
 function LetterMedia({ letter }: { letter: string }) {
   return (
-    <Avatar variant="rounded" sx={{ width: 56, height: 56, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
+    <Avatar component="span" variant="rounded" sx={LETTER_MEDIA_SX}>
       {letter}
     </Avatar>
   );
@@ -42,8 +45,9 @@ const meta = {
       { id: 'cassette', title: 'Cassette', media: <LetterMedia letter="K" /> },
       { id: 'brakePads', title: 'Brake pads', media: <LetterMedia letter="B" /> },
     ],
+    onItemClick: fn(),
   },
-  play: async ({ args, canvas, canvasElement }) => {
+  play: async ({ args, canvas, canvasElement, userEvent }) => {
     const list = canvas.getByRole('list', { name: 'Example cards' });
     const cards = within(list).getAllByRole('listitem');
     await expect(cards).toHaveLength(args.items.length);
@@ -64,9 +68,31 @@ const meta = {
     const title = within(cards[0]).getByText(args.items[0].title);
     await expect(media.getBoundingClientRect().right).toBeLessThanOrEqual(title.getBoundingClientRect().left);
 
+    // Each card is one button that fills its Paper and is named by its title.
+    for (const [index, card] of cards.entries()) {
+      const button = within(card).getByRole('button', { name: args.items[index].title });
+      await expect(Math.abs(button.getBoundingClientRect().width - boxes[index].width)).toBeLessThanOrEqual(1);
+    }
+
     // Nothing overflows horizontally, even on the narrowest viewport.
     const doc = canvasElement.ownerDocument.documentElement;
     await expect(doc.scrollWidth).toBeLessThanOrEqual(doc.clientWidth);
+
+    // Click and keyboard both report the card's id; keyboard focus shows an outline.
+    const last = args.items[args.items.length - 1];
+    await userEvent.click(canvas.getByRole('button', { name: last.title }));
+    await expect(args.onItemClick).toHaveBeenLastCalledWith(last.id);
+    await userEvent.tab();
+    await userEvent.tab({ shift: true });
+    const focused = canvas.getByRole('button', { name: last.title });
+    await expect(focused).toHaveFocus();
+    await expect(getComputedStyle(focused).outlineStyle).toBe('solid');
+    // The outline follows the card's rounded corners.
+    await expect(getComputedStyle(focused).borderRadius).toBe(getComputedStyle(cards[cards.length - 1]).borderRadius);
+    await userEvent.keyboard('{Enter}');
+    await expect(args.onItemClick).toHaveBeenCalledTimes(2);
+    await userEvent.keyboard(' ');
+    await expect(args.onItemClick).toHaveBeenCalledTimes(3);
   },
 } satisfies Meta<typeof CardList>;
 

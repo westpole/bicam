@@ -1,5 +1,6 @@
 import { ThemeProvider } from '@mui/material/styles';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { theme } from '@ui/theme';
 
@@ -11,12 +12,13 @@ import type { HomeProps } from './types';
  * Renders the home screen inside the app theme.
  *
  * @param bicycles - The bicycles to show.
+ * @param onBicycleClick - Card click handler.
  * @returns The Testing Library render result.
  */
-function renderHome(bicycles: HomeProps['bicycles']) {
+function renderHome(bicycles: HomeProps['bicycles'], onBicycleClick: HomeProps['onBicycleClick'] = vi.fn()) {
   return render(
     <ThemeProvider theme={theme}>
-      <Home bicycles={bicycles} />
+      <Home bicycles={bicycles} onBicycleClick={onBicycleClick} />
     </ThemeProvider>,
   );
 }
@@ -46,6 +48,15 @@ describe('Home', () => {
     renderHome([LONG_NAME_BICYCLE]);
 
     expect(screen.getByText(LONG_NAME_BICYCLE.name)).toBeInTheDocument();
+  });
+
+  it("reports the bicycle's id when its card is activated", async () => {
+    const onBicycleClick = vi.fn();
+    renderHome(BICYCLES, onBicycleClick);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Roadie' }));
+
+    expect(onBicycleClick).toHaveBeenCalledWith(BICYCLES[1].id);
   });
 
   it('renders nothing when there are no bicycles', () => {

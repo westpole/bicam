@@ -1,5 +1,6 @@
 import { ThemeProvider } from '@mui/material/styles';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { theme } from '@ui/theme';
 
@@ -23,7 +24,7 @@ type ItemId = (typeof ITEMS)[number]['id'];
 function renderList(props: Partial<CardListProps<ItemId>> = {}) {
   return render(
     <ThemeProvider theme={theme}>
-      <CardList<ItemId> aria-label="Things" items={ITEMS} {...props} />
+      <CardList<ItemId> aria-label="Things" items={ITEMS} onItemClick={vi.fn()} {...props} />
     </ThemeProvider>,
   );
 }
@@ -56,6 +57,41 @@ describe('CardList', () => {
 
     expect(list).toHaveStyle({ listStyle: 'none', margin: '0px', padding: '0px' });
     expect(list).toHaveStyle({ flexDirection: 'column' });
+  });
+
+  it('makes each card one native button that fills the Paper and is named by its title', () => {
+    renderList();
+
+    const cards = screen.getAllByRole('listitem');
+
+    cards.forEach((card, index) => {
+      const button = within(card).getByRole('button');
+
+      expect(button.tagName).toBe('BUTTON');
+      expect(button).toHaveAttribute('type', 'button');
+      expect(button).toHaveAccessibleName(ITEMS[index].title);
+      expect(button.parentElement).toBe(card);
+      expect(button).toHaveStyle({ width: '100%', textAlign: 'left' });
+      // Only phrasing content inside the button.
+      expect(button.querySelector('div')).toBeNull();
+    });
+  });
+
+  it('reports the activated card by click, Enter, and Space', async () => {
+    const onItemClick = vi.fn();
+    renderList({ onItemClick });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Second' }));
+    expect(onItemClick).toHaveBeenLastCalledWith('two');
+
+    screen.getByRole('button', { name: 'Third' }).focus();
+    await userEvent.keyboard('{Enter}');
+    expect(onItemClick).toHaveBeenLastCalledWith('three');
+
+    screen.getByRole('button', { name: 'First' }).focus();
+    await userEvent.keyboard(' ');
+    expect(onItemClick).toHaveBeenLastCalledWith('one');
+    expect(onItemClick).toHaveBeenCalledTimes(3);
   });
 
   it('shows the media on the left, hidden from assistive tech', () => {

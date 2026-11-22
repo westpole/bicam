@@ -9,14 +9,15 @@ import type { HomeProps } from './types';
 
 /**
  * Start screen: the user's bicycles as a vertical list of cards, each with a bike image and the bicycle's name.
- * Renders nothing when there are no bicycles, so the main viewport stays empty on a fresh start.
+ * Activating a card reports that bicycle's id. Renders nothing when there are no bicycles, so the main viewport
+ * stays empty on a fresh start.
  *
  * @param props - See {@link HomeProps}.
  * @returns The bicycle card list, or `null` when there are no bicycles.
  * @example
- * <Home bicycles={bicycles} />
+ * <Home bicycles={bicycles} onBicycleClick={openBicycleDetails} />
  */
-export function Home({ bicycles }: HomeProps) {
+export function Home({ bicycles, onBicycleClick }: HomeProps) {
   const { t } = useTranslation();
 
   const items = useMemo<CardListItem[]>(
@@ -28,5 +29,5 @@ export function Home({ bicycles }: HomeProps) {
     return null;
   }
 
-  return <CardList aria-label={t('home.bicycleList.label')} items={items} />;
+  return <CardList aria-label={t('home.bicycleList.label')} items={items} onItemClick={onBicycleClick} />;
 }

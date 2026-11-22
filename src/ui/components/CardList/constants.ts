@@ -15,12 +15,25 @@ export const CARD_SX: SxProps<Theme> = {
   overflow: 'hidden',
 };
 
-/** Card content: the media on the left, the text column on the right. */
+/**
+ * Card content, which is also the click target: a native `<button>` that fills the `Paper`, with the media on the
+ * left and the text column on the right. The focus outline is drawn inside the button so the Paper's
+ * `overflow: hidden` never clips it, and `borderRadius: 'inherit'` makes it follow the Paper's rounded corners.
+ */
 export const CARD_CONTENT_SX: SxProps<Theme> = {
   display: 'flex',
   alignItems: 'center',
+  justifyContent: 'flex-start',
   gap: 2,
   p: 2,
+  width: '100%',
+  textAlign: 'left',
+  borderRadius: 'inherit',
+  '&:focus-visible': {
+    outline: '2px solid',
+    outlineColor: 'primary.main',
+    outlineOffset: '-2px',
+  },
 };
 
 /** Media slot: never shrinks, so long titles truncate instead of squeezing the image. */

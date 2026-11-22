@@ -1,7 +1,7 @@
 # [FEATURE] Open a Bicycle details placeholder from a card
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #10)
 > **Sprint:** `10-ui-introduce-bicycle-list`
@@ -32,15 +32,15 @@ Bicycle details placeholder screen titled with that bicycle's name.
 **So that** I can open that bicycle's details
 
 **Acceptance Criteria:**
-- [ ] Given `home` with bicycles, then each card's content is one native `<button>` (`ButtonBase component="button"
+- [x] Given `home` with bicycles, then each card's content is one native `<button>` (`ButtonBase component="button"
       type="button"`) filling the `Paper`, whose accessible name is the bicycle name.
-- [ ] Given a card, when the user clicks it or focuses it and presses Enter or Space, then `<main>` shows the Bicycle
+- [x] Given a card, when the user clicks it or focuses it and presses Enter or Space, then `<main>` shows the Bicycle
       details placeholder: an `<h2>` with that bicycle's name and the line "This screen is coming soon."
-- [ ] Given keyboard focus on a card, then a visible focus outline is drawn inside the card's rounded corners.
-- [ ] Given the menu is open, then the cards are not reachable (existing `inert` on `<main>`), unchanged.
-- [ ] Given the details screen, when the user picks a menu option, then that option's screen replaces it (`navigateTo`
+- [x] Given keyboard focus on a card, then a visible focus outline is drawn inside the card's rounded corners.
+- [x] Given the menu is open, then the cards are not reachable (existing `inert` on `<main>`), unchanged.
+- [x] Given the details screen, when the user picks a menu option, then that option's screen replaces it (`navigateTo`
       clears the selection, #20).
-- [ ] Edge case: a long name on the details screen wraps and does not overflow at 320px (existing `ScreenPlaceholder`
+- [x] Edge case: a long name on the details screen wraps and does not overflow at 320px (existing `ScreenPlaceholder`
       behavior).
 
 **Out of scope:** real details content; a back button; moving focus to the details heading; routing/URLs; event icons.
@@ -53,9 +53,9 @@ Bicycle details placeholder screen titled with that bicycle's name.
 **So that** any future card list can navigate the same way
 
 **Acceptance Criteria:**
-- [ ] `CardList` gets a required `onItemClick: (id: Id) => void` prop, called with the activated item's `id`.
-- [ ] `Home` gets `onBicycleClick: (id: BicycleId) => void` and passes it through.
-- [ ] `CardList` still imports nothing from `src/store/**`.
+- [x] `CardList` gets a required `onItemClick: (id: Id) => void` prop, called with the activated item's `id`.
+- [x] `Home` gets `onBicycleClick: (id: BicycleId) => void` and passes it through.
+- [x] `CardList` still imports nothing from `src/store/**`.
 
 **Out of scope:** optional/non-clickable cards; secondary actions.
 
@@ -106,12 +106,12 @@ it in secondary text, under the unchanged header.
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Component and App tests written and passing
-- [ ] Desktop, Mobile, and Dark stories added/updated and passing, with `a11y.test: 'error'`
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] New `src/ui/**` files meet the coverage thresholds
-- [ ] `code-reviewer` subagent run and findings addressed
+- [x] All acceptance criteria met
+- [x] Component and App tests written and passing
+- [x] Desktop, Mobile, and Dark stories added/updated and passing, with `a11y.test: 'error'`
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] New `src/ui/**` files meet the coverage thresholds
+- [x] `code-reviewer` subagent run and findings addressed
 
 ---
 

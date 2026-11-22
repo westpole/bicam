@@ -143,6 +143,39 @@ export const HomeWithBicycles: Story = {
   },
 };
 
+/**
+ * Home → details flow: click the second card, see its details placeholder, then leave it through the menu.
+ *
+ * @param context - The story context.
+ */
+async function playHomeToDetails({ canvas, canvasElement, userEvent }: Parameters<NonNullable<Story['play']>>[0]) {
+  const main = canvasElement.querySelector('main') as HTMLElement;
+  await within(main).findByRole('list', { name: 'Bicycles' });
+
+  await userEvent.click(canvas.getByRole('button', { name: 'Roadie' }));
+  await expect(within(main).getByRole('heading', { level: 2, name: 'Roadie' })).toBeVisible();
+  await expect(within(main).getByText('This screen is coming soon.')).toBeVisible();
+  await expect(within(main).queryByRole('list', { name: 'Bicycles' })).not.toBeInTheDocument();
+  await expect(canvas.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+
+  await userEvent.click(canvas.getByRole('button', { name: 'Open menu' }));
+  await userEvent.click(await canvas.findByRole('button', { name: 'Add bicycle' }));
+  await waitFor(() => expect(canvas.queryByRole('navigation')).not.toBeInTheDocument());
+  await expect(within(main).getByRole('heading', { level: 2, name: 'Add bicycle' })).toBeVisible();
+}
+
+export const HomeToDetails: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  args: { initialState: { bicycle: toBicycleCollection(BICYCLES) } },
+  play: playHomeToDetails,
+};
+
+export const HomeToDetailsMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  args: { initialState: { bicycle: toBicycleCollection(BICYCLES) } },
+  play: playHomeToDetails,
+};
+
 /** More cards than fit: `<main>` scrolls while the header stays put. */
 export const HomeScrollsMobile: Story = {
   globals: { viewport: { value: 'mobile1', isRotated: false } },

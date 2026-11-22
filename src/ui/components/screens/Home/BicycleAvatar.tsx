@@ -12,13 +12,14 @@ const AVATAR_SX: SxProps<Theme> = {
 
 /**
  * Image shown on the left of a bicycle card: a bike icon on a rounded primary-colored square. Decorative; the card
- * title names the bicycle. Will show the bicycle's photo, with this icon as the fallback, once photos exist.
+ * title names the bicycle. Rendered as a `<span>` because it sits inside the card's `<button>`. Will show the
+ * bicycle's photo, with this icon as the fallback, once photos exist.
  *
  * @returns The bicycle avatar.
  */
 export function BicycleAvatar() {
   return (
-    <Avatar variant="rounded" sx={AVATAR_SX}>
+    <Avatar component="span" variant="rounded" sx={AVATAR_SX}>
       <DirectionsBikeIcon sx={{ fontSize: 32 }} />
     </Avatar>
   );
