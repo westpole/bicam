@@ -101,3 +101,53 @@ export async function expectMenuButtonBesideTitle(page: Page): Promise<void> {
     Math.abs(buttonBox.y + buttonBox.height / 2 - (headingBox.y + headingBox.height / 2)),
   ).toBeLessThanOrEqual(4);
 }
+
+/**
+ * The app menu flow (design doc `docs/design/app-menu.md`):
+ *
+ * - (a) The menu button opens the menu: the button reads "Close menu" (✕) and the "Main menu" navigation lists the four
+ *   options, top to bottom, inside `<main>`'s area below the header.
+ * - (b) The ✕ button closes it again.
+ * - (c) Choosing "Add bicycle" closes the menu and shows its placeholder heading in `<main>`.
+ *
+ * @param page - Page showing the app shell with the menu closed.
+ * @example
+ * await expectMenuFlow(page);
+ */
+export async function expectMenuFlow(page: Page): Promise<void> {
+  const menu = page.getByRole('navigation', { name: 'Main menu' });
+  await expect(menu).toHaveCount(0);
+
+  // (a) Open.
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  await expect(page.getByRole('button', { name: 'Close menu' })).toHaveAttribute('aria-expanded', 'true');
+  await expect(menu.getByRole('button')).toHaveText([
+    'Add bicycle',
+    'Add component',
+    'Add clothes set',
+    'Before ride check-in',
+  ]);
+
+  // Settled position: the panel starts at the header's bottom edge and fills the rest of the viewport.
+  await expect(async () => {
+    const header = await landmarkBox(page, 'banner');
+    const panel = await menu.boundingBox();
+    const viewportHeight = await page.evaluate(() => window.innerHeight);
+    if (!panel) {
+      throw new Error('The menu has no bounding box');
+    }
+    expect(Math.abs(panel.y - (header.y + header.height))).toBeLessThanOrEqual(TOLERANCE);
+    expect(Math.abs(panel.y + panel.height - viewportHeight)).toBeLessThanOrEqual(TOLERANCE);
+  }).toPass({ timeout: LAYOUT_SETTLE_TIMEOUT });
+
+  // (b) Close with ✕.
+  await page.getByRole('button', { name: 'Close menu' }).click();
+  await expect(menu).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Open menu' })).toHaveAttribute('aria-expanded', 'false');
+
+  // (c) Choose an option.
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  await menu.getByRole('button', { name: 'Add bicycle' }).click();
+  await expect(menu).toHaveCount(0);
+  await expect(page.getByRole('main').getByRole('heading', { level: 2, name: 'Add bicycle' })).toBeVisible();
+}

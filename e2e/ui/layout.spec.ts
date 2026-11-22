@@ -1,5 +1,5 @@
 import { expect, test } from '../fixtures/electron';
-import { expectShellLayout } from '../fixtures/shell';
+import { expectMenuFlow, expectShellLayout } from '../fixtures/shell';
 
 /** Electron UI: layout and theming of the main window. */
 test.describe('main window layout', () => {
@@ -16,6 +16,10 @@ test.describe('main window layout', () => {
       .toEqual({ width: 480, height: 640 });
 
     await expectShellLayout(mainWindow);
+  });
+
+  test('opens the menu under the header and navigates to a placeholder screen', async ({ mainWindow }) => {
+    await expectMenuFlow(mainWindow);
   });
 
   test('follows the system dark color scheme', async ({ mainWindow }) => {
