@@ -4,7 +4,8 @@
   },
   "header": {
     "menuButton": {
-      "label": "Open menu"
+      "label": "Open menu",
+      "closeLabel": "Close menu"
     }
   }
 }

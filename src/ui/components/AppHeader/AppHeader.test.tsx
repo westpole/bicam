@@ -69,6 +69,57 @@ describe('AppHeader', () => {
     expect(icon).toHaveAttribute('aria-hidden', 'true');
   });
 
+  it('marks the closed menu button as a collapsed disclosure for the app menu', () => {
+    renderHeader({ menuId: 'app-menu' });
+
+    const button = screen.getByRole('button', { name: 'Open menu' });
+
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(button).toHaveAttribute('aria-controls', 'app-menu');
+    expect(screen.queryByTestId('CloseIcon')).not.toBeInTheDocument();
+  });
+
+  it('shows the close icon and label while the menu is open', () => {
+    renderHeader({ menuOpen: true, menuId: 'app-menu' });
+
+    const button = screen.getByRole('button', { name: 'Close menu' });
+    const icon = screen.getByTestId('CloseIcon');
+
+    expect(button).toHaveAttribute('aria-expanded', 'true');
+    expect(button).toHaveAttribute('aria-controls', 'app-menu');
+    expect(button).toContainElement(icon);
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.queryByTestId('MenuIcon')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open menu' })).not.toBeInTheDocument();
+  });
+
+  it('omits aria-controls when no menu id is given', () => {
+    renderHeader({ menuOpen: true });
+
+    expect(screen.getByRole('button', { name: 'Close menu' })).not.toHaveAttribute('aria-controls');
+  });
+
+  it('swaps back to the menu icon when the menu closes', () => {
+    const { rerender } = renderHeader({ menuOpen: true });
+
+    rerender(
+      <ThemeProvider theme={theme}>
+        <AppHeader menuOpen={false} />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Open menu' })).toContainElement(screen.getByTestId('MenuIcon'));
+  });
+
+  it('calls onMenuClick when the open menu button is clicked', async () => {
+    const onMenuClick = vi.fn();
+    renderHeader({ menuOpen: true, onMenuClick });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close menu' }));
+
+    expect(onMenuClick).toHaveBeenCalledTimes(1);
+  });
+
   it('calls onMenuClick when the menu button is clicked', async () => {
     const onMenuClick = vi.fn();
     renderHeader({ onMenuClick });
