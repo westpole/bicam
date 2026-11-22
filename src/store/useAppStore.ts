@@ -1,0 +1,23 @@
+import { create } from 'zustand';
+
+import { INITIAL_APP_STATE } from './constants';
+import type { AppStore } from './types';
+
+/**
+ * The app's single global store: shared UI state (menu visibility, active screen) that the header, the menu, and the
+ * main viewport all depend on. Not persisted, so the app always starts on `home` with the menu closed.
+ *
+ * Read it with atomic selectors so components only re-render for the fields they use.
+ *
+ * @example
+ * const isMenuOpen = useAppStore((state) => state.isMenuOpen);
+ * const toggleMenu = useAppStore((state) => state.toggleMenu);
+ */
+export const useAppStore = create<AppStore>()((set) => ({
+  ...INITIAL_APP_STATE,
+  openMenu: () => set({ isMenuOpen: true }),
+  closeMenu: () => set({ isMenuOpen: false }),
+  toggleMenu: () => set((state) => ({ isMenuOpen: !state.isMenuOpen })),
+  navigateTo: (screen) => set({ activeScreen: screen, isMenuOpen: false }),
+  reset: () => set({ ...INITIAL_APP_STATE }),
+}));
