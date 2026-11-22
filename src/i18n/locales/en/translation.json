@@ -8,6 +8,15 @@
       "closeLabel": "Close menu"
     }
   },
+  "menu": {
+    "label": "Main menu",
+    "items": {
+      "addBicycle": "Add bicycle",
+      "addComponent": "Add component",
+      "addClothesSet": "Add clothes set",
+      "beforeRideCheckIn": "Before ride check-in"
+    }
+  },
   "screens": {
     "addBicycle": {
       "title": "Add bicycle"

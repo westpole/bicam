@@ -53,6 +53,51 @@ describe('AppShell', () => {
     expect(style.minHeight).toMatch(/^0(px)?$/);
   });
 
+  it('places main explicitly in row 2, column 1 and keeps it interactive by default', () => {
+    renderShell();
+
+    const main = screen.getByRole('main');
+    const style = getComputedStyle(main);
+
+    expect(style.gridRow).toMatch(/^2/);
+    expect(style.gridColumn).toMatch(/^1/);
+    expect(main).not.toHaveAttribute('inert');
+    // Without an overlay the shell has exactly the header and main.
+    expect(main.parentElement?.children).toHaveLength(2);
+  });
+
+  it('renders the overlay after main in the same grid cell, clipped and click-through', () => {
+    render(
+      <ThemeProvider theme={theme}>
+        <AppShell header={<AppHeader />} overlay={<nav aria-label="Overlay nav" />} />
+      </ThemeProvider>,
+    );
+
+    const main = screen.getByRole('main');
+    const overlayBox = screen.getByRole('navigation', { name: 'Overlay nav' }).parentElement as HTMLElement;
+    const style = getComputedStyle(overlayBox);
+
+    expect(overlayBox.parentElement).toBe(main.parentElement);
+    expect(main.compareDocumentPosition(overlayBox) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(style.gridRow).toMatch(/^2/);
+    expect(style.gridColumn).toMatch(/^1/);
+    expect(style.overflow).toBe('hidden');
+    expect(style.pointerEvents).toBe('none');
+    expect(style.position).toBe('relative');
+    expect(main).not.toHaveAttribute('inert');
+  });
+
+  it('makes main inert while the overlay is open', () => {
+    render(
+      <ThemeProvider theme={theme}>
+        <AppShell header={<AppHeader />} overlay={<nav aria-label="Overlay nav" />} overlayOpen />
+      </ThemeProvider>,
+    );
+
+    // `inert` also hides <main> from the accessibility tree, so query it by tag.
+    expect(document.querySelector('main')).toHaveAttribute('inert');
+  });
+
   it('lays the shell out as a two-row grid that clips overflow', () => {
     renderShell();
 

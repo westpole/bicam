@@ -16,11 +16,14 @@ export const SHELL_SX: SxProps<Theme> = {
 };
 
 /**
- * The only vertical scroll container. `overscrollBehaviorY` stops scroll chaining and pull-to-refresh bounce.
+ * The only vertical scroll container. It is placed explicitly in row 2 / column 1 so an overlay can share the cell.
+ * `overscrollBehaviorY` stops scroll chaining and pull-to-refresh bounce.
  * Mobile first: base padding for `xs`, more from `sm` up. The focus outline is drawn inside the box so the
  * shell's `overflow: hidden` never clips it.
  */
 export const MAIN_SX: SxProps<Theme> = {
+  gridRow: 2,
+  gridColumn: 1,
   overflowY: 'auto',
   overscrollBehaviorY: 'contain',
   minHeight: 0,
@@ -30,4 +33,20 @@ export const MAIN_SX: SxProps<Theme> = {
     outlineColor: 'primary.main',
     outlineOffset: '-2px',
   },
+};
+
+/**
+ * Box for the `overlay` slot: the same grid cell as `<main>` (row 2, column 1), stacked above it because it comes
+ * later in the DOM and has `zIndex: 1`. `overflow: hidden` clips overlay content that moves outside the cell (the
+ * menu sliding in from above never paints over the header). `pointerEvents: 'none'` keeps the box from blocking
+ * clicks on `<main>` when the overlay is empty or closed; overlay content opts back in with `pointerEvents: 'auto'`.
+ */
+export const OVERLAY_SX: SxProps<Theme> = {
+  gridRow: 2,
+  gridColumn: 1,
+  position: 'relative',
+  overflow: 'hidden',
+  minHeight: 0,
+  zIndex: 1,
+  pointerEvents: 'none',
 };
