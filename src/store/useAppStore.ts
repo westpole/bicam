@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { createBicycleSlice } from './bicycle/createBicycleSlice';
 import { INITIAL_APP_STATE } from './constants';
 import type { AppStore } from './types';
 
@@ -14,8 +15,9 @@ import type { AppStore } from './types';
  * const isMenuOpen = useAppStore((state) => state.isMenuOpen);
  * const toggleMenu = useAppStore((state) => state.toggleMenu);
  */
-export const useAppStore = create<AppStore>()((set) => ({
+export const useAppStore = create<AppStore>()((set, get, api) => ({
   ...INITIAL_APP_STATE,
+  ...createBicycleSlice(set, get, api),
   openMenu: () => set({ isMenuOpen: true }),
   closeMenu: () => set({ isMenuOpen: false }),
   toggleMenu: () => set((state) => ({ isMenuOpen: !state.isMenuOpen })),

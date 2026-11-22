@@ -1,7 +1,7 @@
 # [FEATURE] Add `addBicycle`, `updateBicycle`, `removeBicycle` store actions
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (#8)
 > **Sprint:** `8-store-bicycle-entity`
@@ -34,11 +34,11 @@ Add a bicycle slice to `useAppStore` with actions that add, update, and remove b
 **So that** it is stored normalized and validated
 
 **Acceptance Criteria:**
-- [ ] Given valid input, when `addBicycle(input)` runs, then it returns `{ ok: true, bicycle }` with the normalized
+- [x] Given valid input, when `addBicycle(input)` runs, then it returns `{ ok: true, bicycle }` with the normalized
   bicycle, `byId[id]` holds it, and `id` is appended to `allIds`.
-- [ ] Given an id already used in any letter case, then it returns `{ ok: false, errors: [{ field: 'id', code: 'duplicate' }, …] }`.
-- [ ] Given invalid input, then it returns all validation errors and state is unchanged (same object reference).
-- [ ] Edge case: integer-like ids (`'51'`, `'2024'`) keep insertion order in `allIds`.
+- [x] Given an id already used in any letter case, then it returns `{ ok: false, errors: [{ field: 'id', code: 'duplicate' }, …] }`.
+- [x] Given invalid input, then it returns all validation errors and state is unchanged (same object reference).
+- [x] Edge case: integer-like ids (`'51'`, `'2024'`) keep insertion order in `allIds`.
 
 **Out of scope:** Checking component ids against the `components` slice, UI.
 
@@ -48,11 +48,11 @@ Add a bicycle slice to `useAppStore` with actions that add, update, and remove b
 **So that** the user can correct or complete its details
 
 **Acceptance Criteria:**
-- [ ] Given a stored bicycle, when `updateBicycle(id, changes)` runs with valid changes, then only the given keys
+- [x] Given a stored bicycle, when `updateBicycle(id, changes)` runs with valid changes, then only the given keys
   change, the result is normalized and validated, and the id keeps its place in `allIds`.
-- [ ] Passing `null` for an optional field clears it; omitting a key leaves it unchanged.
-- [ ] Given an unknown id, then it returns `{ ok: false, errors: [{ field: 'id', code: 'notFound' }] }`.
-- [ ] Given invalid changes, then it returns the errors and state is unchanged.
+- [x] Passing `null` for an optional field clears it; omitting a key leaves it unchanged.
+- [x] Given an unknown id, then it returns `{ ok: false, errors: [{ field: 'id', code: 'notFound' }] }`.
+- [x] Given invalid changes, then it returns the errors and state is unchanged.
 
 **Out of scope:** Renaming a bicycle (changing its `id`).
 
@@ -62,9 +62,9 @@ Add a bicycle slice to `useAppStore` with actions that add, update, and remove b
 **So that** the user can delete bicycles they no longer own
 
 **Acceptance Criteria:**
-- [ ] Given a stored bicycle, when `removeBicycle(id)` runs, then it returns `true` and the id is gone from `byId` and `allIds`.
-- [ ] Given an unknown id, then it returns `false` and state is unchanged.
-- [ ] Ids are matched exactly: `removeBicycle('roadie')` does not remove `'Roadie'`.
+- [x] Given a stored bicycle, when `removeBicycle(id)` runs, then it returns `true` and the id is gone from `byId` and `allIds`.
+- [x] Given an unknown id, then it returns `false` and state is unchanged.
+- [x] Ids are matched exactly: `removeBicycle('roadie')` does not remove `'Roadie'`.
 
 **Out of scope:** Cascading removal into `events`/`components`/`history` (placeholders).
 
@@ -101,10 +101,10 @@ Add a bicycle slice to `useAppStore` with actions that add, update, and remove b
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Unit tests written and passing (`npm run test:store`)
-- [ ] JSDoc on every function and type
-- [ ] Store docs updated if behavior differs from the plan
+- [x] All acceptance criteria met
+- [x] Unit tests written and passing (`npm run test:store`)
+- [x] JSDoc on every function and type
+- [x] Store docs updated if behavior differs from the plan
 
 ---
 

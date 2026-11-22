@@ -66,8 +66,27 @@ export interface BicycleValidationError {
   code: BicycleErrorCode;
 }
 
-/** Result of a bicycle write: the stored bicycle on success, every failing field otherwise. */
+/**
+ * Result of a bicycle write: the stored bicycle on success, every failing field otherwise. On success `bicycle` is
+ * the object held in the store; treat it as read-only.
+ */
 export type BicycleResult = { ok: true; bicycle: Bicycle } | { ok: false; errors: BicycleValidationError[] };
+
+/** Bicycle actions on `useAppStore`. A failed action never changes state. See `docs/store/bicycle.md` §4. */
+export interface BicycleActions {
+  /**
+   * Normalizes, validates, and stores a new bicycle, appending its id to `allIds`. Fails with `duplicate` on `id`
+   * when the id is already used, ignoring case.
+   */
+  addBicycle: (input: BicycleInput) => BicycleResult;
+  /**
+   * Merges `changes` into the bicycle stored under exactly `id`, then normalizes and validates it. `null` clears an
+   * optional field; omitted or `undefined` keys are unchanged. Fails with `notFound` on `id` for an unknown id.
+   */
+  updateBicycle: (id: BicycleId, changes: BicycleUpdate) => BicycleResult;
+  /** Removes the bicycle stored under exactly `id`. Returns `false`, changing nothing, for an unknown id. */
+  removeBicycle: (id: BicycleId) => boolean;
+}
 
 /** Normalized bicycle collection. `allIds` holds the display (insertion) order. */
 export interface BicycleCollection {

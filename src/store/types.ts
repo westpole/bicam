@@ -1,4 +1,4 @@
-import type { BicycleCollection } from './bicycle/types';
+import type { BicycleActions, BicycleCollection } from './bicycle/types';
 
 /**
  * Top-level screens shown in the `<main>` viewport. `home` is the start screen (empty for now); the others are
@@ -28,8 +28,8 @@ export interface AppStoreState {
   history: ReservedSlice;
 }
 
-/** Actions exposed by {@link useAppStore}. */
-export interface AppStoreActions {
+/** Actions exposed by {@link useAppStore}: UI actions plus the bicycle actions. */
+export interface AppStoreActions extends BicycleActions {
   /** Opens the app menu. Idempotent. */
   openMenu: () => void;
   /** Closes the app menu. Idempotent. */

@@ -91,11 +91,14 @@ Normalization (`normalizeBicycleInput`) runs before validation:
 | Action | Returns | Behavior |
 | --- | --- | --- |
 | `addBicycle(input: BicycleInput)` | `BicycleResult` | Normalizes and validates `input`. On success, stores the bicycle and appends its id to `allIds`. Fails with `{ field: 'id', code: 'duplicate' }` when the id is already used (case-insensitive). |
-| `updateBicycle(id: BicycleId, changes: BicycleUpdate)` | `BicycleResult` | `BicycleUpdate` is `Partial<Omit<BicycleInput, 'id'>>`. Merges `changes` into the stored bicycle, then normalizes and validates the result. Position in `allIds` is kept. Fails with `{ field: 'id', code: 'notFound' }` for an unknown id. Passing `null` clears an optional field; omitting a key leaves it unchanged. |
+| `updateBicycle(id: BicycleId, changes: BicycleUpdate)` | `BicycleResult` | `BicycleUpdate` is `Partial<Omit<BicycleInput, 'id'>>`. Merges `changes` into the stored bicycle, then normalizes and validates the result. Position in `allIds` is kept. Fails with `{ field: 'id', code: 'notFound' }` for an unknown id. Passing `null` (or blank text) clears an optional field; omitting a key, or passing `undefined`, leaves it unchanged. An `id` key in `changes` is ignored. |
 | `removeBicycle(id: BicycleId)` | `boolean` | Removes the bicycle from `byId` and `allIds`. Returns `false` (and leaves state unchanged) for an unknown id. |
 
 Ids are matched exactly (case-sensitive) in `updateBicycle` and `removeBicycle`. Only the duplicate check is
 case-insensitive. A failed action never changes state.
+
+Lookups use own-property checks (`hasBicycle`), so ids that match `Object.prototype` names (`'toString'`,
+`'constructor'`, `'__proto__'`) are stored and found like any other id and never match inherited properties.
 
 ## 5. Results and error codes
 
