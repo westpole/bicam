@@ -91,8 +91,9 @@ describe('useAppStore', () => {
       isMenuOpen: true,
       bicycle: {
         byId: {
-          Roadie: {
-            id: 'Roadie',
+          'bike-1': {
+            id: 'bike-1',
+            name: 'Roadie',
             company: 'Canyon',
             model: 'Ultimate',
             purchased: null,
@@ -101,7 +102,7 @@ describe('useAppStore', () => {
             components: [],
           },
         },
-        allIds: ['Roadie'],
+        allIds: ['bike-1'],
       },
     });
 

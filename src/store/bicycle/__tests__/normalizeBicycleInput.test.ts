@@ -4,7 +4,7 @@ import { normalizeBicycleInput } from '../utilities/normalizeBicycleInput';
 describe('normalizeBicycleInput', () => {
   it('trims every string, including component ids', () => {
     const result = normalizeBicycleInput({
-      id: '  Gravel Grinder ',
+      name: '  Gravel Grinder ',
       company: ' Canyon',
       model: 'Grizl CF SL 7  ',
       purchased: ' 2024-05-17 ',
@@ -14,7 +14,7 @@ describe('normalizeBicycleInput', () => {
     });
 
     expect(result).toEqual({
-      id: 'Gravel Grinder',
+      name: 'Gravel Grinder',
       company: 'Canyon',
       model: 'Grizl CF SL 7',
       purchased: '2024-05-17',
@@ -25,8 +25,8 @@ describe('normalizeBicycleInput', () => {
   });
 
   it('turns missing optional fields into null and a missing components list into []', () => {
-    expect(normalizeBicycleInput({ id: 'Roadie', company: 'Canyon', model: 'Ultimate' })).toEqual({
-      id: 'Roadie',
+    expect(normalizeBicycleInput({ name: 'Roadie', company: 'Canyon', model: 'Ultimate' })).toEqual({
+      name: 'Roadie',
       company: 'Canyon',
       model: 'Ultimate',
       purchased: null,
@@ -38,7 +38,7 @@ describe('normalizeBicycleInput', () => {
 
   it('turns null and blank optional text into null', () => {
     const result = normalizeBicycleInput({
-      id: 'Roadie',
+      name: 'Roadie',
       company: 'Canyon',
       model: 'Ultimate',
       purchased: null,
@@ -50,8 +50,8 @@ describe('normalizeBicycleInput', () => {
   });
 
   it('keeps required fields as empty strings so validation can report them', () => {
-    expect(normalizeBicycleInput({ id: '  ', company: '', model: ' ' })).toMatchObject({
-      id: '',
+    expect(normalizeBicycleInput({ name: '  ', company: '', model: ' ' })).toMatchObject({
+      name: '',
       company: '',
       model: '',
     });
@@ -59,18 +59,24 @@ describe('normalizeBicycleInput', () => {
 
   it('keeps case, inner spaces, and duplicate component ids unchanged', () => {
     const result = normalizeBicycleInput({
-      id: 'My  Bike',
+      name: 'My  Bike',
       company: 'canyon',
       model: 'Ultimate',
       size: 'ml',
       components: ['a', 'a'],
     });
 
-    expect(result).toMatchObject({ id: 'My  Bike', company: 'canyon', size: 'ml', components: ['a', 'a'] });
+    expect(result).toMatchObject({ name: 'My  Bike', company: 'canyon', size: 'ml', components: ['a', 'a'] });
+  });
+
+  it('picks known fields only, so an id key is dropped', () => {
+    const input = { id: 'chosen-id', name: 'Roadie', company: 'Canyon', model: 'Ultimate' } as BicycleInput;
+
+    expect(normalizeBicycleInput(input)).not.toHaveProperty('id');
   });
 
   it('does not mutate the input', () => {
-    const input: BicycleInput = { id: ' Roadie ', company: 'Canyon', model: 'Ultimate', components: [' a '] };
+    const input: BicycleInput = { name: ' Roadie ', company: 'Canyon', model: 'Ultimate', components: [' a '] };
     const snapshot = structuredClone(input);
 
     const result = normalizeBicycleInput(input);

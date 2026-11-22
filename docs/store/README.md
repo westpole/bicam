@@ -54,6 +54,10 @@ These rules apply to every domain slice, now and in the future.
 - **Entity collections** are normalized: `{ byId: Record<Id, Entity>; allIds: Id[] }`. `allIds` holds the display
   order (insertion order). A plain object cannot hold the order, because JavaScript sorts integer-like keys such as
   `'51'` or `'2024'` ahead of other keys.
+- **Ids are generated, names are typed.** Every entity key is a UUID v4 from `crypto.randomUUID()`, assigned by the
+  store on creation and never changed, so references from other slices stay valid. Anything the user types and sees
+  as a title (for example `Bicycle.name`) is a separate, editable field. `crypto.randomUUID()` needs a secure
+  context: `https://`, `localhost`, or Electron's `file://` all qualify.
 - **Writes go through store actions.** Actions validate and normalize input and return a result object; they never
   throw for invalid user input. Errors are codes (`'required'`, `'tooLong'`, …), not text, so the UI translates them
   with `t()`.
@@ -73,7 +77,7 @@ src/store/
 ├── constants.ts            # INITIAL_APP_STATE
 ├── __tests__/
 └── bicycle/
-    ├── types.ts            # Bicycle, BicycleInput, BicycleCollection, results, errors
+    ├── types.ts            # Bicycle, BicycleInput, BicycleDetails, BicycleCollection, results, errors
     ├── constants.ts        # BICYCLE_LIMITS, INITIAL_BICYCLE_COLLECTION
     ├── createBicycleSlice.ts
     ├── utilities/          # one function per file
@@ -92,11 +96,16 @@ persistence is added:
 - `localStorage` works for both the web build and the Electron `file://` build. Move to a file in Electron
   `userData` (through a preload/IPC bridge) only if storage size or backups require it.
 
-## 5. Open questions
+## 5. Decisions
+
+| Decision | Reason |
+| --- | --- |
+| Bicycles are keyed by a generated UUID `id`; the user-typed title is a separate, unique `name`. | Other slices will reference bicycles by key. A user-typed key would break those references (and old history entries) on rename. With a generated id, renaming is a plain field update. |
+
+## 6. Open questions
 
 | Question | Why it matters | Current answer |
 | --- | --- | --- |
-| Should the user-defined bicycle `id` also be the primary key? | Other slices (`events`, `history`) will reference bicycles by key. If the user renames a bicycle, every reference must be updated, and old history entries would name a bicycle that no longer exists. | Yes for now, as requested. Renaming is not supported. Decide before `events`/`history` or persistence land; the alternative is a generated internal key (UUID) plus a user-defined, unique `name`. |
 | Should `frameGeometry` be structured? | Free text cannot be compared or validated (stack, reach, head tube angle, …). | Free text for now. A structured, unit-tagged object (mm, degrees) can replace it with a migration. |
 | Should `purchased` reject future dates? | Needs the current date, which makes the store depend on a clock. | Not checked in the store. The input form can warn. |
 | Should `components` be checked against the `components` slice? | Ids could point to components that do not exist. | Not possible yet (placeholder slice). Add the check when the `components` slice is implemented. |

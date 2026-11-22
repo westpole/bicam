@@ -1,4 +1,4 @@
-import type { Bicycle, BicycleInput } from '../types';
+import type { BicycleDetails, BicycleInput } from '../types';
 
 /**
  * Trims optional text and turns a missing, `null`, or blank value into `null`.
@@ -13,21 +13,23 @@ function toOptionalText(value: string | null | undefined): string | null {
 }
 
 /**
- * Converts raw form input into the stored {@link Bicycle} shape without validating it. Does not mutate `input`.
+ * Converts raw form input into the stored bicycle fields (everything except the generated `id`) without validating
+ * them. Picks known fields only and does not mutate `input`.
  *
  * - Trims every string, including each component id.
  * - Optional text (`purchased`, `size`, `frameGeometry`) that is missing, `null`, or blank becomes `null`.
  * - A missing `components` list becomes `[]`.
  *
  * @param input - Raw bicycle input.
- * @returns A new bicycle object, ready for `validateBicycle`.
+ * @returns New bicycle details, ready for `validateBicycle`.
  * @example
- * normalizeBicycleInput({ id: ' Roadie ', company: 'Canyon', model: 'Ultimate', size: '  ' });
- * // { id: 'Roadie', company: 'Canyon', model: 'Ultimate', purchased: null, size: null, frameGeometry: null, components: [] }
+ * normalizeBicycleInput({ name: ' Roadie ', company: 'Canyon', model: 'Ultimate', size: '  ' });
+ * // { name: 'Roadie', company: 'Canyon', model: 'Ultimate', purchased: null, size: null,
+ * //   frameGeometry: null, components: [] }
  */
-export function normalizeBicycleInput(input: BicycleInput): Bicycle {
+export function normalizeBicycleInput(input: BicycleInput): BicycleDetails {
   return {
-    id: input.id.trim(),
+    name: input.name.trim(),
     company: input.company.trim(),
     model: input.model.trim(),
     purchased: toOptionalText(input.purchased),

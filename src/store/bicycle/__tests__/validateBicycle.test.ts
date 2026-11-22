@@ -1,5 +1,5 @@
 import { BICYCLE_LIMITS } from '../constants';
-import type { Bicycle } from '../types';
+import type { BicycleDetails } from '../types';
 import { normalizeBicycleInput } from '../utilities/normalizeBicycleInput';
 import { validateBicycle } from '../utilities/validateBicycle';
 
@@ -9,9 +9,9 @@ import { validateBicycle } from '../utilities/validateBicycle';
  * @param overrides - Fields to replace.
  * @returns A normalized bicycle.
  */
-function makeBicycle(overrides: Partial<Bicycle> = {}): Bicycle {
+function makeBicycle(overrides: Partial<BicycleDetails> = {}): BicycleDetails {
   return {
-    id: 'Gravel Grinder',
+    name: 'Gravel Grinder',
     company: 'Canyon',
     model: 'Grizl CF SL 7',
     purchased: '2024-05-17',
@@ -36,7 +36,7 @@ describe('validateBicycle', () => {
   });
 
   describe.each([
-    ['id', BICYCLE_LIMITS.idMaxLength],
+    ['name', BICYCLE_LIMITS.nameMaxLength],
     ['company', BICYCLE_LIMITS.companyMaxLength],
     ['model', BICYCLE_LIMITS.modelMaxLength],
   ] as const)('%s', (field, maxLength) => {
@@ -147,14 +147,14 @@ describe('validateBicycle', () => {
   });
 
   it('applies limits after normalization trims the input', () => {
-    const bicycle = normalizeBicycleInput({ id: `  ${'x'.repeat(40)}  `, company: 'Canyon', model: 'Ultimate' });
+    const bicycle = normalizeBicycleInput({ name: `  ${'x'.repeat(40)}  `, company: 'Canyon', model: 'Ultimate' });
 
     expect(validateBicycle(bicycle)).toEqual([]);
   });
 
   it('reports every failing field once, in Bicycle field order', () => {
-    const bicycle: Bicycle = {
-      id: '',
+    const bicycle: BicycleDetails = {
+      name: '',
       company: 'x'.repeat(61),
       model: `a${BELL}`,
       purchased: '2023-02-30',
@@ -164,7 +164,7 @@ describe('validateBicycle', () => {
     };
 
     expect(validateBicycle(bicycle)).toEqual([
-      { field: 'id', code: 'required' },
+      { field: 'name', code: 'required' },
       { field: 'company', code: 'tooLong' },
       { field: 'model', code: 'invalidFormat' },
       { field: 'purchased', code: 'invalidFormat' },

@@ -11,7 +11,7 @@ Object.freeze(INITIAL_BICYCLE_COLLECTION);
 
 /** Bicycle field limits, counted in UTF-16 code units after trimming. Documented in `docs/store/bicycle.md` §2. */
 export const BICYCLE_LIMITS = {
-  idMaxLength: 40,
+  nameMaxLength: 40,
   companyMaxLength: 60,
   modelMaxLength: 60,
   sizeMaxLength: 10,

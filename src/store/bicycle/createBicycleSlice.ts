@@ -1,12 +1,12 @@
 import type { StateCreator } from 'zustand';
 
 import type { AppStore } from '../types';
-import type { BicycleActions, BicycleResult } from './types';
+import type { Bicycle, BicycleActions, BicycleResult } from './types';
+import { createBicycleId } from './utilities/createBicycleId';
 import { definedChanges } from './utilities/definedChanges';
 import { hasBicycle } from './utilities/hasBicycle';
-import { isBicycleIdTaken } from './utilities/isBicycleIdTaken';
 import { normalizeBicycleInput } from './utilities/normalizeBicycleInput';
-import { validateBicycle } from './utilities/validateBicycle';
+import { validateBicycleInCollection } from './utilities/validateBicycleInCollection';
 
 /**
  * Creates the bicycle actions for {@link useAppStore}. Data lives in `state.bicycle`; every successful write replaces
@@ -20,17 +20,14 @@ import { validateBicycle } from './utilities/validateBicycle';
  */
 export const createBicycleSlice: StateCreator<AppStore, [], [], BicycleActions> = (set, get) => ({
   addBicycle: (input): BicycleResult => {
-    const bicycle = normalizeBicycleInput(input);
-    const errors = validateBicycle(bicycle);
-
-    // `id` is the first Bicycle field, so unshift keeps one error per field in field order.
-    if (!errors.some(({ field }) => field === 'id') && isBicycleIdTaken(get().bicycle, bicycle.id)) {
-      errors.unshift({ field: 'id', code: 'duplicate' });
-    }
+    const details = normalizeBicycleInput(input);
+    const errors = validateBicycleInCollection(get().bicycle, details);
 
     if (errors.length > 0) {
       return { ok: false, errors };
     }
+
+    const bicycle: Bicycle = { id: createBicycleId(), ...details };
 
     set((state) => ({
       bicycle: {
@@ -49,13 +46,15 @@ export const createBicycleSlice: StateCreator<AppStore, [], [], BicycleActions> 
       return { ok: false, errors: [{ field: 'id', code: 'notFound' }] };
     }
 
-    const current = collection.byId[id];
-    const bicycle = normalizeBicycleInput({ ...current, ...definedChanges(changes), id: current.id });
-    const errors = validateBicycle(bicycle);
+    // normalizeBicycleInput picks known fields only, so an `id` key in `changes` is ignored.
+    const details = normalizeBicycleInput({ ...collection.byId[id], ...definedChanges(changes) });
+    const errors = validateBicycleInCollection(collection, details, id);
 
     if (errors.length > 0) {
       return { ok: false, errors };
     }
+
+    const bicycle: Bicycle = { id, ...details };
 
     set((state) => ({
       bicycle: { byId: { ...state.bicycle.byId, [id]: bicycle }, allIds: state.bicycle.allIds },

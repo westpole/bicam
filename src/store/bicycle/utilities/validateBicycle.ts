@@ -4,7 +4,7 @@ import {
   MULTILINE_FORBIDDEN_PATTERN,
   SIZE_PATTERN,
 } from '../constants';
-import type { Bicycle, BicycleErrorCode, BicycleField, BicycleValidationError } from '../types';
+import type { BicycleDetails, BicycleErrorCode, BicycleField, BicycleValidationError } from '../types';
 import { isIsoDate } from './isIsoDate';
 
 /**
@@ -64,18 +64,18 @@ function checkSize(size: string): BicycleErrorCode | null {
 }
 
 /**
- * Validates a normalized bicycle against the field limits in `docs/store/bicycle.md` §2. Does not check id
- * uniqueness across the store; the store actions do that.
+ * Validates normalized bicycle details against the field limits in `docs/store/bicycle.md` §2. Does not check name
+ * uniqueness across the store; the store actions do that. The generated `id` is not validated.
  *
  * @param bicycle - Output of `normalizeBicycleInput` (trimmed, blanks as `null`).
- * @returns Every failing field, at most one error each, in {@link Bicycle} field order; `[]` when valid.
+ * @returns Every failing field, at most one error each, in `Bicycle` field order; `[]` when valid.
  * @example
- * validateBicycle({ ...bicycle, id: '', size: 'X*L' });
- * // [{ field: 'id', code: 'required' }, { field: 'size', code: 'invalidFormat' }]
+ * validateBicycle({ ...details, name: '', size: 'X*L' });
+ * // [{ field: 'name', code: 'required' }, { field: 'size', code: 'invalidFormat' }]
  */
-export function validateBicycle(bicycle: Bicycle): BicycleValidationError[] {
+export function validateBicycle(bicycle: BicycleDetails): BicycleValidationError[] {
   const checks: Array<[BicycleField, BicycleErrorCode | null]> = [
-    ['id', checkText(bicycle.id, BICYCLE_LIMITS.idMaxLength, CONTROL_CHARACTER_PATTERN)],
+    ['name', checkText(bicycle.name, BICYCLE_LIMITS.nameMaxLength, CONTROL_CHARACTER_PATTERN)],
     ['company', checkText(bicycle.company, BICYCLE_LIMITS.companyMaxLength, CONTROL_CHARACTER_PATTERN)],
     ['model', checkText(bicycle.model, BICYCLE_LIMITS.modelMaxLength, CONTROL_CHARACTER_PATTERN)],
     ['purchased', bicycle.purchased === null || isIsoDate(bicycle.purchased) ? null : 'invalidFormat'],

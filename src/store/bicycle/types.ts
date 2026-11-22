@@ -1,4 +1,4 @@
-/** User-defined bicycle identifier, also shown as the bicycle's title. Unique case-insensitively. */
+/** Generated bicycle identifier (UUID v4). Assigned by `addBicycle` and never changed. */
 export type BicycleId = string;
 
 /** Identifier of a component (the `components` slice is a placeholder for now). */
@@ -12,8 +12,10 @@ export type IsoDate = string;
  * `docs/store/bicycle.md`.
  */
 export interface Bicycle {
-  /** User-defined, unique (case-insensitive) id shown as the title. 1–40 chars. */
+  /** Generated UUID; the key other slices use to reference this bicycle. Never changes. */
   id: BicycleId;
+  /** User-typed name shown as the bicycle's title. Unique (case-insensitive), 1–40 chars, can be renamed. */
+  name: string;
   /** Manufacturer or brand. 1–60 chars. */
   company: string;
   /** Model name. 1–60 chars. */
@@ -28,13 +30,16 @@ export interface Bicycle {
   components: ComponentId[];
 }
 
+/** Every user-editable bicycle field: a {@link Bicycle} without its generated `id`. */
+export type BicycleDetails = Omit<Bicycle, 'id'>;
+
 /**
  * Raw bicycle data as a form provides it. Normalized by `normalizeBicycleInput` before validation: strings are
  * trimmed, empty optional text becomes `null`, and a missing `components` list becomes `[]`.
  */
 export interface BicycleInput {
-  /** User-defined id; see {@link Bicycle.id}. */
-  id: string;
+  /** See {@link Bicycle.name}. */
+  name: string;
   /** See {@link Bicycle.company}. */
   company: string;
   /** See {@link Bicycle.model}. */
@@ -49,8 +54,8 @@ export interface BicycleInput {
   components?: string[];
 }
 
-/** Changes for `updateBicycle`: any input field except `id`. Omitted keys stay unchanged; `null` clears a field. */
-export type BicycleUpdate = Partial<Omit<BicycleInput, 'id'>>;
+/** Changes for `updateBicycle`: any input field. Omitted keys stay unchanged; `null` clears an optional field. */
+export type BicycleUpdate = Partial<BicycleInput>;
 
 /** A field of {@link Bicycle} that a validation error can point at. */
 export type BicycleField = keyof Bicycle;
@@ -75,22 +80,23 @@ export type BicycleResult = { ok: true; bicycle: Bicycle } | { ok: false; errors
 /** Bicycle actions on `useAppStore`. A failed action never changes state. See `docs/store/bicycle.md` §4. */
 export interface BicycleActions {
   /**
-   * Normalizes, validates, and stores a new bicycle, appending its id to `allIds`. Fails with `duplicate` on `id`
-   * when the id is already used, ignoring case.
+   * Normalizes and validates `input`, generates a new id, stores the bicycle, and appends the id to `allIds`. Fails
+   * with `duplicate` on `name` when another bicycle has the same name, ignoring case.
    */
   addBicycle: (input: BicycleInput) => BicycleResult;
   /**
-   * Merges `changes` into the bicycle stored under exactly `id`, then normalizes and validates it. `null` clears an
-   * optional field; omitted or `undefined` keys are unchanged. Fails with `notFound` on `id` for an unknown id.
+   * Merges `changes` into the bicycle stored under `id`, then normalizes and validates it. Renaming is allowed; the
+   * new name must not clash with another bicycle's name. `null` clears an optional field; omitted or `undefined`
+   * keys are unchanged. Fails with `notFound` on `id` for an unknown id.
    */
   updateBicycle: (id: BicycleId, changes: BicycleUpdate) => BicycleResult;
-  /** Removes the bicycle stored under exactly `id`. Returns `false`, changing nothing, for an unknown id. */
+  /** Removes the bicycle stored under `id`. Returns `false`, changing nothing, for an unknown id. */
   removeBicycle: (id: BicycleId) => boolean;
 }
 
 /** Normalized bicycle collection. `allIds` holds the display (insertion) order. */
 export interface BicycleCollection {
-  /** Bicycles keyed by their exact id. */
+  /** Bicycles keyed by their generated id. */
   byId: Record<BicycleId, Bicycle>;
   /** Bicycle ids in insertion order. */
   allIds: BicycleId[];
