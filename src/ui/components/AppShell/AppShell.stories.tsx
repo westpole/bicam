@@ -99,6 +99,39 @@ export const MobileLandscape: Story = {
   },
 };
 
+/**
+ * An open overlay covers `<main>`'s cell (not the header) and makes `<main>` inert. The default play is skipped:
+ * it tabs into `<main>`, which an open overlay prevents on purpose.
+ */
+export const WithOverlay: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  args: {
+    overlayOpen: true,
+    overlay: (
+      <Paper component="aside" aria-label="Example overlay" square elevation={0} sx={{ height: '100%', p: 2, pointerEvents: 'auto' }}>
+        Overlay content
+      </Paper>
+    ),
+  },
+  play: async ({ canvas, canvasElement }) => {
+    const banner = canvas.getByRole('banner');
+    const main = canvasElement.querySelector('main') as HTMLElement;
+    const overlay = canvas.getByText('Overlay content');
+
+    await expect(main).toHaveAttribute('inert');
+    const overlayBox = overlay.getBoundingClientRect();
+    const mainBox = main.getBoundingClientRect();
+    await expect(Math.abs(overlayBox.top - banner.getBoundingClientRect().bottom)).toBeLessThanOrEqual(1);
+    await expect(Math.abs(overlayBox.top - mainBox.top)).toBeLessThanOrEqual(1);
+    await expect(Math.abs(overlayBox.height - mainBox.height)).toBeLessThanOrEqual(1);
+
+    // The overlay is stacked above <main>: a hit test in the middle of the cell lands on the overlay.
+    const doc = canvasElement.ownerDocument;
+    const hit = doc.elementFromPoint(mainBox.left + mainBox.width / 2, mainBox.top + mainBox.height / 2);
+    await expect(overlay.contains(hit)).toBe(true);
+  },
+};
+
 export const Dark: Story = {
   globals: { viewport: { value: 'desktop', isRotated: false }, colorScheme: 'dark' },
   play: async (context) => {

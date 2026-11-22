@@ -165,6 +165,7 @@ Storybook a11y setting is `test: 'todo'` (warn only), so stories added in this b
 ## 7. Out of scope
 
 - What the menu button does (drawer, navigation, routing). It renders and is accessible, but clicking it does nothing yet.
+  (Since implemented: see [app-menu.md](./app-menu.md).)
 - A manual light/dark toggle and storing the user's choice. The app follows the OS only.
 - Zustand state. There is no shared state until the menu has behavior.
 - Safe-area insets (`viewport-fit=cover`) for notched devices.

@@ -1,0 +1,14 @@
+import { useTranslation } from 'react-i18next';
+
+import { ScreenPlaceholder } from '../ScreenPlaceholder/ScreenPlaceholder';
+
+/**
+ * Placeholder for the "Add component" screen, opened from the app menu. Will hold the form for adding a component to a bicycle.
+ *
+ * @returns The titled placeholder screen.
+ */
+export function AddComponent() {
+  const { t } = useTranslation();
+
+  return <ScreenPlaceholder title={t('screens.addComponent.title')} />;
+}

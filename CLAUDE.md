@@ -31,7 +31,7 @@ Run the `code-reviewer` subagent (`.claude/agents/`) before committing. A projec
 - `src/ui/theme/` owns the MUI theme. Style through the theme and `sx`; Emotion is the styling engine.
 - `src/ui/components/**` holds React components and their stories/tests.
 - `src/i18n/config.ts` initializes i18next; translations live in `src/i18n/locales/<lng>/translation.json`. Keys are type-checked from the English file via `src/i18n/i18next.d.ts`.
-- `src/store/` holds Zustand stores (none yet).
+- `src/store/` holds the single global Zustand store: `useAppStore.ts` (menu visibility, active screen), with `types.ts` and `constants.ts` (`INITIAL_APP_STATE`). Only `src/App.tsx` reads it; components get state via props.
 - `electron/main.ts` owns the desktop window, app lifecycle, and security handlers. It runs directly via Node type stripping, so use erasable TypeScript only.
 
 ## Repo-Specific Patterns

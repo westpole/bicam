@@ -4,7 +4,34 @@
   },
   "header": {
     "menuButton": {
-      "label": "Open menu"
+      "label": "Open menu",
+      "closeLabel": "Close menu"
+    }
+  },
+  "menu": {
+    "label": "Main menu",
+    "items": {
+      "addBicycle": "Add bicycle",
+      "addComponent": "Add component",
+      "addClothesSet": "Add clothes set",
+      "beforeRideCheckIn": "Before ride check-in"
+    }
+  },
+  "screens": {
+    "addBicycle": {
+      "title": "Add bicycle"
+    },
+    "addComponent": {
+      "title": "Add component"
+    },
+    "addClothesSet": {
+      "title": "Add clothes set"
+    },
+    "beforeRideCheckIn": {
+      "title": "Before ride check-in"
+    },
+    "placeholder": {
+      "body": "This screen is coming soon."
     }
   }
 }

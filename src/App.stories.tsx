@@ -1,7 +1,17 @@
+import { useEffect } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, waitFor } from 'storybook/test';
+import { expect, waitFor, within } from 'storybook/test';
+
+import { INITIAL_APP_STATE } from '@store/constants';
+import type { AppStoreState } from '@store/types';
+import { useAppStore } from '@store/useAppStore';
 
 import { App } from './App';
+
+/** Typed story args: store fields to seed on top of the baseline. */
+interface StoryArgs {
+  initialState: Partial<AppStoreState>;
+}
 
 const meta = {
   title: 'Screens/App',
@@ -11,26 +21,74 @@ const meta = {
     layout: 'fullscreen',
     a11y: { test: 'error' },
   },
+  args: {
+    initialState: {},
+  } satisfies StoryArgs,
+  decorators: [
+    (Story, context) => {
+      const { initialState } = context.args as StoryArgs;
+
+      useEffect(() => {
+        // Reset to the baseline first, then apply story overrides, so no state bleeds between stories.
+        useAppStore.setState({ ...INITIAL_APP_STATE, ...initialState });
+      }, [initialState]);
+
+      return <Story />;
+    },
+  ],
 } satisfies Meta<typeof App>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/**
+ * Asserts the closed shell: banner, menu button, and the app title.
+ *
+ * @param canvas - The story canvas queries.
+ */
+async function expectClosedShell(canvas: Parameters<NonNullable<Story['play']>>[0]['canvas']) {
+  await expect(canvas.getByRole('banner')).toBeVisible();
+  await expect(canvas.getByRole('button', { name: 'Open menu' })).toBeVisible();
+  await expect(canvas.getByRole('heading', { level: 1, name: 'Bicam' })).toBeVisible();
+}
+
+/**
+ * Full menu flow: open, close with ✕, reopen, choose "Before ride check-in", and see its placeholder.
+ *
+ * @param context - The story context.
+ */
+async function playMenuFlow({ canvas, canvasElement, userEvent }: Parameters<NonNullable<Story['play']>>[0]) {
+  await expectClosedShell(canvas);
+  const main = canvasElement.querySelector('main') as HTMLElement;
+
+  await userEvent.click(canvas.getByRole('button', { name: 'Open menu' }));
+  const menu = await canvas.findByRole('navigation', { name: 'Main menu' });
+  await expect(canvas.getByRole('button', { name: 'Close menu' })).toBeVisible();
+  await expect(main).toHaveAttribute('inert');
+  await waitFor(() => expect(within(menu).getByRole('button', { name: 'Add bicycle' })).toHaveFocus());
+
+  await userEvent.click(canvas.getByRole('button', { name: 'Close menu' }));
+  await waitFor(() => expect(canvas.queryByRole('navigation')).not.toBeInTheDocument());
+
+  await userEvent.click(canvas.getByRole('button', { name: 'Open menu' }));
+  await userEvent.click(await canvas.findByRole('button', { name: 'Before ride check-in' }));
+  await waitFor(() => expect(canvas.queryByRole('navigation')).not.toBeInTheDocument());
+  await expect(within(main).getByRole('heading', { level: 2, name: 'Before ride check-in' })).toBeVisible();
+  await expect(main).not.toHaveAttribute('inert');
+  await expect(canvas.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+}
+
 export const Desktop: Story = {
   globals: { viewport: { value: 'desktop', isRotated: false } },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('banner')).toBeVisible();
-    await expect(canvas.getByRole('button', { name: 'Open menu' })).toBeVisible();
-    await expect(canvas.getByRole('heading', { level: 1, name: 'Bicam' })).toBeVisible();
+    await expectClosedShell(canvas);
   },
 };
 
 export const Mobile: Story = {
   globals: { viewport: { value: 'mobile1', isRotated: false } },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('banner')).toBeVisible();
-    await expect(canvas.getByRole('button', { name: 'Open menu' })).toBeVisible();
-    await expect(canvas.getByRole('heading', { level: 1, name: 'Bicam' })).toBeVisible();
+    await expectClosedShell(canvas);
   },
 };
 
@@ -39,8 +97,28 @@ export const Dark: Story = {
   play: async ({ canvas, canvasElement }) => {
     // The preview decorator applies the mode in an effect, so wait for the switch.
     await waitFor(() => expect(canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
-    await expect(canvas.getByRole('banner')).toBeVisible();
-    await expect(canvas.getByRole('button', { name: 'Open menu' })).toBeVisible();
-    await expect(canvas.getByRole('heading', { level: 1, name: 'Bicam' })).toBeVisible();
+    await expectClosedShell(canvas);
+  },
+};
+
+export const MenuFlow: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  play: playMenuFlow,
+};
+
+export const MenuFlowMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  play: playMenuFlow,
+};
+
+/** Seeded from the store: menu open over the "Add bicycle" screen, which is marked current. */
+export const MenuOpenDark: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false }, colorScheme: 'dark' },
+  args: { initialState: { isMenuOpen: true, activeScreen: 'addBicycle' } },
+  play: async ({ canvas, canvasElement }) => {
+    await waitFor(() => expect(canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
+    const menu = await canvas.findByRole('navigation', { name: 'Main menu' });
+    await expect(canvas.getByRole('button', { name: 'Close menu' })).toBeVisible();
+    await expect(within(menu).getByRole('button', { current: 'page' })).toHaveAccessibleName('Add bicycle');
   },
 };
