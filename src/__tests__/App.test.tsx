@@ -1,15 +1,19 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ThemeProvider } from '@mui/material/styles';
 
 import { INITIAL_APP_STATE } from '@store/constants';
 import { useAppStore } from '@store/useAppStore';
 import { BICYCLES, toBicycleCollection } from '@ui/components/screens/Home/__mocks__/bicycles';
+import { theme } from '@ui/theme';
 
 import { App } from '../App';
 
 describe('App', () => {
   beforeEach(() => {
     useAppStore.setState({ ...INITIAL_APP_STATE });
+    // MUI saves the chosen color scheme mode to localStorage; start every test from `system`.
+    localStorage.clear();
   });
 
   it('renders the project name as the page heading', () => {
@@ -22,6 +26,29 @@ describe('App', () => {
     render(<App />);
 
     expect(document.title).toBe('Bicam');
+  });
+
+  it('switches between the light and dark color schemes from the header toggle', async () => {
+    render(
+      <ThemeProvider theme={theme}>
+        <App />
+      </ThemeProvider>,
+    );
+    const root = document.documentElement;
+
+    // jsdom reports no `prefers-color-scheme: dark`, so the system mode resolves to light.
+    await userEvent.click(await screen.findByRole('button', { name: 'Switch to dark theme' }));
+
+    await waitFor(() => expect(root).toHaveClass('dark'));
+    expect(screen.getByTestId('LightModeIcon')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to light theme' }));
+
+    await waitFor(() => expect(root).toHaveClass('light'));
+    expect(root).not.toHaveClass('dark');
+    expect(screen.getByRole('button', { name: 'Switch to dark theme' })).toContainElement(
+      screen.getByTestId('DarkModeIcon'),
+    );
   });
 
   it('starts with the menu closed and an empty main viewport', () => {

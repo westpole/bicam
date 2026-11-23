@@ -129,6 +129,49 @@ describe('AppHeader', () => {
     expect(onMenuClick).toHaveBeenCalledTimes(1);
   });
 
+  it('omits the theme toggle when no toggle handler is given', () => {
+    renderHeader();
+
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /theme/ })).not.toBeInTheDocument();
+  });
+
+  it('renders the theme toggle after the title, offering dark mode with a moon icon in light', () => {
+    renderHeader({ onColorSchemeToggle: vi.fn() });
+
+    const toggle = screen.getByRole('button', { name: 'Switch to dark theme' });
+    const heading = screen.getByRole('heading', { level: 1 });
+    const icon = screen.getByTestId('DarkModeIcon');
+
+    expect(heading.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(toggle).toHaveClass('MuiIconButton-edgeEnd');
+    expect(toggle).toHaveClass('MuiIconButton-sizeLarge');
+    expect(toggle).toHaveClass('MuiIconButton-colorInherit');
+    expect(toggle).toContainElement(icon);
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.queryByTestId('LightModeIcon')).not.toBeInTheDocument();
+  });
+
+  it('offers light mode with a sun icon in dark', () => {
+    renderHeader({ colorScheme: 'dark', onColorSchemeToggle: vi.fn() });
+
+    expect(screen.getByRole('button', { name: 'Switch to light theme' })).toContainElement(
+      screen.getByTestId('LightModeIcon'),
+    );
+    expect(screen.queryByTestId('DarkModeIcon')).not.toBeInTheDocument();
+  });
+
+  it('calls onColorSchemeToggle when the theme toggle is clicked', async () => {
+    const onColorSchemeToggle = vi.fn();
+    const onMenuClick = vi.fn();
+    renderHeader({ onColorSchemeToggle, onMenuClick });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to dark theme' }));
+
+    expect(onColorSchemeToggle).toHaveBeenCalledTimes(1);
+    expect(onMenuClick).not.toHaveBeenCalled();
+  });
+
   it('does nothing when the menu button is clicked without a handler', async () => {
     // No-throw smoke test: the click must not throw or log an error while no drawer exists yet.
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});

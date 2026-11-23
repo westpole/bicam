@@ -59,7 +59,8 @@ const preview: Preview = {
   },
   decorators: [
     (Story, context) => (
-      <ThemeProvider theme={theme}>
+      // `noSsr` matches `src/main.tsx`: `useColorScheme` reports the scheme from the first render.
+      <ThemeProvider theme={theme} noSsr>
         <ColorSchemeSync mode={toColorSchemeMode(context.globals.colorScheme)} />
         <CssBaseline />
         <Story />

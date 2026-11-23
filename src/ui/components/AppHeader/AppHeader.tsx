@@ -1,3 +1,5 @@
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
 import AppBar from '@mui/material/AppBar';
 import IconButton from '@mui/material/IconButton';
 import Toolbar from '@mui/material/Toolbar';
@@ -17,13 +19,33 @@ import type { AppHeaderProps } from './types';
  * "Close menu" while open, with matching `aria-expanded` (and `aria-controls` when `menuId` is given).
  * Presentational: the open state and menu id come from props, not the store or the menu component.
  *
+ * When `onColorSchemeToggle` is given, a light/dark theme toggle sits at the right edge. It shows the scheme it
+ * switches to (moon in light, sun in dark) with a matching label. The scheme itself comes from props.
+ *
  * @param props - See {@link AppHeaderProps}.
  * @returns The header banner.
  * @example
- * <AppShell header={<AppHeader menuOpen={isMenuOpen} menuId={APP_MENU_ID} onMenuClick={toggleMenu} />} />
+ * <AppShell
+ *   header={
+ *     <AppHeader
+ *       menuOpen={isMenuOpen}
+ *       menuId={APP_MENU_ID}
+ *       onMenuClick={toggleMenu}
+ *       colorScheme={colorScheme}
+ *       onColorSchemeToggle={toggleColorScheme}
+ *     />
+ *   }
+ * />
  */
-export function AppHeader({ menuOpen = false, menuId, onMenuClick }: AppHeaderProps) {
+export function AppHeader({
+  menuOpen = false,
+  menuId,
+  onMenuClick,
+  colorScheme = 'light',
+  onColorSchemeToggle,
+}: AppHeaderProps) {
   const { t } = useTranslation();
+  const isDark = colorScheme === 'dark';
 
   return (
     <AppBar component="header" position="static">
@@ -45,6 +67,21 @@ export function AppHeader({ menuOpen = false, menuId, onMenuClick }: AppHeaderPr
         <Typography variant="h6" component="h1" noWrap sx={{ minWidth: 0 }}>
           {t('app.title')}
         </Typography>
+        {onColorSchemeToggle && (
+          // ml: 'auto' pushes the toggle to the right edge; same 48 × 48 hit area as the menu button.
+          <IconButton
+            edge="end"
+            color="inherit"
+            size="large"
+            aria-label={
+              isDark ? t('header.themeToggle.switchToLightLabel') : t('header.themeToggle.switchToDarkLabel')
+            }
+            onClick={onColorSchemeToggle}
+            sx={{ ml: 'auto', flexShrink: 0 }}
+          >
+            {isDark ? <LightModeIcon /> : <DarkModeIcon />}
+          </IconButton>
+        )}
       </Toolbar>
     </AppBar>
   );
