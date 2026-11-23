@@ -21,7 +21,9 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <ThemeProvider theme={theme}>
+    {/* The app never renders on a server, so `noSsr` lets `useColorScheme` report the stored or system scheme on the
+        first render instead of `undefined` until mount (which briefly showed the wrong theme toggle icon). */}
+    <ThemeProvider theme={theme} noSsr>
       <CssBaseline />
       <App />
     </ThemeProvider>

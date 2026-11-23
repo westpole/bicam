@@ -98,6 +98,76 @@ export const Dark: Story = {
 };
 
 /**
+ * Play function for the theme toggle: it sits at the header's right edge on the title row, keeps a 48 × 48 hit area,
+ * offers the other scheme, follows the AppBar text color, comes after the menu button in tab order, and calls the
+ * handler.
+ */
+const playThemeToggle = async ({ args, canvas, userEvent }: Parameters<NonNullable<Story['play']>>[0]) => {
+  const isDark = args.colorScheme === 'dark';
+  const banner = canvas.getByRole('banner');
+  const heading = canvas.getByRole('heading', { level: 1, name: 'Bicam' });
+  const toggle = canvas.getByRole('button', { name: isDark ? 'Switch to light theme' : 'Switch to dark theme' });
+  const icon = canvas.getByTestId(isDark ? 'LightModeIcon' : 'DarkModeIcon');
+
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toContainElement(icon);
+  await expect(getComputedStyle(icon).color).toBe(getComputedStyle(banner).color);
+
+  const toggleBox = toggle.getBoundingClientRect();
+  const headingBox = heading.getBoundingClientRect();
+  const bannerBox = banner.getBoundingClientRect();
+  await expect(toggleBox.left).toBeGreaterThanOrEqual(headingBox.right);
+  // `edge="end"` pulls the button into the toolbar gutter, so its icon lines up with the page's right padding.
+  await expect(bannerBox.right - toggleBox.right).toBeLessThanOrEqual(24);
+  await expect(
+    Math.abs(toggleBox.top + toggleBox.height / 2 - (headingBox.top + headingBox.height / 2)),
+  ).toBeLessThanOrEqual(4);
+  await expect(toggleBox.width).toBeGreaterThanOrEqual(48);
+  await expect(toggleBox.height).toBeGreaterThanOrEqual(48);
+
+  await userEvent.tab();
+  await expect(canvas.getByRole('button', { name: 'Open menu' })).toHaveFocus();
+  await userEvent.tab();
+  await expect(toggle).toHaveFocus();
+  await userEvent.click(toggle);
+  await expect(args.onColorSchemeToggle).toHaveBeenCalledTimes(1);
+  await expect(args.onMenuClick).not.toHaveBeenCalled();
+};
+
+/** With a toggle handler, the light/dark theme toggle appears at the right edge (moon: switch to dark). */
+export const ThemeToggle: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  args: { colorScheme: 'light', onColorSchemeToggle: fn() },
+  play: playThemeToggle,
+};
+
+export const ThemeToggleMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  args: { colorScheme: 'light', onColorSchemeToggle: fn() },
+  play: playThemeToggle,
+};
+
+/** In the dark scheme the toggle shows a sun and offers the light theme. */
+export const ThemeToggleDark: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false }, colorScheme: 'dark' },
+  args: { colorScheme: 'dark', onColorSchemeToggle: fn() },
+  play: async (context) => {
+    // The preview decorator applies the mode in an effect, so wait for the switch.
+    await waitFor(() => expect(context.canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
+    await playThemeToggle(context);
+  },
+};
+
+export const ThemeToggleDarkMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false }, colorScheme: 'dark' },
+  args: { colorScheme: 'dark', onColorSchemeToggle: fn() },
+  play: async (context) => {
+    await waitFor(() => expect(context.canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
+    await playThemeToggle(context);
+  },
+};
+
+/**
  * Play function for the menu-open state: the button shows ✕, reads "Close menu", is an expanded disclosure, keeps
  * its 48 × 48 hit area, and still calls the handler.
  */

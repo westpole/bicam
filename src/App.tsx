@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { useColorScheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
 import { useAppStore } from '@store/useAppStore';
@@ -16,7 +17,9 @@ import { Home } from '@ui/components/screens/Home/Home';
  * `bicycleDetails`, the selected bicycle's details placeholder; otherwise the chosen menu screen.
  *
  * `App` is the only component that reads `useAppStore`; it passes state and actions down as props, so the header,
- * menu, and screens stay presentational.
+ * menu, and screens stay presentational. The light/dark mode is owned by MUI's `ThemeProvider` (it applies the scheme
+ * class and saves the choice to `localStorage`), so `App` reads it with `useColorScheme` and hands the header the
+ * resolved scheme and a toggle instead of copying it into the store.
  *
  * @returns The app shell.
  */
@@ -31,6 +34,12 @@ export function App() {
   const closeMenu = useAppStore((state) => state.closeMenu);
   const navigateTo = useAppStore((state) => state.navigateTo);
   const openBicycleDetails = useAppStore((state) => state.openBicycleDetails);
+  // `colorScheme` is the resolved scheme (`system` already applied). It is defined from the first render because
+  // `main.tsx` (and the Storybook preview) pass `noSsr`; the light fallback only covers rendering without such a
+  // ThemeProvider (e.g. unit tests).
+  const { colorScheme, setMode } = useColorScheme();
+  const shownColorScheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const toggleColorScheme = () => setMode(shownColorScheme === 'dark' ? 'light' : 'dark');
 
   // Select the whole slice (a stable reference until it changes) and map it here, so the selector never returns a
   // new array on each call.
@@ -52,7 +61,15 @@ export function App() {
 
   return (
     <AppShell
-      header={<AppHeader menuOpen={isMenuOpen} menuId={APP_MENU_ID} onMenuClick={toggleMenu} />}
+      header={
+        <AppHeader
+          menuOpen={isMenuOpen}
+          menuId={APP_MENU_ID}
+          onMenuClick={toggleMenu}
+          colorScheme={shownColorScheme}
+          onColorSchemeToggle={toggleColorScheme}
+        />
+      }
       overlay={<AppMenu open={isMenuOpen} activeScreen={activeScreen} onSelect={navigateTo} onClose={closeMenu} />}
       overlayOpen={isMenuOpen}
     >

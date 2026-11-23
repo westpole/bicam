@@ -6,6 +6,10 @@
     "menuButton": {
       "label": "Open menu",
       "closeLabel": "Close menu"
+    },
+    "themeToggle": {
+      "switchToDarkLabel": "Switch to dark theme",
+      "switchToLightLabel": "Switch to light theme"
     }
   },
   "menu": {

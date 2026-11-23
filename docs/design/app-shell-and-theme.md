@@ -167,7 +167,9 @@ Storybook a11y setting is `test: 'todo'` (warn only), so stories added in this b
 
 - What the menu button does (drawer, navigation, routing). It renders and is accessible, but clicking it does nothing yet.
   (Since implemented: see [app-menu.md](./app-menu.md).)
-- A manual light/dark toggle and storing the user's choice. The app follows the OS only.
+- A manual light/dark toggle and storing the user's choice. The app follows the OS only. (Since implemented: a
+  toggle at the right edge of the header calls `useColorScheme().setMode('light' | 'dark')` from `App`. MUI's storage
+  manager keeps the choice in `localStorage`. The app follows the OS until the user picks a scheme.)
 - Zustand state. There is no shared state until the menu has behavior.
 - Safe-area insets (`viewport-fit=cover`) for notched devices.
 - Content for the main viewport beyond placeholder and story fixtures.
