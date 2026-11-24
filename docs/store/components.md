@@ -1,7 +1,6 @@
 # Components slice
 
-> **Status:** In progress (batch #15, everything implemented except [Links between slices](#links-between-slices), see
-> [tickets/plan.md](../../tickets/plan.md))
+> **Status:** In progress (batch #15, everything implemented, see [tickets/plan.md](../../tickets/plan.md))
 > **Owner layer:** Zustand, `src/store/components/`
 > **Root key:** `components` (see [README.md](./README.md))
 

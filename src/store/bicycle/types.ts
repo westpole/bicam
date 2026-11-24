@@ -23,7 +23,7 @@ export interface Bicycle {
   size: string | null;
   /** Free-text frame geometry notes, or `null` when unknown. 1–500 chars. */
   frameGeometry: string | null;
-  /** Ids of the components currently installed. Unique, up to 100. */
+  /** Ids of the components currently installed. Stored components only, unique, up to 100. */
   components: ComponentId[];
 }
 
@@ -78,13 +78,15 @@ export type BicycleResult = { ok: true; bicycle: Bicycle } | { ok: false; errors
 export interface BicycleActions {
   /**
    * Normalizes and validates `input`, generates a new id, stores the bicycle, and appends the id to `allIds`. Fails
-   * with `duplicate` on `name` when another bicycle has the same name, ignoring case.
+   * with `duplicate` on `name` when another bicycle has the same name, ignoring case, and with `notFound` on
+   * `components` when a listed component is not stored.
    */
   addBicycle: (input: BicycleInput) => BicycleResult;
   /**
    * Merges `changes` into the bicycle stored under `id`, then normalizes and validates it. Renaming is allowed; the
    * new name must not clash with another bicycle's name. `null` clears an optional field; omitted or `undefined`
-   * keys are unchanged. Fails with `notFound` on `id` for an unknown id.
+   * keys are unchanged. Fails with `notFound` on `id` for an unknown id, and on `components` when a listed component
+   * is not stored.
    */
   updateBicycle: (id: BicycleId, changes: BicycleUpdate) => BicycleResult;
   /** Removes the bicycle stored under `id`. Returns `false`, changing nothing, for an unknown id. */

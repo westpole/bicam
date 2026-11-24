@@ -113,6 +113,118 @@ describe('useAppStore', () => {
     expect(getStateData()).toEqual(INITIAL_APP_STATE);
   });
 
+  describe('links between bicycles and components', () => {
+    /**
+     * Adds a component through the store and returns its generated id.
+     *
+     * @param model - The component model.
+     * @returns The new component's id.
+     */
+    function addComponent(model: string): string {
+      const result = useAppStore.getState().addComponent({ type: 'chain', model });
+      if (!result.ok) throw new Error('fixture component was rejected');
+      return result.component.id;
+    }
+
+    /**
+     * Adds a bicycle that lists the given components and returns its generated id.
+     *
+     * @param name - The bicycle name (must be unique).
+     * @param components - Ids of stored components.
+     * @returns The new bicycle's id.
+     */
+    function addBicycleWith(name: string, components: string[]): string {
+      const result = useAppStore.getState().addBicycle({ name, company: 'Canyon', model: 'Grizl', components });
+      if (!result.ok) throw new Error('fixture bicycle was rejected');
+      return result.bicycle.id;
+    }
+
+    /**
+     * Lists the component ids that a bicycle refers to but the store does not hold.
+     *
+     * @param state - The state to check.
+     * @returns The missing ids.
+     */
+    function findMissingComponents({ bicycle, components }: AppStoreState): string[] {
+      return Object.values(bicycle.byId)
+        .flatMap((stored) => stored.components)
+        .filter((id) => !Object.keys(components.byId).includes(id));
+    }
+
+    it('removes a component from every bicycle that lists it', () => {
+      const removed = addComponent('Removed');
+      const kept = addComponent('Kept');
+      const first = addBicycleWith('First', [removed, kept]);
+      const second = addBicycleWith('Second', [removed]);
+      const other = addBicycleWith('Other', [kept]);
+      const before = useAppStore.getState();
+
+      expect(before.removeComponent(removed)).toBe(true);
+
+      const { bicycle, components } = useAppStore.getState();
+      expect(bicycle.byId[first]).toEqual({ ...before.bicycle.byId[first], components: [kept] });
+      expect(bicycle.byId[second]).toEqual({ ...before.bicycle.byId[second], components: [] });
+      expect(bicycle.byId[other]).toBe(before.bicycle.byId[other]);
+      expect(bicycle.allIds).toBe(before.bicycle.allIds);
+      expect(components.allIds).toEqual([kept]);
+      expect(Object.keys(components.byId)).toEqual([kept]);
+    });
+
+    it('keeps the bicycle reference when no bicycle lists the component', () => {
+      const removed = addComponent('Removed');
+      addBicycleWith('Roadie', [addComponent('Kept')]);
+      const before = useAppStore.getState();
+
+      expect(before.removeComponent(removed)).toBe(true);
+
+      expect(useAppStore.getState().bicycle).toBe(before.bicycle);
+      expect(useAppStore.getState().components.byId[removed]).toBeUndefined();
+    });
+
+    it('never shows subscribers a bicycle that lists a missing component', () => {
+      const removed = addComponent('Removed');
+      addBicycleWith('Roadie', [removed]);
+      const missing: string[][] = [];
+      const unsubscribe = useAppStore.subscribe((state) => missing.push(findMissingComponents(state)));
+
+      useAppStore.getState().removeComponent(removed);
+      unsubscribe();
+
+      expect(missing).toEqual([[], []]);
+    });
+
+    it.each(['unknown-id', 'toString', '__proto__'])(
+      'returns false and changes nothing when removing the unknown component %j',
+      (id) => {
+        addBicycleWith('Roadie', [addComponent('Kept')]);
+        const before = useAppStore.getState();
+
+        expect(before.removeComponent(id)).toBe(false);
+        expect(useAppStore.getState()).toBe(before);
+      },
+    );
+
+    it('keeps the components of a removed bicycle', () => {
+      const id = addBicycleWith('Roadie', [addComponent('Kept')]);
+      const before = useAppStore.getState();
+
+      expect(before.removeBicycle(id)).toBe(true);
+
+      expect(useAppStore.getState().components).toBe(before.components);
+    });
+
+    it('can update a bicycle after one of its components was removed', () => {
+      const removed = addComponent('Removed');
+      const id = addBicycleWith('Roadie', [removed]);
+      useAppStore.getState().removeComponent(removed);
+
+      expect(useAppStore.getState().updateBicycle(id, { model: 'Ultimate' })).toMatchObject({
+        ok: true,
+        bicycle: { model: 'Ultimate', components: [] },
+      });
+    });
+  });
+
   describe('selected bicycle', () => {
     /**
      * Adds a bicycle through the store and returns its generated id.

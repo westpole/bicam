@@ -213,8 +213,8 @@ export interface ComponentActions {
    */
   updateComponent: (id: ComponentId, changes: ComponentUpdate) => ComponentResult;
   /**
-   * Removes the component stored under `id`, including its history. Returns `false`, changing nothing, for an unknown
-   * id.
+   * Removes the component stored under `id`, including its history, and its id from every bicycle that lists it.
+   * Returns `false`, changing nothing, for an unknown id.
    */
   removeComponent: (id: ComponentId) => boolean;
   /**

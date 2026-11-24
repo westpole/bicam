@@ -1,6 +1,8 @@
+import type { ComponentCollection } from '../../components/types';
 import { INITIAL_APP_STATE } from '../../constants';
 import { useAppStore } from '../../useAppStore';
-import type { Bicycle, BicycleDetails, BicycleInput, BicycleUpdate } from '../types';
+import { BICYCLE_LIMITS } from '../constants';
+import type { Bicycle, BicycleDetails, BicycleErrorCode, BicycleInput, BicycleUpdate } from '../types';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -23,6 +25,25 @@ const GRAVEL_DETAILS: BicycleDetails = {
   frameGeometry: 'Stack 594 mm',
   components: ['chain-1'],
 };
+
+/** Stored components that the bicycles under test may list. */
+const COMPONENTS: ComponentCollection = {
+  byId: {
+    'chain-1': { id: 'chain-1', type: 'chain', model: 'CN-M8100', history: [] },
+    'chain-2': { id: 'chain-2', type: 'chain', model: 'X12', history: [] },
+    'cassette-1': { id: 'cassette-1', type: 'cassette', model: 'CS-M8100', history: [] },
+  },
+  allIds: ['chain-1', 'chain-2', 'cassette-1'],
+};
+
+/** Component lists with an unknown id that an earlier rule rejects, with that rule's code. */
+const REJECTED_BEFORE_LOOKUP: Array<[string, string[], BicycleErrorCode]> = [
+  ['too many ids', Array.from({ length: BICYCLE_LIMITS.componentsMaxCount + 1 }, (_, i) => `unknown-${i}`), 'tooMany'],
+  ['a blank id', ['unknown-id', ' '], 'required'],
+  ['a too long id', ['unknown-id', 'x'.repeat(BICYCLE_LIMITS.componentIdMaxLength + 1)], 'tooLong'],
+  ['a control character', ['unknown-id', 'a\nb'], 'invalidFormat'],
+  ['a repeated id', ['unknown-id', 'unknown-id'], 'duplicate'],
+];
 
 /**
  * Builds minimal valid input for a bicycle with the given name.
@@ -52,7 +73,7 @@ function addOrFail(input: BicycleInput): Bicycle {
 
 describe('bicycle slice', () => {
   beforeEach(() => {
-    useAppStore.setState({ ...INITIAL_APP_STATE });
+    useAppStore.setState({ ...INITIAL_APP_STATE, components: COMPONENTS });
   });
 
   afterEach(() => {
@@ -158,6 +179,52 @@ describe('bicycle slice', () => {
       expect(useAppStore.getState().bicycle).toBe(before);
     });
 
+    it.each([[[]], [['chain-1']], [[' chain-1 ', 'cassette-1']]])('accepts the stored components %j', (components) => {
+      const expected = components.map((id: string) => id.trim());
+
+      expect(addOrFail({ ...minimalInput('Roadie'), components }).components).toEqual(expected);
+    });
+
+    it('accepts a component that another bicycle lists', () => {
+      addOrFail({ ...minimalInput('Roadie'), components: ['chain-1'] });
+
+      expect(addOrFail({ ...minimalInput('Gravel'), components: ['chain-1'] }).components).toEqual(['chain-1']);
+    });
+
+    it.each(['unknown-id', 'CHAIN-1', 'toString', '__proto__'])('rejects the unknown component %j', (id) => {
+      const randomUUID = vi.spyOn(crypto, 'randomUUID');
+      const before = useAppStore.getState();
+
+      const result = before.addBicycle({ ...minimalInput('Roadie'), components: ['chain-1', id] });
+
+      expect(result).toEqual({ ok: false, errors: [{ field: 'components', code: 'notFound' }] });
+      expect(randomUUID).not.toHaveBeenCalled();
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it.each(REJECTED_BEFORE_LOOKUP)('reports %s before an unknown component', (_name, components, code) => {
+      const result = useAppStore.getState().addBicycle({ ...minimalInput('Roadie'), components });
+
+      expect(result).toEqual({ ok: false, errors: [{ field: 'components', code }] });
+    });
+
+    it('reports an unknown component last, together with other field errors', () => {
+      addOrFail(minimalInput('Roadie'));
+
+      const result = useAppStore
+        .getState()
+        .addBicycle({ ...minimalInput('roadie'), size: 'X*L', components: ['unknown-id'] });
+
+      expect(result).toEqual({
+        ok: false,
+        errors: [
+          { field: 'name', code: 'duplicate' },
+          { field: 'size', code: 'invalidFormat' },
+          { field: 'components', code: 'notFound' },
+        ],
+      });
+    });
+
     it.each(['toString', 'constructor', '__proto__'])('accepts %j as a name', (name) => {
       expect(addOrFail(minimalInput(name))).toMatchObject({ name });
     });
@@ -230,6 +297,33 @@ describe('bicycle slice', () => {
       const result = useAppStore.getState().updateBicycle(gravel.id, { components: ['chain-2', 'cassette-1'] });
 
       expect(result).toMatchObject({ ok: true, bicycle: { components: ['chain-2', 'cassette-1'] } });
+    });
+
+    it('accepts an empty components list', () => {
+      const result = useAppStore.getState().updateBicycle(gravel.id, { components: [] });
+
+      expect(result).toEqual({ ok: true, bicycle: { ...gravel, components: [] } });
+    });
+
+    it.each(['unknown-id', 'CHAIN-1', 'toString', '__proto__'])('rejects the unknown component %j', (id) => {
+      const before = useAppStore.getState();
+
+      const result = before.updateBicycle(gravel.id, { components: ['chain-1', id] });
+
+      expect(result).toEqual({ ok: false, errors: [{ field: 'components', code: 'notFound' }] });
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it.each(REJECTED_BEFORE_LOOKUP)('reports %s before an unknown component', (_name, components, code) => {
+      const result = useAppStore.getState().updateBicycle(gravel.id, { components });
+
+      expect(result).toEqual({ ok: false, errors: [{ field: 'components', code }] });
+    });
+
+    it('reports only the unknown bicycle when the components are unknown too', () => {
+      const result = useAppStore.getState().updateBicycle('unknown-id', { components: ['unknown-id'] });
+
+      expect(result).toEqual({ ok: false, errors: [{ field: 'id', code: 'notFound' }] });
     });
 
     it('keeps the stored id even if the caller smuggles an id into the changes', () => {

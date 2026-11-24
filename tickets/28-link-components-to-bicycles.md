@@ -1,7 +1,7 @@
 # [FEATURE] Keep bicycle component ids valid
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P2
 > **Epic:** [plan.md](./plan.md) (batch #15)
 > **Sprint:** `15-store-component-entity`
@@ -33,11 +33,11 @@ a component from its bicycles when it is removed.
 **So that** a bicycle never points at a missing part
 
 **Acceptance Criteria:**
-- [ ] `addBicycle` and `updateBicycle` with an unknown id, including `'toString'`, return
+- [x] `addBicycle` and `updateBicycle` with an unknown id, including `'toString'`, return
       `{ field: 'components', code: 'notFound' }` and leave state unchanged.
-- [ ] The existing `components` checks come first: `tooMany`, `required`, `tooLong`, `invalidFormat`, and `duplicate`
+- [x] The existing `components` checks come first: `tooMany`, `required`, `tooLong`, `invalidFormat`, and `duplicate`
       win over `notFound`. Still one error per field, in field order.
-- [ ] Stored ids and an empty list are accepted.
+- [x] Stored ids and an empty list are accepted.
 
 **Out of scope:** stopping two bicycles from listing the same component.
 
@@ -47,10 +47,10 @@ a component from its bicycles when it is removed.
 **So that** they list only parts that exist
 
 **Acceptance Criteria:**
-- [ ] `removeComponent(id)` also removes the id from every bicycle that lists it. Bicycles that do not list it keep
+- [x] `removeComponent(id)` also removes the id from every bicycle that lists it. Bicycles that do not list it keep
       their references; if none lists it, `bicycle` keeps its reference.
-- [ ] Removing an unknown component returns `false` and changes nothing.
-- [ ] `removeBicycle` leaves `components` unchanged.
+- [x] Removing an unknown component returns `false` and changes nothing.
+- [x] `removeBicycle` leaves `components` unchanged.
 
 **Out of scope:** a confirmation before removal.
 
@@ -95,11 +95,11 @@ No visual assets (store-only ticket).
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Store tests passing (`npm run test:store`); 90% branch threshold met
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function; store docs updated
-- [ ] `code-reviewer` subagent run and findings addressed
+- [x] All acceptance criteria met
+- [x] Store tests passing (`npm run test:store`); 90% branch threshold met
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function; store docs updated
+- [x] `code-reviewer` subagent run and findings addressed
 
 ---
 

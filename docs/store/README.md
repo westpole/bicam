@@ -115,7 +115,7 @@ persistence is added:
 | Decision | Reason |
 | --- | --- |
 | Bicycles are keyed by a generated UUID `id`; the user-typed title is a separate, unique `name`. | Other slices will reference bicycles by key. A user-typed key would break those references (and old history entries) on rename. With a generated id, renaming is a plain field update. |
-| Navigation side effects of domain actions live in `useAppStore.ts` wrappers, not in slices (e.g. removing the selected bicycle returns to `home`). | Each slice owns only its domain key; the UI fields belong to the root store. The wrapper calls the slice action, then updates the UI fields in a second `set`. React batches both into one render; a non-React subscriber can see one in-between notification. |
+| Navigation and cross-slice side effects of domain actions live in `useAppStore.ts` wrappers, not in slices (e.g. removing the selected bicycle returns to `home`; removing a component unlinks it from its bicycles). | Each slice owns only its domain key; the UI fields belong to the root store. A wrapper uses a second `set`: `removeBicycle` updates the UI fields after the slice action, and `removeComponent` unlinks before it, so the bicycles never list a missing component. React batches both into one render; a non-React subscriber can see one in-between notification. |
 
 ## 6. Open questions
 
@@ -123,4 +123,3 @@ persistence is added:
 | --- | --- | --- |
 | Should `frameGeometry` be structured? | Free text cannot be compared or validated (stack, reach, head tube angle, …). | Free text for now. A structured, unit-tagged object (mm, degrees) can replace it with a migration. |
 | Should `purchased` reject future dates? | Needs the current date, which makes the store depend on a clock. | Not checked in the store. The input form can warn. |
-| Should `components` be checked against the `components` slice? | Ids could point to components that do not exist. | Not checked yet. Planned for batch #15, see [components.md §4](./components.md#links-between-slices). |
