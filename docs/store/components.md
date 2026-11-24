@@ -1,6 +1,6 @@
 # Components slice
 
-> **Status:** In progress (batch #15, everything implemented, see [tickets/plan.md](../../tickets/plan.md))
+> **Status:** Implemented (batch #15)
 > **Owner layer:** Zustand, `src/store/components/`
 > **Root key:** `components` (see [README.md](./README.md))
 
@@ -57,8 +57,8 @@ interface ComponentCollection {
 
 Initial value: `{ byId: {}, allIds: [] }`.
 
-`ComponentId` and `IsoDate` are not new. `ComponentId` moved here from `src/store/bicycle/types.ts` in #22, and
-`IsoDate` moved from there to `src/store/common/types.ts` in #24.
+`ComponentId` moved here from `src/store/bicycle/types.ts`, and `IsoDate` moved from there to
+`src/store/common/types.ts`.
 
 The entity is named `BicycleComponent` and its type `BicycleComponentType`, because `Component` and `ComponentType` are
 also React exports.
@@ -271,4 +271,4 @@ On success, the returned object is the one held in the store; treat it as read-o
 
 | Question | Why it matters | Current answer |
 | --- | --- | --- |
-| Can one component be listed on two bicycles at once? | A part is physically on one bicycle at a time. | Not checked. Does not block any ticket. |
+| Can one component be listed on two bicycles at once? | A part is physically on one bicycle at a time. | Not checked. |

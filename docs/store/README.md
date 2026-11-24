@@ -10,7 +10,7 @@ the shape of that store, the data limits of each entity, and the rules every sli
 | --- | --- |
 | [README.md](./README.md) | Root structure, conventions, persistence notes, open questions |
 | [bicycle.md](./bicycle.md) | The `bicycle` slice and the `Bicycle` entity |
-| [components.md](./components.md) | The `components` slice and the `BicycleComponent` entity (in progress, batch #15) |
+| [components.md](./components.md) | The `components` slice and the `BicycleComponent` entity |
 
 ## 1. Root structure
 
@@ -24,7 +24,7 @@ interface AppStoreState {
   // Domain data
   bicycle: BicycleCollection;   // implemented, see bicycle.md
   events: ReservedSlice;        // placeholder, always {}
-  components: ComponentCollection; // in progress (batch #15), see components.md
+  components: ComponentCollection; // implemented, see components.md
   history: ReservedSlice;       // placeholder, always {}
 }
 ```
@@ -36,7 +36,7 @@ interface AppStoreState {
 | `selectedBicycleId` | Implemented | `BicycleId \| null` | `null` | UI only. After each action completes, `activeScreen === 'bicycleDetails'` exactly when this is a stored bicycle id. Set by `openBicycleDetails`; cleared by `navigateTo` and by removing the selected bicycle. |
 | `bicycle` | Implemented | `BicycleCollection` | `{ byId: {}, allIds: [] }` | The user's bicycles. See [bicycle.md](./bicycle.md). |
 | `events` | Placeholder | `ReservedSlice` | `{}` | Reserved for maintenance and ride events. |
-| `components` | In progress (batch #15) | `ComponentCollection` | `{ byId: {}, allIds: [] }` | The user's components. `Bicycle.components` references ids from here. See [components.md](./components.md). |
+| `components` | Implemented | `ComponentCollection` | `{ byId: {}, allIds: [] }` | The user's components. `Bicycle.components` references ids from here. See [components.md](./components.md). |
 | `history` | Placeholder | `ReservedSlice` | `{}` | Reserved for the change and maintenance log. |
 
 `ReservedSlice` is `Readonly<Record<string, never>>`: an empty object that holds nothing. The real types replace it

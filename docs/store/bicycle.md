@@ -59,7 +59,7 @@ All text is trimmed before it is validated and stored. Lengths are counted after
 
 | Field | Type | Required | Limits | Notes |
 | --- | --- | --- | --- | --- |
-| `id` | `string` | Generated | UUID v4 from `crypto.randomUUID()` | Assigned by `addBicycle`; never changes and cannot be set by the caller. Other slices (`events`, `history`, `components`) will reference bicycles by this id. |
+| `id` | `string` | Generated | UUID v4 from `crypto.randomUUID()` | Assigned by `addBicycle`; never changes and cannot be set by the caller. Other slices (`events`, `history`) will reference bicycles by this id. |
 | `name` | `string` | Yes | 1–40 chars; no control characters; unique, case-insensitive (`'Roadie'` and `'roadie'` clash) | Typed by the user and shown as the bicycle's title. Can be changed with `updateBicycle`. |
 | `company` | `string` | Yes | 1–60 chars; no control characters | Manufacturer or brand, e.g. `'Canyon'`. |
 | `model` | `string` | Yes | 1–60 chars; no control characters | e.g. `'Grizl CF SL 7'`. |
