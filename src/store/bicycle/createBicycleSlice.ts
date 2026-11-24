@@ -1,9 +1,9 @@
 import type { StateCreator } from 'zustand';
 
+import { definedChanges } from '../common/utilities/definedChanges';
 import type { AppStore } from '../types';
 import type { Bicycle, BicycleActions, BicycleResult } from './types';
 import { createBicycleId } from './utilities/createBicycleId';
-import { definedChanges } from './utilities/definedChanges';
 import { hasBicycle } from './utilities/hasBicycle';
 import { normalizeBicycleInput } from './utilities/normalizeBicycleInput';
 import { validateBicycleInCollection } from './utilities/validateBicycleInCollection';

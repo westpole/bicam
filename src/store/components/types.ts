@@ -57,11 +57,14 @@ export interface ComponentInput {
   model: string;
 }
 
+/** Changes for `updateComponent`: any input field. Omitted or `undefined` keys stay unchanged. */
+export type ComponentUpdate = Partial<ComponentInput>;
+
 /** A field of {@link BicycleComponent} that a validation error can point at. */
 export type ComponentField = Exclude<keyof BicycleComponent, 'history'>;
 
 /** Why a field failed validation. Codes, not text: the UI translates them. See `docs/store/components.md` §5. */
-export type ComponentErrorCode = TextErrorCode | 'invalidOption';
+export type ComponentErrorCode = TextErrorCode | 'invalidOption' | 'notFound';
 
 /** One failing field. Validation reports at most one error per field. */
 export interface ComponentValidationError {
@@ -91,6 +94,17 @@ export interface ComponentActions {
    * id to `allIds`.
    */
   addComponent: (input: ComponentInput) => ComponentResult;
+  /**
+   * Merges `changes` into the component stored under `id`, then normalizes and validates it. Omitted or `undefined`
+   * keys are unchanged; the id, the history, and the place in `allIds` are always kept. When nothing changes, the stored
+   * component is returned and state is not written. Fails with `notFound` on `id` for an unknown id.
+   */
+  updateComponent: (id: ComponentId, changes: ComponentUpdate) => ComponentResult;
+  /**
+   * Removes the component stored under `id`, including its history. Returns `false`, changing nothing, for an unknown
+   * id.
+   */
+  removeComponent: (id: ComponentId) => boolean;
 }
 
 /** Normalized component collection. `allIds` holds the display (insertion) order. */

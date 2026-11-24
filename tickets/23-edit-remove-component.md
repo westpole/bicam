@@ -1,7 +1,7 @@
 # [FEATURE] Edit and remove a component
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #15)
 > **Sprint:** `15-store-component-entity`
@@ -31,11 +31,11 @@ Add `updateComponent` and `removeComponent`, so a caller can correct a component
 **So that** I can fix a mistake
 
 **Acceptance Criteria:**
-- [ ] `updateComponent(id, changes)` changes only the given keys and returns `{ ok: true, component }`. `id`,
+- [x] `updateComponent(id, changes)` changes only the given keys and returns `{ ok: true, component }`. `id`,
       `history` (same reference), and the place in `allIds` are kept.
-- [ ] An omitted or `undefined` key is unchanged; `id` and `history` keys in `changes` are ignored.
-- [ ] Invalid changes return the same errors as `addComponent` and leave state unchanged.
-- [ ] Edge case: an unknown id, including `'__proto__'` and `'toString'`, returns
+- [x] An omitted or `undefined` key is unchanged; `id` and `history` keys in `changes` are ignored.
+- [x] Invalid changes return the same errors as `addComponent` and leave state unchanged.
+- [x] Edge case: an unknown id, including `'__proto__'` and `'toString'`, returns
       `{ ok: false, errors: [{ field: 'id', code: 'notFound' }] }`.
 
 **Out of scope:** the type-change rule for stored history (#25, the first type-specific fields).
@@ -46,8 +46,8 @@ Add `updateComponent` and `removeComponent`, so a caller can correct a component
 **So that** my list holds only parts I care about
 
 **Acceptance Criteria:**
-- [ ] `removeComponent(id)` returns `true`, and the id is gone from `byId` and `allIds`. Other components are unchanged.
-- [ ] An unknown id returns `false` and leaves state unchanged (same object reference).
+- [x] `removeComponent(id)` returns `true`, and the id is gone from `byId` and `allIds`. Other components are unchanged.
+- [x] An unknown id returns `false` and leaves state unchanged (same object reference).
 
 **Out of scope:** removing the id from bicycles (#28), archiving or undo.
 
@@ -85,11 +85,11 @@ No visual assets (store-only ticket).
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Store tests passing (`npm run test:store`); 90% branch threshold met
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function and type
-- [ ] `code-reviewer` subagent run and findings addressed
+- [x] All acceptance criteria met
+- [x] Store tests passing (`npm run test:store`); 90% branch threshold met
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function and type
+- [x] `code-reviewer` subagent run and findings addressed
 
 ---
 

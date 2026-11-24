@@ -1,6 +1,7 @@
 # Components slice
 
-> **Status:** In progress (batch #15, `addComponent` implemented, see [tickets/plan.md](../../tickets/plan.md))
+> **Status:** In progress (batch #15, `addComponent`, `updateComponent`, and `removeComponent` implemented, see
+> [tickets/plan.md](../../tickets/plan.md))
 > **Owner layer:** Zustand, `src/store/components/`
 > **Root key:** `components` (see [README.md](./README.md))
 
@@ -192,7 +193,7 @@ In updates, `null` (or blank text) clears an optional field. An omitted or `unde
 | Action | Returns | Behavior |
 | --- | --- | --- |
 | `addComponent(input)` | `ComponentResult` | Validates, generates an `id`, stores the component with `history: []`, and appends the id to `allIds`. |
-| `updateComponent(id, changes)` | `ComponentResult` | Changes `type` and/or `model`. Keeps `id`, `history`, and the place in `allIds`. A new `type` is rejected with `{ field: 'type', code: 'notAllowed' }` when any stored entry fails validation for it, whatever that entry's own error code is. |
+| `updateComponent(id, changes)` | `ComponentResult` | Changes `type` and/or `model`. Keeps `id`, `history`, and the place in `allIds`. State is not written when nothing changes. A new `type` is rejected with `{ field: 'type', code: 'notAllowed' }` when any stored entry fails validation for it, whatever that entry's own error code is. |
 | `removeComponent(id)` | `boolean` | Removes the component and its history. `false` for an unknown id. The wrapper in `useAppStore.ts` also removes the id from every `Bicycle.components` (see [Links between slices](#links-between-slices)). |
 | `addComponentHistoryEntry(componentId, input)` | `ComponentHistoryResult` | Validates against the component's type, generates an entry `id`, and appends the entry. |
 | `updateComponentHistoryEntry(componentId, entryId, changes)` | `ComponentHistoryResult` | Merges, normalizes, and validates. Keeps the entry's `id` and place. |

@@ -126,7 +126,7 @@ A move must not change bicycle behavior. Existing bicycle test cases stay as the
 | Ticket | Title | Type | Priority | Size | Status | Blocked by |
 | --- | --- | --- | --- | --- | --- | --- |
 | [#22](./22-add-component.md) | Add a component to the store | Feature | P1 | M | Done | — |
-| [#23](./23-edit-remove-component.md) | Edit and remove a component | Feature | P1 | S | Ready for Dev | #22 |
+| [#23](./23-edit-remove-component.md) | Edit and remove a component | Feature | P1 | S | Done | #22 |
 | [#24](./24-record-component-install.md) | Record an installation and distance in component history | Feature | P1 | M | Ready for Dev | #23 |
 | [#25](./25-history-position-subcomponent.md) | Record position and subcomponent | Feature | P1 | M | Ready for Dev | #24 |
 | [#26](./26-chain-care-history.md) | Record chain lubrication and stretch | Feature | P1 | S | Ready for Dev | #25 |

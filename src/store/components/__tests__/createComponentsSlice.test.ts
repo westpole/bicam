@@ -1,7 +1,7 @@
 import { INITIAL_APP_STATE } from '../../constants';
 import { useAppStore } from '../../useAppStore';
 import { COMPONENT_TYPES } from '../constants';
-import type { BicycleComponent, ComponentInput } from '../types';
+import type { BicycleComponent, ComponentInput, ComponentUpdate } from '../types';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -21,6 +21,22 @@ function addOrFail(input: ComponentInput): BicycleComponent {
   }
 
   return result.component;
+}
+
+/**
+ * Puts a history entry on a stored component. Written with `setState` because no action writes history yet.
+ *
+ * @param component - A stored component.
+ * @returns The stored component with its history.
+ */
+function seedHistory(component: BicycleComponent): BicycleComponent {
+  const seeded: BicycleComponent = { ...component, history: [{ id: 'entry-1' }] };
+
+  useAppStore.setState(({ components }) => ({
+    components: { ...components, byId: { ...components.byId, [component.id]: seeded } },
+  }));
+
+  return seeded;
 }
 
 describe('components slice', () => {
@@ -107,6 +123,144 @@ describe('components slice', () => {
       });
       expect(randomUUID).not.toHaveBeenCalled();
       expect(useAppStore.getState().components).toBe(before);
+    });
+  });
+
+  describe('updateComponent', () => {
+    let first: BicycleComponent;
+    let chain: BicycleComponent;
+    let last: BicycleComponent;
+
+    beforeEach(() => {
+      first = addOrFail({ type: 'saddle', model: 'Fizik Argo' });
+      chain = seedHistory(addOrFail(CHAIN_INPUT));
+      last = addOrFail({ type: 'stem', model: 'Zipp Service Course' });
+    });
+
+    it.each<[string, ComponentUpdate, Partial<BicycleComponent>]>([
+      ['model', { model: '  KMC X12 ' }, { model: 'KMC X12' }],
+      ['type', { type: ' cassette ' }, { type: 'cassette' }],
+      ['type and model', { type: 'wheel', model: 'DT GR 1600' }, { type: 'wheel', model: 'DT GR 1600' }],
+    ])('changes only the given %s, normalized', (_name, changes, expected) => {
+      const result = useAppStore.getState().updateComponent(chain.id, changes);
+
+      if (!result.ok) {
+        throw new Error('expected success');
+      }
+      expect(result.component).toStrictEqual({ ...chain, ...expected });
+      expect(useAppStore.getState().components.byId[chain.id]).toBe(result.component);
+    });
+
+    it('keeps the history reference, the place in allIds, and the other components', () => {
+      const allIdsBefore = useAppStore.getState().components.allIds;
+
+      useAppStore.getState().updateComponent(chain.id, { type: 'cassette', model: 'XT' });
+
+      const { byId, allIds } = useAppStore.getState().components;
+      expect(byId[chain.id].history).toBe(chain.history);
+      expect(allIds).toBe(allIdsBefore);
+      expect(byId[first.id]).toBe(first);
+      expect(byId[last.id]).toBe(last);
+    });
+
+    it('does not mutate the previous collection', () => {
+      const before = useAppStore.getState().components;
+
+      useAppStore.getState().updateComponent(chain.id, { model: 'KMC X12' });
+
+      expect(before.byId[chain.id]).toBe(chain);
+      expect(chain.model).toBe('Shimano CN-M8100');
+    });
+
+    it.each<[string, ComponentUpdate]>([
+      ['omitted', {}],
+      ['undefined', { type: undefined, model: undefined }],
+      ['equal after trimming', { type: ' chain ', model: ' Shimano CN-M8100 ' }],
+    ])('returns the stored component and does not write state when keys are %s', (_name, changes) => {
+      const before = useAppStore.getState();
+
+      const result = before.updateComponent(chain.id, changes);
+
+      expect(result).toEqual({ ok: true, component: chain });
+      expect(result.ok && result.component).toBe(chain);
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it('leaves an undefined key unchanged while another key changes', () => {
+      const result = useAppStore.getState().updateComponent(chain.id, { type: undefined, model: 'KMC X12' });
+
+      expect(result).toEqual({ ok: true, component: { ...chain, model: 'KMC X12' } });
+    });
+
+    it('ignores an id and a history smuggled into the changes', () => {
+      const changes = { model: 'KMC X12', id: 'other-id', history: [] };
+
+      const result = useAppStore.getState().updateComponent(chain.id, changes);
+
+      expect(result).toEqual({ ok: true, component: { ...chain, model: 'KMC X12' } });
+      expect(useAppStore.getState().components.byId[chain.id].history).toBe(chain.history);
+      expect(Object.keys(useAppStore.getState().components.byId)).toEqual([first.id, chain.id, last.id]);
+    });
+
+    it.each<ComponentUpdate>([
+      { type: ' ' },
+      { type: 'engine' },
+      { model: '  ' },
+      { model: 'x'.repeat(61) },
+      { model: 'a\nb' },
+      { type: 'engine', model: '' },
+    ])('returns the same errors as addComponent and leaves state unchanged for %j', (changes) => {
+      const before = useAppStore.getState();
+      const expected = before.addComponent({ ...CHAIN_INPUT, ...changes });
+
+      const result = before.updateComponent(chain.id, changes);
+
+      expect(result.ok).toBe(false);
+      expect(result).toEqual(expected);
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it.each(['unknown-id', 'toString', '__proto__'])('returns only notFound for the id %j', (id) => {
+      const before = useAppStore.getState();
+
+      const result = before.updateComponent(id, { model: '' });
+
+      expect(result).toEqual({ ok: false, errors: [{ field: 'id', code: 'notFound' }] });
+      expect(useAppStore.getState()).toBe(before);
+    });
+  });
+
+  describe('removeComponent', () => {
+    it('removes the component from byId and allIds and keeps the others', () => {
+      const first = addOrFail(CHAIN_INPUT);
+      const removed = addOrFail(CHAIN_INPUT);
+      const last = addOrFail({ type: 'stem', model: 'Zipp Service Course' });
+      const before = useAppStore.getState().components;
+
+      expect(useAppStore.getState().removeComponent(removed.id)).toBe(true);
+
+      const { byId, allIds } = useAppStore.getState().components;
+      expect(Object.keys(byId)).toEqual([first.id, last.id]);
+      expect(allIds).toEqual([first.id, last.id]);
+      expect(byId[first.id]).toBe(first);
+      expect(byId[last.id]).toBe(last);
+      expect(before.byId[removed.id]).toBe(removed);
+      expect(before.allIds).toEqual([first.id, removed.id, last.id]);
+    });
+
+    it('returns false when the component was already removed', () => {
+      const { id } = addOrFail(CHAIN_INPUT);
+      useAppStore.getState().removeComponent(id);
+
+      expect(useAppStore.getState().removeComponent(id)).toBe(false);
+    });
+
+    it.each(['unknown-id', 'toString', '__proto__'])('returns false and changes nothing for the id %j', (id) => {
+      addOrFail(CHAIN_INPUT);
+      const before = useAppStore.getState();
+
+      expect(before.removeComponent(id)).toBe(false);
+      expect(useAppStore.getState()).toBe(before);
     });
   });
 
