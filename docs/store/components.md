@@ -1,7 +1,7 @@
 # Components slice
 
 > **Status:** In progress (batch #15, `addComponent`, `updateComponent`, `removeComponent`, and `addComponentHistoryEntry`
-> with `date`, `installed`, and `distance` implemented, see [tickets/plan.md](../../tickets/plan.md))
+> without `lubricated` and `stretch` implemented, see [tickets/plan.md](../../tickets/plan.md))
 > **Owner layer:** Zustand, `src/store/components/`
 > **Root key:** `components` (see [README.md](./README.md))
 
@@ -153,9 +153,10 @@ Every entry has every key. A field that does not apply to the component's type m
 The rules are data in `src/store/components/constants.ts`, so changing one is a one-line edit:
 
 ```ts
+const COMPONENT_POSITIONS: readonly ComponentPosition[] = ['front', 'rear'];
 const POSITION_TYPES: readonly BicycleComponentType[] = ['brakes', 'shifters', 'derailleur'];
 const CHAIN_CARE_TYPES: readonly BicycleComponentType[] = ['chain'];
-const SUBCOMPONENTS: Partial<Record<BicycleComponentType, readonly Subcomponent[]>> = { /* table above */ };
+const SUBCOMPONENTS: Readonly<Partial<Record<BicycleComponentType, readonly Subcomponent[]>>> = { /* table above */ };
 ```
 
 Stored values are codes, not labels. The UI translates them with `t()`.

@@ -1,7 +1,7 @@
 # [FEATURE] Record position and subcomponent
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #15)
 > **Sprint:** `15-store-component-entity`
@@ -32,10 +32,10 @@ about, for the types that have them.
 **So that** I can tell my two brakes, shifters, or derailleurs apart
 
 **Acceptance Criteria:**
-- [ ] Entries have `position`, `null` by default.
-- [ ] `'front'` and `'rear'` are accepted for `brakes`, `shifters`, and `derailleur`; another value → `invalidOption`.
-- [ ] For each of the other 13 types any non-null `position` → `notAllowed`.
-- [ ] Missing, `null`, or blank is stored as `null` for every type.
+- [x] Entries have `position`, `null` by default.
+- [x] `'front'` and `'rear'` are accepted for `brakes`, `shifters`, and `derailleur`; another value → `invalidOption`.
+- [x] For each of the other 13 types any non-null `position` → `notAllowed`.
+- [x] Missing, `null`, or blank is stored as `null` for every type.
 
 **Out of scope:** left and right (pedals, crank arms).
 
@@ -45,11 +45,11 @@ about, for the types that have them.
 **So that** I know which part of a wheel, brake, or shifter is new
 
 **Acceptance Criteria:**
-- [ ] Entries have `subcomponent`, `null` by default.
-- [ ] `wheel` accepts `hub`, `spokes`, `rim`, `valve`; `brakes` accepts `lever`, `hose`, `caliper`, `rotor`,
+- [x] Entries have `subcomponent`, `null` by default.
+- [x] `wheel` accepts `hub`, `spokes`, `rim`, `valve`; `brakes` accepts `lever`, `hose`, `caliper`, `rotor`,
       `brakePads`, `brakeFluid`; `shifters` accepts `shifter`, `hose`, `cable`, `derailleur`.
-- [ ] On those types another value → `invalidOption`, including a value of another type (`rim` on `brakes`).
-- [ ] For each of the other 13 types any non-null `subcomponent` → `notAllowed`.
+- [x] On those types another value → `invalidOption`, including a value of another type (`rim` on `brakes`).
+- [x] For each of the other 13 types any non-null `subcomponent` → `notAllowed`.
 
 **Out of scope:** a separate model or distance per subcomponent.
 
@@ -59,13 +59,13 @@ about, for the types that have them.
 **So that** stored entries always make sense
 
 **Acceptance Criteria:**
-- [ ] Given `brakes` with an entry `subcomponent: 'rotor'`, `updateComponent(id, { type: 'chain' })` returns
+- [x] Given `brakes` with an entry `subcomponent: 'rotor'`, `updateComponent(id, { type: 'chain' })` returns
       `{ ok: false, errors: [{ field: 'type', code: 'notAllowed' }] }` and state is unchanged.
-- [ ] The result is the same single error when the entry itself would fail with another code: `brakes` with
+- [x] The result is the same single error when the entry itself would fail with another code: `brakes` with
       `subcomponent: 'rotor'` changed to `shifters` (`invalidOption` on the entry) → `notAllowed` on `type`.
-- [ ] When `model` is invalid too, both errors are returned, `type` first.
-- [ ] Given `brakes` whose entries use only `position` and `hose`, changing to `shifters` succeeds.
-- [ ] Changing only `model` never runs into this rule.
+- [x] When `model` is invalid too, both errors are returned, `type` first.
+- [x] Given `brakes` whose entries use only `position` and `hose`, changing to `shifters` succeeds.
+- [x] Changing only `model` never runs into this rule.
 
 **Out of scope:** clearing conflicting fields automatically.
 
@@ -103,11 +103,11 @@ No visual assets (store-only ticket).
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Store tests passing (`npm run test:store`); 90% branch threshold met
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function and type; store docs match the code
-- [ ] `code-reviewer` subagent run and findings addressed
+- [x] All acceptance criteria met
+- [x] Store tests passing (`npm run test:store`); 90% branch threshold met
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function and type; store docs match the code
+- [x] `code-reviewer` subagent run and findings addressed
 
 ---
 

@@ -9,10 +9,13 @@ import type {
   ComponentHistoryEntry,
   ComponentHistoryResult,
   ComponentResult,
+  ComponentValidationError,
 } from './types';
 import { createComponentId } from './utilities/createComponentId';
 import { createHistoryEntryId } from './utilities/createHistoryEntryId';
 import { hasComponent } from './utilities/hasComponent';
+import { isBicycleComponentType } from './utilities/isBicycleComponentType';
+import { isHistoryValidForType } from './utilities/isHistoryValidForType';
 import { normalizeComponentHistoryInput } from './utilities/normalizeComponentHistoryInput';
 import { normalizeComponentInput } from './utilities/normalizeComponentInput';
 import { validateComponent } from './utilities/validateComponent';
@@ -57,10 +60,21 @@ export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActi
 
     const stored = collection.byId[id];
     // normalizeComponentInput picks known fields only, so `id` and `history` keys in `changes` are ignored.
-    const validation = validateComponent(normalizeComponentInput({ ...stored, ...definedChanges(changes) }));
+    const input = normalizeComponentInput({ ...stored, ...definedChanges(changes) });
+    const validation = validateComponent(input);
+    const hasTypeConflict =
+      input.type !== stored.type &&
+      isBicycleComponentType(input.type) &&
+      !isHistoryValidForType(input.type, stored.history);
+    const typeErrors: ComponentValidationError[] = hasTypeConflict ? [{ field: 'type', code: 'notAllowed' }] : [];
 
+    // A conflicting type is a known one, so `validation` has no other error for `type`.
     if (!validation.ok) {
-      return validation;
+      return { ok: false, errors: [...typeErrors, ...validation.errors] };
+    }
+
+    if (hasTypeConflict) {
+      return { ok: false, errors: typeErrors };
     }
 
     const { type, model } = validation.details;
@@ -107,14 +121,13 @@ export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActi
       return { ok: false, errors: [{ field: 'history', code: 'tooMany' }] };
     }
 
-    const details = normalizeComponentHistoryInput(input);
-    const errors = validateComponentHistoryEntry(stored.type, details);
+    const validation = validateComponentHistoryEntry(stored.type, normalizeComponentHistoryInput(input));
 
-    if (errors.length > 0) {
-      return { ok: false, errors };
+    if (!validation.ok) {
+      return validation;
     }
 
-    const entry: ComponentHistoryEntry = { id: createHistoryEntryId(), ...details };
+    const entry: ComponentHistoryEntry = { id: createHistoryEntryId(), ...validation.details };
     const component: BicycleComponent = { ...stored, history: [...stored.history, entry] };
 
     set((state) => ({

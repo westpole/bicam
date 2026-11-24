@@ -92,7 +92,7 @@ src/store/
 │   └── __tests__/
 └── components/
     ├── types.ts            # BicycleComponent, ComponentHistoryEntry, inputs, ComponentCollection, results, errors
-    ├── constants.ts        # COMPONENT_LIMITS, COMPONENT_TYPES, INITIAL_COMPONENT_COLLECTION
+    ├── constants.ts        # COMPONENT_LIMITS, COMPONENT_TYPES, per-type history rules, INITIAL_COMPONENT_COLLECTION
     ├── createComponentsSlice.ts
     ├── utilities/          # one function per file
     └── __tests__/

@@ -1,4 +1,4 @@
-import type { BicycleComponentType, ComponentCollection } from './types';
+import type { BicycleComponentType, ComponentCollection, ComponentPosition, Subcomponent } from './types';
 
 /**
  * Empty component collection used as the initial `components` slice. Frozen (with its `byId` and `allIds`) because it
@@ -39,3 +39,19 @@ export const COMPONENT_TYPES: readonly BicycleComponentType[] = [
   'shifters',
   'derailleur',
 ];
+
+/** Every position. Lists each {@link ComponentPosition} exactly once. */
+export const COMPONENT_POSITIONS: readonly ComponentPosition[] = ['front', 'rear'];
+
+/** Types whose history entries can have a `position`. Documented in `docs/store/components.md` §3. */
+export const POSITION_TYPES: readonly BicycleComponentType[] = ['brakes', 'shifters', 'derailleur'];
+
+/**
+ * Subcomponents per type. History entries of a type that is not listed cannot have a `subcomponent`. Documented in
+ * `docs/store/components.md` §3.
+ */
+export const SUBCOMPONENTS: Readonly<Partial<Record<BicycleComponentType, readonly Subcomponent[]>>> = {
+  wheel: ['hub', 'spokes', 'rim', 'valve'],
+  brakes: ['lever', 'hose', 'caliper', 'rotor', 'brakePads', 'brakeFluid'],
+  shifters: ['shifter', 'hose', 'cable', 'derailleur'],
+};

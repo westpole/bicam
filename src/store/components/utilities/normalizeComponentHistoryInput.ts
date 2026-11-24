@@ -1,4 +1,5 @@
-import type { ComponentHistoryDetails, ComponentHistoryInput } from '../types';
+import { toOptionalText } from '../../common/utilities/toOptionalText';
+import type { ComponentHistoryInput, NormalizedComponentHistoryInput } from '../types';
 
 /**
  * Turns a missing number into `null` and `-0` into `0`, because `-0` does not survive a JSON round trip.
@@ -12,22 +13,25 @@ function toOptionalNumber(value: number | null | undefined): number | null {
 }
 
 /**
- * Converts raw history input into the stored entry fields (everything except the generated `id`) without validating
- * them. Picks known fields only and does not mutate `input`.
+ * Converts raw history input into the entry fields (everything except the generated `id`) without validating them.
+ * Picks known fields only and does not mutate `input`.
  *
  * - Trims every string.
+ * - A missing, `null`, or blank `position` or `subcomponent` becomes `null`.
  * - A missing or `null` `distance` becomes `null`; `-0` becomes `0`.
  *
  * @param input - Raw history input.
- * @returns New entry details, ready for `validateComponentHistoryEntry`.
+ * @returns New history input, ready for `validateComponentHistoryEntry`.
  * @example
- * normalizeComponentHistoryInput({ date: ' 2026-04-12 ', installed: '2026-03-01' });
- * // { date: '2026-04-12', installed: '2026-03-01', distance: null }
+ * normalizeComponentHistoryInput({ date: ' 2026-04-12 ', installed: '2026-03-01', position: 'rear' });
+ * // { date: '2026-04-12', installed: '2026-03-01', distance: null, position: 'rear', subcomponent: null }
  */
-export function normalizeComponentHistoryInput(input: ComponentHistoryInput): ComponentHistoryDetails {
+export function normalizeComponentHistoryInput(input: ComponentHistoryInput): NormalizedComponentHistoryInput {
   return {
     date: input.date.trim(),
     installed: input.installed.trim(),
     distance: toOptionalNumber(input.distance),
+    position: toOptionalText(input.position),
+    subcomponent: toOptionalText(input.subcomponent),
   };
 }

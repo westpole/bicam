@@ -62,6 +62,8 @@ function seedHistory(component: BicycleComponent, count: number): void {
       date: '2026-04-12',
       installed: '2026-03-01',
       distance: null,
+      position: null,
+      subcomponent: null,
     }),
   );
 
@@ -253,6 +255,107 @@ describe('components slice', () => {
       expect(useAppStore.getState()).toBe(before);
     });
 
+    describe('with type-specific history', () => {
+      let brakes: BicycleComponent;
+
+      /**
+       * Adds an entry to `brakes` and refreshes it.
+       *
+       * @param input - Type-specific history fields.
+       * @returns The store state after the entry was added.
+       */
+      function withBrakesEntry(input: Partial<ComponentHistoryInput>): ReturnType<typeof useAppStore.getState> {
+        addEntryOrFail(brakes.id, { ...ENTRY_INPUT, ...input });
+        brakes = useAppStore.getState().components.byId[brakes.id];
+
+        return useAppStore.getState();
+      }
+
+      beforeEach(() => {
+        brakes = addOrFail({ type: 'brakes', model: 'Shimano GRX' });
+      });
+
+      it.each<[string, Partial<ComponentHistoryInput>, string]>([
+        ['a subcomponent on a type without subcomponents', { subcomponent: 'rotor' }, 'chain'],
+        ['a subcomponent that is not an option of the new type', { subcomponent: 'rotor' }, 'shifters'],
+        ['a position on a type without positions', { position: 'front' }, 'wheel'],
+      ])('rejects a new type with only notAllowed for %s', (_name, input, type) => {
+        const before = withBrakesEntry(input);
+
+        const result = before.updateComponent(brakes.id, { type });
+
+        expect(result).toEqual({ ok: false, errors: [{ field: 'type', code: 'notAllowed' }] });
+        expect(useAppStore.getState()).toBe(before);
+      });
+
+      it('rejects a new type when only a later entry conflicts', () => {
+        withBrakesEntry({ subcomponent: 'hose' });
+        const before = withBrakesEntry({ subcomponent: 'rotor' });
+
+        const result = before.updateComponent(brakes.id, { type: 'shifters' });
+
+        expect(result).toEqual({ ok: false, errors: [{ field: 'type', code: 'notAllowed' }] });
+        expect(useAppStore.getState()).toBe(before);
+      });
+
+      it('reports the conflicting type before an invalid model', () => {
+        const before = withBrakesEntry({ subcomponent: 'rotor' });
+
+        const result = before.updateComponent(brakes.id, { type: 'chain', model: ' ' });
+
+        expect(result).toEqual({
+          ok: false,
+          errors: [
+            { field: 'type', code: 'notAllowed' },
+            { field: 'model', code: 'required' },
+          ],
+        });
+        expect(useAppStore.getState()).toBe(before);
+      });
+
+      it('reports an unknown type as invalidOption only', () => {
+        const before = withBrakesEntry({ subcomponent: 'rotor' });
+
+        const result = before.updateComponent(brakes.id, { type: 'engine' });
+
+        expect(result).toEqual({ ok: false, errors: [{ field: 'type', code: 'invalidOption' }] });
+      });
+
+      it('accepts a new type that every entry fits', () => {
+        withBrakesEntry({ position: 'front' });
+        withBrakesEntry({ subcomponent: 'hose' });
+        const before = withBrakesEntry({ position: 'rear', subcomponent: 'hose' });
+
+        const result = before.updateComponent(brakes.id, { type: 'shifters' });
+
+        expect(result).toEqual({ ok: true, component: { ...brakes, type: 'shifters' } });
+        expect(useAppStore.getState().components.byId[brakes.id].history).toBe(brakes.history);
+      });
+
+      // The seeded entry does not fit its own type, so these updates succeed only if the rule is skipped.
+      it.each<ComponentUpdate>([{ model: 'SRAM Rival' }, { type: ' brakes ', model: 'SRAM Rival' }])(
+        'does not check the history when the type stays the same: %j',
+        (changes) => {
+          const entry: ComponentHistoryEntry = {
+            id: 'entry-1',
+            date: '2026-04-12',
+            installed: '2026-03-01',
+            distance: null,
+            position: null,
+            subcomponent: 'rim',
+          };
+          const seeded: BicycleComponent = { ...brakes, history: [entry] };
+          useAppStore.setState(({ components }) => ({
+            components: { ...components, byId: { ...components.byId, [brakes.id]: seeded } },
+          }));
+
+          const result = useAppStore.getState().updateComponent(brakes.id, changes);
+
+          expect(result).toEqual({ ok: true, component: { ...seeded, model: 'SRAM Rival' } });
+        },
+      );
+    });
+
     it.each(['unknown-id', 'toString', '__proto__'])('returns only notFound for the id %j', (id) => {
       const before = useAppStore.getState();
 
@@ -318,7 +421,14 @@ describe('components slice', () => {
       }
       const { id } = result.entry;
       expect(id).toMatch(UUID_PATTERN);
-      expect(result.entry).toStrictEqual({ id, date: '2026-04-12', installed: '2026-03-01', distance: 412.5 });
+      expect(result.entry).toStrictEqual({
+        id,
+        date: '2026-04-12',
+        installed: '2026-03-01',
+        distance: 412.5,
+        position: null,
+        subcomponent: null,
+      });
 
       const stored = useAppStore.getState().components.byId[chain.id];
       expect(stored).toStrictEqual({ ...chain, history: [result.entry] });
@@ -388,6 +498,41 @@ describe('components slice', () => {
       [-0, 0],
     ])('stores the distance %s as %s', (distance, expected) => {
       expect(addEntryOrFail(chain.id, { ...ENTRY_INPUT, distance }).distance).toBe(expected);
+    });
+
+    it('stores the normalized position and subcomponent', () => {
+      const { id } = addOrFail({ type: 'brakes', model: 'Shimano GRX' });
+
+      const entry = addEntryOrFail(id, { ...ENTRY_INPUT, position: ' rear ', subcomponent: ' brakePads ' });
+
+      expect(entry).toMatchObject({ position: 'rear', subcomponent: 'brakePads' });
+      expect(useAppStore.getState().components.byId[id].history).toEqual([entry]);
+    });
+
+    describe.each(COMPONENT_TYPES)('on %s', (type) => {
+      it.each([undefined, null, '', '  '])('stores the position and subcomponent %j as null', (value) => {
+        const { id } = addOrFail({ type, model: 'Model' });
+
+        const entry = addEntryOrFail(id, { ...ENTRY_INPUT, position: value, subcomponent: value });
+
+        expect(entry).toMatchObject({ position: null, subcomponent: null });
+      });
+    });
+
+    it('validates the position and subcomponent against the component type', () => {
+      const { id } = addOrFail({ type: 'wheel', model: 'DT GR 1600' });
+      const before = useAppStore.getState();
+
+      const result = before.addComponentHistoryEntry(id, { ...ENTRY_INPUT, position: 'rear', subcomponent: 'rotor' });
+
+      expect(result).toEqual({
+        ok: false,
+        errors: [
+          { field: 'position', code: 'notAllowed' },
+          { field: 'subcomponent', code: 'invalidOption' },
+        ],
+      });
+      expect(useAppStore.getState()).toBe(before);
     });
 
     it('ignores an id smuggled into the input', () => {
