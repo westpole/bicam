@@ -1,4 +1,5 @@
 import { INITIAL_BICYCLE_COLLECTION } from './bicycle/constants';
+import { INITIAL_COMPONENT_COLLECTION } from './components/constants';
 import type { AppStoreState } from './types';
 
 /**
@@ -12,6 +13,6 @@ export const INITIAL_APP_STATE: Readonly<AppStoreState> = Object.freeze({
   selectedBicycleId: null,
   bicycle: INITIAL_BICYCLE_COLLECTION,
   events: Object.freeze({}),
-  components: Object.freeze({}),
+  components: INITIAL_COMPONENT_COLLECTION,
   history: Object.freeze({}),
 });

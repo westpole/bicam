@@ -10,6 +10,7 @@ the shape of that store, the data limits of each entity, and the rules every sli
 | --- | --- |
 | [README.md](./README.md) | Root structure, conventions, persistence notes, open questions |
 | [bicycle.md](./bicycle.md) | The `bicycle` slice and the `Bicycle` entity |
+| [components.md](./components.md) | The `components` slice and the `BicycleComponent` entity |
 
 ## 1. Root structure
 
@@ -23,7 +24,7 @@ interface AppStoreState {
   // Domain data
   bicycle: BicycleCollection;   // implemented, see bicycle.md
   events: ReservedSlice;        // placeholder, always {}
-  components: ReservedSlice;    // placeholder, always {}
+  components: ComponentCollection; // implemented, see components.md
   history: ReservedSlice;       // placeholder, always {}
 }
 ```
@@ -35,7 +36,7 @@ interface AppStoreState {
 | `selectedBicycleId` | Implemented | `BicycleId \| null` | `null` | UI only. After each action completes, `activeScreen === 'bicycleDetails'` exactly when this is a stored bicycle id. Set by `openBicycleDetails`; cleared by `navigateTo` and by removing the selected bicycle. |
 | `bicycle` | Implemented | `BicycleCollection` | `{ byId: {}, allIds: [] }` | The user's bicycles. See [bicycle.md](./bicycle.md). |
 | `events` | Placeholder | `ReservedSlice` | `{}` | Reserved for maintenance and ride events. |
-| `components` | Placeholder | `ReservedSlice` | `{}` | Reserved for components. `Bicycle.components` will reference ids from here. |
+| `components` | Implemented | `ComponentCollection` | `{ byId: {}, allIds: [] }` | The user's components. `Bicycle.components` references ids from here. See [components.md](./components.md). |
 | `history` | Placeholder | `ReservedSlice` | `{}` | Reserved for the change and maintenance log. |
 
 `ReservedSlice` is `Readonly<Record<string, never>>`: an empty object that holds nothing. The real types replace it
@@ -78,15 +79,26 @@ src/store/
 ├── types.ts                # AppStoreState, AppStoreActions, ReservedSlice, ScreenView, MenuScreen
 ├── constants.ts            # INITIAL_APP_STATE
 ├── __tests__/
-└── bicycle/
-    ├── types.ts            # Bicycle, BicycleInput, BicycleDetails, BicycleCollection, results, errors
-    ├── constants.ts        # BICYCLE_LIMITS, INITIAL_BICYCLE_COLLECTION
-    ├── createBicycleSlice.ts
+├── common/                 # helpers shared by the slices, no state
+│   ├── types.ts            # IsoDate, TextErrorCode
+│   ├── constants.ts        # CONTROL_CHARACTER_PATTERN, ISO_DATE_PATTERN
+│   ├── utilities/          # one function per file
+│   └── __tests__/
+├── bicycle/
+│   ├── types.ts            # Bicycle, BicycleInput, BicycleDetails, BicycleCollection, results, errors
+│   ├── constants.ts        # BICYCLE_LIMITS, INITIAL_BICYCLE_COLLECTION
+│   ├── createBicycleSlice.ts
+│   ├── utilities/          # one function per file
+│   └── __tests__/
+└── components/
+    ├── types.ts            # BicycleComponent, ComponentHistoryEntry, inputs, ComponentCollection, results, errors
+    ├── constants.ts        # COMPONENT_LIMITS, COMPONENT_TYPES, per-type history rules, INITIAL_COMPONENT_COLLECTION
+    ├── createComponentsSlice.ts
     ├── utilities/          # one function per file
     └── __tests__/
 ```
 
-Each future slice (`events`, `components`, `history`) gets its own folder with the same layout.
+Each future slice (`events`, `history`) gets its own folder with the same layout.
 
 ## 4. Persistence
 
@@ -103,7 +115,7 @@ persistence is added:
 | Decision | Reason |
 | --- | --- |
 | Bicycles are keyed by a generated UUID `id`; the user-typed title is a separate, unique `name`. | Other slices will reference bicycles by key. A user-typed key would break those references (and old history entries) on rename. With a generated id, renaming is a plain field update. |
-| Navigation side effects of domain actions live in `useAppStore.ts` wrappers, not in slices (e.g. removing the selected bicycle returns to `home`). | Each slice owns only its domain key; the UI fields belong to the root store. The wrapper calls the slice action, then updates the UI fields in a second `set`. React batches both into one render; a non-React subscriber can see one in-between notification. |
+| Navigation and cross-slice side effects of domain actions live in `useAppStore.ts` wrappers, not in slices (e.g. removing the selected bicycle returns to `home`; removing a component unlinks it from its bicycles). | Each slice owns only its domain key; the UI fields belong to the root store. A wrapper uses a second `set`: `removeBicycle` updates the UI fields after the slice action, and `removeComponent` unlinks before it, so the bicycles never list a missing component. React batches both into one render; a non-React subscriber can see one in-between notification. |
 
 ## 6. Open questions
 
@@ -111,4 +123,3 @@ persistence is added:
 | --- | --- | --- |
 | Should `frameGeometry` be structured? | Free text cannot be compared or validated (stack, reach, head tube angle, …). | Free text for now. A structured, unit-tagged object (mm, degrees) can replace it with a migration. |
 | Should `purchased` reject future dates? | Needs the current date, which makes the store depend on a clock. | Not checked in the store. The input form can warn. |
-| Should `components` be checked against the `components` slice? | Ids could point to components that do not exist. | Not possible yet (placeholder slice). Add the check when the `components` slice is implemented. |

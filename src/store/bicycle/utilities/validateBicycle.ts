@@ -1,31 +1,8 @@
-import {
-  BICYCLE_LIMITS,
-  CONTROL_CHARACTER_PATTERN,
-  MULTILINE_FORBIDDEN_PATTERN,
-  SIZE_PATTERN,
-} from '../constants';
+import { CONTROL_CHARACTER_PATTERN } from '../../common/constants';
+import { checkText } from '../../common/utilities/checkText';
+import { isIsoDate } from '../../common/utilities/isIsoDate';
+import { BICYCLE_LIMITS, MULTILINE_FORBIDDEN_PATTERN, SIZE_PATTERN } from '../constants';
 import type { BicycleDetails, BicycleErrorCode, BicycleField, BicycleValidationError } from '../types';
-import { isIsoDate } from './isIsoDate';
-
-/**
- * Checks one text value against the common rules: non-empty, maximum length, no forbidden characters.
- *
- * @param value - Already trimmed text.
- * @param maxLength - Maximum allowed length.
- * @param forbidden - Pattern that must not match anywhere in `value`.
- * @returns The first failing rule's code, or `null` when the value is valid.
- */
-function checkText(value: string, maxLength: number, forbidden: RegExp): BicycleErrorCode | null {
-  if (value.length === 0) {
-    return 'required';
-  }
-
-  if (value.length > maxLength) {
-    return 'tooLong';
-  }
-
-  return forbidden.test(value) ? 'invalidFormat' : null;
-}
 
 /**
  * Checks the installed component ids: count, each id's text rules, then duplicates.

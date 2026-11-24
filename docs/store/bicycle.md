@@ -59,14 +59,14 @@ All text is trimmed before it is validated and stored. Lengths are counted after
 
 | Field | Type | Required | Limits | Notes |
 | --- | --- | --- | --- | --- |
-| `id` | `string` | Generated | UUID v4 from `crypto.randomUUID()` | Assigned by `addBicycle`; never changes and cannot be set by the caller. Other slices (`events`, `history`, `components`) will reference bicycles by this id. |
+| `id` | `string` | Generated | UUID v4 from `crypto.randomUUID()` | Assigned by `addBicycle`; never changes and cannot be set by the caller. Other slices (`events`, `history`) will reference bicycles by this id. |
 | `name` | `string` | Yes | 1–40 chars; no control characters; unique, case-insensitive (`'Roadie'` and `'roadie'` clash) | Typed by the user and shown as the bicycle's title. Can be changed with `updateBicycle`. |
 | `company` | `string` | Yes | 1–60 chars; no control characters | Manufacturer or brand, e.g. `'Canyon'`. |
 | `model` | `string` | Yes | 1–60 chars; no control characters | e.g. `'Grizl CF SL 7'`. |
 | `purchased` | `IsoDate \| null` | No | `YYYY-MM-DD`, must be a real calendar date (`2023-02-30` is rejected) | Date of purchase. `null` when unknown. |
 | `size` | `string \| null` | No | 1–10 chars from `A–Z a–z 0–9`, space, `.`, `/`, `-` | Holds letter sizes (`'ML'`, `'M/L'`, `'XS'`) and numeric sizes (`'51'`, `'56.5'`). Stored as typed: no case change, no unit. `null` when unknown. |
 | `frameGeometry` | `string \| null` | No | 1–500 chars; line breaks allowed, other control characters rejected | Free-text notes (stack, reach, angles, …). `null` when unknown. |
-| `components` | `ComponentId[]` | No (defaults to `[]`) | Up to 100 ids; each 1–64 chars, trimmed, no control characters; no duplicates | Ids of the components installed on this bicycle now. Not checked against the `components` slice yet (placeholder). |
+| `components` | `ComponentId[]` | No (defaults to `[]`) | Up to 100 ids; each 1–64 chars, trimmed, no control characters; no duplicates | Ids of the components installed on this bicycle now. Every id must be a stored component; removing a component also removes its id here (see [components.md §4](./components.md#links-between-slices)). |
 
 Limits live in `BICYCLE_LIMITS` (`src/store/bicycle/constants.ts`).
 
@@ -129,7 +129,7 @@ type BicycleResult =
 | `invalidFormat` | A value contains a character that is not allowed, `size` has a character outside its set, or `purchased` is not a real `YYYY-MM-DD` date. |
 | `tooMany` | `components` has more than 100 ids. |
 | `duplicate` | `name` is already used by another bicycle (case-insensitive), or `components` lists an id twice. |
-| `notFound` | `updateBicycle` was called with an unknown `id`. |
+| `notFound` | `updateBicycle` was called with an unknown `id` (returned alone), or `components` lists an id that is not a stored component (checked after the other `components` rules). |
 
 Validation reports every failing field at once (one error per field, in field order), so a form can mark all of them.
 On success, the returned `bicycle` is the object held in the store; treat it as read-only.

@@ -1,16 +1,5 @@
+import { toOptionalText } from '../../common/utilities/toOptionalText';
 import type { BicycleDetails, BicycleInput } from '../types';
-
-/**
- * Trims optional text and turns a missing, `null`, or blank value into `null`.
- *
- * @param value - Optional raw text.
- * @returns The trimmed text, or `null` when nothing is left.
- */
-function toOptionalText(value: string | null | undefined): string | null {
-  const trimmed = value?.trim();
-
-  return trimmed ? trimmed : null;
-}
 
 /**
  * Converts raw form input into the stored bicycle fields (everything except the generated `id`) without validating

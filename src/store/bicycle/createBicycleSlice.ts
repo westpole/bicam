@@ -1,16 +1,17 @@
 import type { StateCreator } from 'zustand';
 
+import { definedChanges } from '../common/utilities/definedChanges';
 import type { AppStore } from '../types';
 import type { Bicycle, BicycleActions, BicycleResult } from './types';
 import { createBicycleId } from './utilities/createBicycleId';
-import { definedChanges } from './utilities/definedChanges';
 import { hasBicycle } from './utilities/hasBicycle';
 import { normalizeBicycleInput } from './utilities/normalizeBicycleInput';
 import { validateBicycleInCollection } from './utilities/validateBicycleInCollection';
 
 /**
  * Creates the bicycle actions for {@link useAppStore}. Data lives in `state.bicycle`; every successful write replaces
- * `bicycle` and the changed `byId` / `allIds` objects, and a failed write does not call `set`.
+ * `bicycle` and the changed `byId` / `allIds` objects, and a failed write does not call `set`. Reads
+ * `state.components` to check component ids, and never writes it.
  *
  * @param set - Zustand `set`.
  * @param get - Zustand `get`.
@@ -21,7 +22,7 @@ import { validateBicycleInCollection } from './utilities/validateBicycleInCollec
 export const createBicycleSlice: StateCreator<AppStore, [], [], BicycleActions> = (set, get) => ({
   addBicycle: (input): BicycleResult => {
     const details = normalizeBicycleInput(input);
-    const errors = validateBicycleInCollection(get().bicycle, details);
+    const errors = validateBicycleInCollection(get().bicycle, get().components, details);
 
     if (errors.length > 0) {
       return { ok: false, errors };
@@ -48,7 +49,7 @@ export const createBicycleSlice: StateCreator<AppStore, [], [], BicycleActions> 
 
     // normalizeBicycleInput picks known fields only, so an `id` key in `changes` is ignored.
     const details = normalizeBicycleInput({ ...collection.byId[id], ...definedChanges(changes) });
-    const errors = validateBicycleInCollection(collection, details, id);
+    const errors = validateBicycleInCollection(collection, get().components, details, id);
 
     if (errors.length > 0) {
       return { ok: false, errors };
