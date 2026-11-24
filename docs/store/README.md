@@ -10,6 +10,7 @@ the shape of that store, the data limits of each entity, and the rules every sli
 | --- | --- |
 | [README.md](./README.md) | Root structure, conventions, persistence notes, open questions |
 | [bicycle.md](./bicycle.md) | The `bicycle` slice and the `Bicycle` entity |
+| [components.md](./components.md) | The `components` slice and the `BicycleComponent` entity (planned, batch #15) |
 
 ## 1. Root structure
 
@@ -35,7 +36,7 @@ interface AppStoreState {
 | `selectedBicycleId` | Implemented | `BicycleId \| null` | `null` | UI only. After each action completes, `activeScreen === 'bicycleDetails'` exactly when this is a stored bicycle id. Set by `openBicycleDetails`; cleared by `navigateTo` and by removing the selected bicycle. |
 | `bicycle` | Implemented | `BicycleCollection` | `{ byId: {}, allIds: [] }` | The user's bicycles. See [bicycle.md](./bicycle.md). |
 | `events` | Placeholder | `ReservedSlice` | `{}` | Reserved for maintenance and ride events. |
-| `components` | Placeholder | `ReservedSlice` | `{}` | Reserved for components. `Bicycle.components` will reference ids from here. |
+| `components` | Placeholder | `ReservedSlice` | `{}` | Reserved for components. `Bicycle.components` will reference ids from here. Planned shape: [components.md](./components.md). |
 | `history` | Placeholder | `ReservedSlice` | `{}` | Reserved for the change and maintenance log. |
 
 `ReservedSlice` is `Readonly<Record<string, never>>`: an empty object that holds nothing. The real types replace it
@@ -111,4 +112,4 @@ persistence is added:
 | --- | --- | --- |
 | Should `frameGeometry` be structured? | Free text cannot be compared or validated (stack, reach, head tube angle, …). | Free text for now. A structured, unit-tagged object (mm, degrees) can replace it with a migration. |
 | Should `purchased` reject future dates? | Needs the current date, which makes the store depend on a clock. | Not checked in the store. The input form can warn. |
-| Should `components` be checked against the `components` slice? | Ids could point to components that do not exist. | Not possible yet (placeholder slice). Add the check when the `components` slice is implemented. |
+| Should `components` be checked against the `components` slice? | Ids could point to components that do not exist. | Not possible yet (placeholder slice). Planned for batch #15, see [components.md §4](./components.md#links-between-slices). |
