@@ -130,7 +130,7 @@ A move must not change bicycle behavior. Existing bicycle test cases stay as the
 | [#24](./24-record-component-install.md) | Record an installation and distance in component history | Feature | P1 | M | Done | #23 |
 | [#25](./25-history-position-subcomponent.md) | Record position and subcomponent | Feature | P1 | M | Done | #24 |
 | [#26](./26-chain-care-history.md) | Record chain lubrication and stretch | Feature | P1 | S | Done | #25 |
-| [#27](./27-edit-remove-history-entry.md) | Edit and remove a history entry | Feature | P2 | S | Ready for Dev | #26 |
+| [#27](./27-edit-remove-history-entry.md) | Edit and remove a history entry | Feature | P2 | S | Done | #26 |
 | [#28](./28-link-components-to-bicycles.md) | Keep bicycle component ids valid | Feature | P2 | S | Ready for Dev | #23 |
 
 All open decisions are recorded in [components.md §6](../docs/store/components.md#6-decisions). By priority,

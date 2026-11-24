@@ -1,7 +1,7 @@
 # [FEATURE] Edit and remove a history entry
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P2
 > **Epic:** [plan.md](./plan.md) (batch #15)
 > **Sprint:** `15-store-component-entity`
@@ -31,15 +31,15 @@ Add `updateComponentHistoryEntry` and `removeComponentHistoryEntry`, so a caller
 **So that** my records are right
 
 **Acceptance Criteria:**
-- [ ] Only the given keys change. The entry keeps its `id` and its place in `history`; other entries keep their
+- [x] Only the given keys change. The entry keeps its `id` and its place in `history`; other entries keep their
       references.
-- [ ] `null` or blank text clears an optional field; an omitted or `undefined` key is unchanged; an `id` key is ignored.
-- [ ] The merged entry is validated by the same rules as a new one, for the component's type.
-- [ ] An unknown component → `{ field: 'componentId', code: 'notFound' }`; an unknown entry →
+- [x] `null` or blank text clears an optional field; an omitted or `undefined` key is unchanged; an `id` key is ignored.
+- [x] The merged entry is validated by the same rules as a new one, for the component's type.
+- [x] An unknown component → `{ field: 'componentId', code: 'notFound' }`; an unknown entry →
       `{ field: 'id', code: 'notFound' }`. An entry of another component is unknown. Either
       error is returned alone.
-- [ ] Edge case: an entry can be edited when the component already has 500 entries.
-- [ ] A failed edit leaves `components` with the same object reference.
+- [x] Edge case: an entry can be edited when the component already has 500 entries.
+- [x] A failed edit leaves `components` with the same object reference.
 
 **Out of scope:** moving an entry to another component, reordering.
 
@@ -49,9 +49,9 @@ Add `updateComponentHistoryEntry` and `removeComponentHistoryEntry`, so a caller
 **So that** a record made by mistake does not mislead me
 
 **Acceptance Criteria:**
-- [ ] `removeComponentHistoryEntry(componentId, entryId)` returns `true` and removes only that entry.
-- [ ] An unknown component or entry returns `false` and leaves state unchanged (same object reference).
-- [ ] After the last conflicting entry is removed, a type change it blocked (#25) succeeds.
+- [x] `removeComponentHistoryEntry(componentId, entryId)` returns `true` and removes only that entry.
+- [x] An unknown component or entry returns `false` and leaves state unchanged (same object reference).
+- [x] After the last conflicting entry is removed, a type change it blocked (#25) succeeds.
 
 **Out of scope:** undo.
 
@@ -87,11 +87,11 @@ No visual assets (store-only ticket).
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Store tests passing (`npm run test:store`); 90% branch threshold met
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function and type
-- [ ] `code-reviewer` subagent run and findings addressed
+- [x] All acceptance criteria met
+- [x] Store tests passing (`npm run test:store`); 90% branch threshold met
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function and type
+- [x] `code-reviewer` subagent run and findings addressed
 
 ---
 

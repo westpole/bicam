@@ -136,4 +136,62 @@ export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActi
 
     return { ok: true, entry };
   },
+
+  updateComponentHistoryEntry: (componentId, entryId, changes): ComponentHistoryResult => {
+    const collection = get().components;
+
+    if (!hasComponent(collection, componentId)) {
+      return { ok: false, errors: [{ field: 'componentId', code: 'notFound' }] };
+    }
+
+    const stored = collection.byId[componentId];
+    const storedEntry = stored.history.find(({ id }) => id === entryId);
+
+    if (!storedEntry) {
+      return { ok: false, errors: [{ field: 'id', code: 'notFound' }] };
+    }
+
+    // normalizeComponentHistoryInput picks known fields only, so an `id` key in `changes` is ignored.
+    const input = normalizeComponentHistoryInput({ ...storedEntry, ...definedChanges(changes) });
+    const validation = validateComponentHistoryEntry(stored.type, input);
+
+    if (!validation.ok) {
+      return validation;
+    }
+
+    const entry: ComponentHistoryEntry = { id: entryId, ...validation.details };
+    const component: BicycleComponent = {
+      ...stored,
+      history: stored.history.map((other) => (other.id === entryId ? entry : other)),
+    };
+
+    set((state) => ({
+      components: { byId: { ...state.components.byId, [componentId]: component }, allIds: state.components.allIds },
+    }));
+
+    return { ok: true, entry };
+  },
+
+  removeComponentHistoryEntry: (componentId, entryId) => {
+    const collection = get().components;
+
+    if (!hasComponent(collection, componentId)) {
+      return false;
+    }
+
+    const stored = collection.byId[componentId];
+    const history = stored.history.filter(({ id }) => id !== entryId);
+
+    if (history.length === stored.history.length) {
+      return false;
+    }
+
+    const component: BicycleComponent = { ...stored, history };
+
+    set((state) => ({
+      components: { byId: { ...state.components.byId, [componentId]: component }, allIds: state.components.allIds },
+    }));
+
+    return true;
+  },
 });

@@ -5,6 +5,7 @@ import type {
   BicycleComponent,
   ComponentHistoryEntry,
   ComponentHistoryInput,
+  ComponentHistoryUpdate,
   ComponentInput,
   ComponentUpdate,
 } from '../types';
@@ -675,6 +676,319 @@ describe('components slice', () => {
       const { history } = useAppStore.getState().components.byId[chain.id];
       expect(history).toHaveLength(500);
       expect(history[499]).toBe(entry);
+    });
+  });
+
+  describe('updateComponentHistoryEntry', () => {
+    let other: BicycleComponent;
+    let chain: BicycleComponent;
+    let first: ComponentHistoryEntry;
+    let entry: ComponentHistoryEntry;
+    let last: ComponentHistoryEntry;
+
+    beforeEach(() => {
+      const { id: otherId } = addOrFail({ type: 'brakes', model: 'Shimano GRX' });
+      addEntryOrFail(otherId, { ...ENTRY_INPUT, position: 'rear', subcomponent: 'brakePads' });
+      const { id } = addOrFail(CHAIN_INPUT);
+      first = addEntryOrFail(id, ENTRY_INPUT);
+      entry = addEntryOrFail(id, { ...ENTRY_INPUT, lubricated: '2026-04-12', stretch: 0.25 });
+      last = addEntryOrFail(id, ENTRY_INPUT);
+      other = useAppStore.getState().components.byId[otherId];
+      chain = useAppStore.getState().components.byId[id];
+    });
+
+    it.each<[ComponentHistoryUpdate, Partial<ComponentHistoryEntry>]>([
+      [{ date: ' 2026-05-01 ' }, { date: '2026-05-01' }],
+      [{ installed: '2026-02-01' }, { installed: '2026-02-01' }],
+      [{ distance: 500 }, { distance: 500 }],
+      [{ lubricated: ' 2026-05-01' }, { lubricated: '2026-05-01' }],
+      [{ stretch: 0.5 }, { stretch: 0.5 }],
+      [
+        { date: '2026-05-01', distance: 500, stretch: 0.5 },
+        { date: '2026-05-01', distance: 500, stretch: 0.5 },
+      ],
+    ])('changes only the given keys, normalized: %j', (changes, expected) => {
+      const result = useAppStore.getState().updateComponentHistoryEntry(chain.id, entry.id, changes);
+
+      if (!result.ok) {
+        throw new Error('expected success');
+      }
+      expect(result.entry).toStrictEqual({ ...entry, ...expected });
+      expect(useAppStore.getState().components.byId[chain.id].history[1]).toBe(result.entry);
+    });
+
+    it('changes the position and subcomponent', () => {
+      const [stored] = other.history;
+
+      const result = useAppStore
+        .getState()
+        .updateComponentHistoryEntry(other.id, stored.id, { position: 'front', subcomponent: ' rotor ' });
+
+      expect(result).toEqual({ ok: true, entry: { ...stored, position: 'front', subcomponent: 'rotor' } });
+    });
+
+    it('keeps the place of the entry, the other entries, the other components, and allIds', () => {
+      const { allIds: allIdsBefore } = useAppStore.getState().components;
+
+      const result = useAppStore.getState().updateComponentHistoryEntry(chain.id, entry.id, { distance: 500 });
+
+      const { byId, allIds } = useAppStore.getState().components;
+      const updated = { ...entry, distance: 500 };
+      expect(result).toEqual({ ok: true, entry: updated });
+      expect(byId[chain.id]).toStrictEqual({ ...chain, history: [first, updated, last] });
+      expect(byId[chain.id].history[0]).toBe(first);
+      expect(byId[chain.id].history[2]).toBe(last);
+      expect(byId[other.id]).toBe(other);
+      expect(allIds).toBe(allIdsBefore);
+    });
+
+    it('does not mutate the previous collection', () => {
+      const before = useAppStore.getState().components;
+      const snapshot = structuredClone(before);
+
+      useAppStore.getState().updateComponentHistoryEntry(chain.id, entry.id, { distance: 500 });
+
+      expect(before).toStrictEqual(snapshot);
+    });
+
+    it.each<ComponentHistoryUpdate>([
+      { distance: null },
+      { lubricated: null },
+      { lubricated: '  ' },
+      { stretch: null },
+    ])('clears the optional field in %j', (changes) => {
+      const [field] = Object.keys(changes);
+
+      const result = useAppStore.getState().updateComponentHistoryEntry(chain.id, entry.id, changes);
+
+      expect(result).toEqual({ ok: true, entry: { ...entry, [field]: null } });
+    });
+
+    it.each([null, '', ' '])('clears the position and subcomponent with %j', (value) => {
+      const [stored] = other.history;
+
+      const result = useAppStore
+        .getState()
+        .updateComponentHistoryEntry(other.id, stored.id, { position: value, subcomponent: value });
+
+      expect(result).toEqual({ ok: true, entry: { ...stored, position: null, subcomponent: null } });
+    });
+
+    // toBe uses Object.is, which tells 0 from -0.
+    it('stores -0 as 0', () => {
+      const result = useAppStore
+        .getState()
+        .updateComponentHistoryEntry(chain.id, entry.id, { distance: -0, stretch: -0 });
+
+      expect(result.ok && result.entry.distance).toBe(0);
+      expect(result.ok && result.entry.stretch).toBe(0);
+    });
+
+    it('leaves omitted and undefined keys unchanged', () => {
+      const changes: ComponentHistoryUpdate = {
+        date: undefined,
+        installed: undefined,
+        position: undefined,
+        lubricated: undefined,
+        stretch: undefined,
+        distance: 500,
+      };
+
+      const result = useAppStore.getState().updateComponentHistoryEntry(chain.id, entry.id, changes);
+
+      expect(result).toEqual({ ok: true, entry: { ...entry, distance: 500 } });
+    });
+
+    it('ignores an id and an extra key smuggled into the changes', () => {
+      const changes = { distance: 500, id: 'other-id', extra: true };
+
+      const result = useAppStore.getState().updateComponentHistoryEntry(chain.id, entry.id, changes);
+
+      expect(result.ok && result.entry).toStrictEqual({ ...entry, distance: 500 });
+    });
+
+    it.each<ComponentHistoryUpdate>([
+      { date: ' ' },
+      { installed: '2023-02-30' },
+      { distance: 412.55 },
+      { position: 'front' },
+      { subcomponent: 'rotor' },
+      { lubricated: 'yesterday' },
+      { stretch: 5.01 },
+      { date: '', installed: '', distance: -1, position: 'left', subcomponent: 'x', lubricated: 'x', stretch: NaN },
+    ])('returns the same errors as addComponentHistoryEntry and leaves state unchanged for %j', (changes) => {
+      const before = useAppStore.getState();
+      const expected = before.addComponentHistoryEntry(chain.id, { ...ENTRY_INPUT, ...changes });
+
+      const result = before.updateComponentHistoryEntry(chain.id, entry.id, changes);
+
+      expect(result.ok).toBe(false);
+      expect(result).toEqual(expected);
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it('validates against the type of the component', () => {
+      const before = useAppStore.getState();
+
+      const result = before.updateComponentHistoryEntry(other.id, other.history[0].id, {
+        subcomponent: 'rim',
+        stretch: 0,
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        errors: [
+          { field: 'subcomponent', code: 'invalidOption' },
+          { field: 'stretch', code: 'notAllowed' },
+        ],
+      });
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    describe.each<[string, ComponentHistoryUpdate]>([
+      ['valid', { distance: 500 }],
+      ['invalid', { date: '', distance: NaN }],
+    ])('with %s changes', (_name, changes) => {
+      it.each(['unknown-id', 'toString', '__proto__'])('returns only notFound for the component %j', (id) => {
+        const before = useAppStore.getState();
+
+        expect(before.updateComponentHistoryEntry(id, entry.id, changes)).toEqual({
+          ok: false,
+          errors: [{ field: 'componentId', code: 'notFound' }],
+        });
+        expect(useAppStore.getState()).toBe(before);
+      });
+
+      it('returns only the unknown component when the entry is unknown too', () => {
+        expect(useAppStore.getState().updateComponentHistoryEntry('unknown-id', 'unknown-id', changes)).toEqual({
+          ok: false,
+          errors: [{ field: 'componentId', code: 'notFound' }],
+        });
+      });
+
+      it.each(['unknown-id', 'toString', '__proto__', '0'])('returns only notFound for the entry %j', (id) => {
+        const before = useAppStore.getState();
+
+        expect(before.updateComponentHistoryEntry(chain.id, id, changes)).toEqual({
+          ok: false,
+          errors: [{ field: 'id', code: 'notFound' }],
+        });
+        expect(useAppStore.getState()).toBe(before);
+      });
+
+      it('returns only notFound for an entry of another component', () => {
+        const before = useAppStore.getState();
+
+        expect(before.updateComponentHistoryEntry(other.id, entry.id, changes)).toEqual({
+          ok: false,
+          errors: [{ field: 'id', code: 'notFound' }],
+        });
+        expect(useAppStore.getState()).toBe(before);
+      });
+    });
+
+    it('edits an entry of a full history', () => {
+      seedHistory(chain, COMPONENT_LIMITS.historyMaxCount);
+
+      const result = useAppStore.getState().updateComponentHistoryEntry(chain.id, 'entry-499', { distance: 500 });
+
+      const { history } = useAppStore.getState().components.byId[chain.id];
+      expect(result.ok).toBe(true);
+      expect(history).toHaveLength(500);
+      expect(history[499]).toMatchObject({ id: 'entry-499', distance: 500 });
+    });
+  });
+
+  describe('removeComponentHistoryEntry', () => {
+    let other: BicycleComponent;
+    let chain: BicycleComponent;
+
+    beforeEach(() => {
+      const { id: otherId } = addOrFail({ type: 'saddle', model: 'Fizik Argo' });
+      addEntryOrFail(otherId, ENTRY_INPUT);
+      const { id } = addOrFail(CHAIN_INPUT);
+      addEntryOrFail(id, ENTRY_INPUT);
+      addEntryOrFail(id, ENTRY_INPUT);
+      addEntryOrFail(id, ENTRY_INPUT);
+      other = useAppStore.getState().components.byId[otherId];
+      chain = useAppStore.getState().components.byId[id];
+    });
+
+    it('removes only that entry and keeps everything else', () => {
+      const before = useAppStore.getState().components;
+      const snapshot = structuredClone(before);
+      const [first, removed, last] = chain.history;
+
+      expect(useAppStore.getState().removeComponentHistoryEntry(chain.id, removed.id)).toBe(true);
+
+      const { byId, allIds } = useAppStore.getState().components;
+      expect(byId[chain.id]).toStrictEqual({ ...chain, history: [first, last] });
+      expect(byId[chain.id].history[0]).toBe(first);
+      expect(byId[chain.id].history[1]).toBe(last);
+      expect(byId[other.id]).toBe(other);
+      expect(allIds).toBe(before.allIds);
+      expect(before).toStrictEqual(snapshot);
+    });
+
+    it('leaves an empty history after the last entry is removed', () => {
+      useAppStore.getState().removeComponentHistoryEntry(other.id, other.history[0].id);
+
+      expect(useAppStore.getState().components.byId[other.id]).toStrictEqual({ ...other, history: [] });
+    });
+
+    it('returns false when the entry was already removed', () => {
+      const [{ id }] = chain.history;
+      useAppStore.getState().removeComponentHistoryEntry(chain.id, id);
+
+      expect(useAppStore.getState().removeComponentHistoryEntry(chain.id, id)).toBe(false);
+    });
+
+    it.each(['unknown-id', 'toString', '__proto__'])('returns false and changes nothing for the component %j', (id) => {
+      const before = useAppStore.getState();
+
+      expect(before.removeComponentHistoryEntry(id, chain.history[0].id)).toBe(false);
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it.each(['unknown-id', 'toString', '__proto__', '0'])('returns false and writes nothing for the entry %j', (id) => {
+      const before = useAppStore.getState();
+
+      expect(before.removeComponentHistoryEntry(chain.id, id)).toBe(false);
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it('returns false and changes nothing for an entry of another component', () => {
+      const before = useAppStore.getState();
+
+      expect(before.removeComponentHistoryEntry(other.id, chain.history[0].id)).toBe(false);
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it('allows a type change once the last conflicting entry is removed', () => {
+      const conflicting = [
+        addEntryOrFail(chain.id, { ...ENTRY_INPUT, lubricated: '2026-04-12' }),
+        addEntryOrFail(chain.id, { ...ENTRY_INPUT, stretch: 0.5 }),
+      ];
+      const { removeComponentHistoryEntry, updateComponent } = useAppStore.getState();
+      const blocked = { ok: false, errors: [{ field: 'type', code: 'notAllowed' }] };
+
+      expect(updateComponent(chain.id, { type: 'cassette' })).toEqual(blocked);
+      removeComponentHistoryEntry(chain.id, conflicting[0].id);
+      expect(updateComponent(chain.id, { type: 'cassette' })).toEqual(blocked);
+      removeComponentHistoryEntry(chain.id, conflicting[1].id);
+
+      expect(updateComponent(chain.id, { type: 'cassette' })).toEqual({
+        ok: true,
+        component: { ...chain, type: 'cassette' },
+      });
+    });
+
+    it('makes room for a new entry in a full history', () => {
+      seedHistory(chain, COMPONENT_LIMITS.historyMaxCount);
+
+      expect(useAppStore.getState().removeComponentHistoryEntry(chain.id, 'entry-0')).toBe(true);
+
+      expect(useAppStore.getState().addComponentHistoryEntry(chain.id, ENTRY_INPUT).ok).toBe(true);
     });
   });
 

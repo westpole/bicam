@@ -87,6 +87,9 @@ export interface ComponentHistoryInput {
   stretch?: number | null;
 }
 
+/** Changes for `updateComponentHistoryEntry`: any input field. Omitted or `undefined` keys stay unchanged. */
+export type ComponentHistoryUpdate = Partial<ComponentHistoryInput>;
+
 /**
  * Output of `normalizeComponentHistoryInput`: {@link ComponentHistoryDetails} whose options are not checked yet. A
  * stored {@link ComponentHistoryEntry} fits too, so it can be validated again for another type.
@@ -220,6 +223,22 @@ export interface ComponentActions {
    * `componentId` for an unknown component, or only `tooMany` on `history` when its history is full.
    */
   addComponentHistoryEntry: (componentId: ComponentId, input: ComponentHistoryInput) => ComponentHistoryResult;
+  /**
+   * Merges `changes` into one history entry, then normalizes and validates it for the component's type. Omitted or
+   * `undefined` keys are unchanged; `null` or blank text clears an optional field; the entry's id and place are always
+   * kept. Before the changes are checked, fails with only `notFound`: on `componentId` for an unknown component, or on
+   * `id` for an entry that is not in that component's history.
+   */
+  updateComponentHistoryEntry: (
+    componentId: ComponentId,
+    entryId: HistoryEntryId,
+    changes: ComponentHistoryUpdate,
+  ) => ComponentHistoryResult;
+  /**
+   * Removes one entry from the history of the component stored under `componentId`. Returns `false`, changing nothing,
+   * for an unknown component or an entry that is not in its history.
+   */
+  removeComponentHistoryEntry: (componentId: ComponentId, entryId: HistoryEntryId) => boolean;
 }
 
 /** Normalized component collection. `allIds` holds the display (insertion) order. */
