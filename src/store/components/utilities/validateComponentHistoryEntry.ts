@@ -1,5 +1,11 @@
 import { isIsoDate } from '../../common/utilities/isIsoDate';
-import { COMPONENT_LIMITS, COMPONENT_POSITIONS, POSITION_TYPES, SUBCOMPONENTS } from '../constants';
+import {
+  CHAIN_CARE_TYPES,
+  COMPONENT_LIMITS,
+  COMPONENT_POSITIONS,
+  POSITION_TYPES,
+  SUBCOMPONENTS,
+} from '../constants';
 import type {
   BicycleComponentType,
   ComponentErrorCode,
@@ -47,6 +53,42 @@ function checkOption<T extends string>(value: string | null, options: readonly T
 }
 
 /**
+ * Checks an optional `lubricated` date: the type has it, then a real calendar date.
+ *
+ * @param lubricated - Already trimmed date, or `null` when there is none.
+ * @param isAllowed - Whether the component's type has this field.
+ * @returns The first failing rule's code, or `null` when the value is valid.
+ */
+function checkLubricated(lubricated: string | null, isAllowed: boolean): ComponentErrorCode | null {
+  if (lubricated === null) {
+    return null;
+  }
+
+  if (!isAllowed) {
+    return 'notAllowed';
+  }
+
+  return isIsoDate(lubricated) ? null : 'invalidFormat';
+}
+
+/**
+ * Checks an optional `stretch` percentage: the type has it, then the number rules of `checkNumber`.
+ *
+ * @param stretch - The percentage, or `null` when there is none.
+ * @param isAllowed - Whether the component's type has this field.
+ * @returns The first failing rule's code, or `null` when the value is valid.
+ */
+function checkStretch(stretch: number | null, isAllowed: boolean): ComponentErrorCode | null {
+  if (stretch === null) {
+    return null;
+  }
+
+  return isAllowed
+    ? checkNumber(stretch, COMPONENT_LIMITS.stretchMax, COMPONENT_LIMITS.stretchMaxDecimals)
+    : 'notAllowed';
+}
+
+/**
  * Validates normalized history input against the field limits in `docs/store/components.md` §2.2 and the rules for the
  * component's type in §3. Dates are not compared with each other or with today. The generated `id` is not validated.
  *
@@ -57,10 +99,12 @@ function checkOption<T extends string>(value: string | null, options: readonly T
  * @example
  * validateComponentHistoryEntry('chain', {
  *   date: '', installed: '2023-02-30', distance: -1, position: 'rear', subcomponent: null,
+ *   lubricated: null, stretch: 9,
  * });
  * // { ok: false, errors: [
  * //   { field: 'date', code: 'required' }, { field: 'installed', code: 'invalidFormat' },
  * //   { field: 'distance', code: 'outOfRange' }, { field: 'position', code: 'notAllowed' },
+ * //   { field: 'stretch', code: 'outOfRange' },
  * // ] }
  */
 export function validateComponentHistoryEntry(
@@ -68,7 +112,8 @@ export function validateComponentHistoryEntry(
   entry: NormalizedComponentHistoryInput,
 ): ComponentHistoryValidation {
   const { distanceMax, distanceMaxDecimals } = COMPONENT_LIMITS;
-  const { date, installed, distance } = entry;
+  const { date, installed, distance, lubricated, stretch } = entry;
+  const hasChainCare = CHAIN_CARE_TYPES.includes(type);
   const position = checkOption(entry.position, POSITION_TYPES.includes(type) ? COMPONENT_POSITIONS : undefined);
   const subcomponent = checkOption(entry.subcomponent, SUBCOMPONENTS[type]);
   const checks: Array<[ComponentHistoryField, ComponentErrorCode | null]> = [
@@ -77,6 +122,8 @@ export function validateComponentHistoryEntry(
     ['distance', distance === null ? null : checkNumber(distance, distanceMax, distanceMaxDecimals)],
     ['position', position.code],
     ['subcomponent', subcomponent.code],
+    ['lubricated', checkLubricated(lubricated, hasChainCare)],
+    ['stretch', checkStretch(stretch, hasChainCare)],
   ];
   const errors = checks.flatMap(([field, code]) => (code ? [{ field, code }] : []));
 
@@ -86,6 +133,14 @@ export function validateComponentHistoryEntry(
 
   return {
     ok: true,
-    details: { date, installed, distance, position: position.value, subcomponent: subcomponent.value },
+    details: {
+      date,
+      installed,
+      distance,
+      position: position.value,
+      subcomponent: subcomponent.value,
+      lubricated,
+      stretch,
+    },
   };
 }

@@ -1,7 +1,7 @@
 # [FEATURE] Record chain lubrication and stretch
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #15)
 > **Sprint:** `15-store-component-entity`
@@ -32,11 +32,11 @@ Let a chain's history entry hold the date it was waxed or lubricated and its mea
 **So that** I know when it is due again
 
 **Acceptance Criteria:**
-- [ ] Entries have `lubricated`, `null` by default.
-- [ ] On a `chain`, a real `YYYY-MM-DD` date is accepted, also before `installed`; another value → `invalidFormat`.
-- [ ] Given a chain entry, adding a second one with the same `installed` and a later `date` and `lubricated` keeps
+- [x] Entries have `lubricated`, `null` by default.
+- [x] On a `chain`, a real `YYYY-MM-DD` date is accepted, also before `installed`; another value → `invalidFormat`.
+- [x] Given a chain entry, adding a second one with the same `installed` and a later `date` and `lubricated` keeps
       both.
-- [ ] For each of the other 15 types any non-null `lubricated` → `notAllowed`.
+- [x] For each of the other 15 types any non-null `lubricated` → `notAllowed`.
 
 **Out of scope:** reminders, telling wax from lubricant.
 
@@ -46,11 +46,11 @@ Let a chain's history entry hold the date it was waxed or lubricated and its mea
 **So that** I replace the chain before it wears the cassette
 
 **Acceptance Criteria:**
-- [ ] Entries have `stretch`, `null` by default.
-- [ ] On a `chain`, `0`, `0.5`, `0.75`, and `5` are accepted; below 0 or above 5 → `outOfRange`; `NaN`, `Infinity`, or
+- [x] Entries have `stretch`, `null` by default.
+- [x] On a `chain`, `0`, `0.5`, `0.75`, and `5` are accepted; below 0 or above 5 → `outOfRange`; `NaN`, `Infinity`, or
       more than two decimals (`0.755`) → `invalidFormat`.
-- [ ] `-0` is stored as `0`.
-- [ ] For each of the other 15 types any non-null `stretch`, including `0` → `notAllowed`.
+- [x] `-0` is stored as `0`.
+- [x] For each of the other 15 types any non-null `stretch`, including `0` → `notAllowed`.
 
 **Out of scope:** replacement thresholds and warnings.
 
@@ -60,7 +60,7 @@ Let a chain's history entry hold the date it was waxed or lubricated and its mea
 **So that** stored entries always make sense
 
 **Acceptance Criteria:**
-- [ ] Given a chain with a `lubricated` or `stretch` value, changing its type returns
+- [x] Given a chain with a `lubricated` or `stretch` value, changing its type returns
       `{ field: 'type', code: 'notAllowed' }` and state is unchanged.
 
 **Out of scope:** clearing the values automatically.
@@ -97,11 +97,11 @@ No visual assets (store-only ticket).
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Store tests passing (`npm run test:store`); 90% branch threshold met
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function and type; store docs match the code
-- [ ] `code-reviewer` subagent run and findings addressed
+- [x] All acceptance criteria met
+- [x] Store tests passing (`npm run test:store`); 90% branch threshold met
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function and type; store docs match the code
+- [x] `code-reviewer` subagent run and findings addressed
 
 ---
 

@@ -9,6 +9,8 @@ const NORMALIZED: NormalizedComponentHistoryInput = {
   distance: null,
   position: null,
   subcomponent: null,
+  lubricated: null,
+  stretch: null,
 };
 
 describe('normalizeComponentHistoryInput', () => {
@@ -22,27 +24,30 @@ describe('normalizeComponentHistoryInput', () => {
     expect(normalizeComponentHistoryInput({ date: '  ', installed: '' })).toMatchObject({ date: '', installed: '' });
   });
 
-  it.each([
-    ['missing', INPUT],
-    ['undefined', { ...INPUT, distance: undefined }],
-    ['null', { ...INPUT, distance: null }],
-  ])('stores a distance that is %s as null', (_name, input) => {
-    expect(normalizeComponentHistoryInput(input)).toStrictEqual(NORMALIZED);
+  describe.each<'distance' | 'stretch'>(['distance', 'stretch'])('%s', (field) => {
+    it.each([
+      ['missing', INPUT],
+      ['undefined', { ...INPUT, [field]: undefined }],
+      ['null', { ...INPUT, [field]: null }],
+    ])('becomes null when %s', (_name, input) => {
+      expect(normalizeComponentHistoryInput(input)).toStrictEqual(NORMALIZED);
+    });
+
+    // toBe uses Object.is, which tells 0 from -0.
+    it.each([
+      [0, 0],
+      [-0, 0],
+      [0.75, 0.75],
+      [412.5, 412.5],
+      [-1, -1],
+      [NaN, NaN],
+      [Infinity, Infinity],
+    ])('turns %s into %s', (value, expected) => {
+      expect(normalizeComponentHistoryInput({ ...INPUT, [field]: value })[field]).toBe(expected);
+    });
   });
 
-  // toBe uses Object.is, which tells 0 from -0.
-  it.each([
-    [0, 0],
-    [-0, 0],
-    [412.5, 412.5],
-    [-1, -1],
-    [NaN, NaN],
-    [Infinity, Infinity],
-  ])('turns the distance %s into %s', (distance, expected) => {
-    expect(normalizeComponentHistoryInput({ ...INPUT, distance }).distance).toBe(expected);
-  });
-
-  describe.each<'position' | 'subcomponent'>(['position', 'subcomponent'])('%s', (field) => {
+  describe.each(['position', 'subcomponent', 'lubricated'] as const)('%s', (field) => {
     it.each([
       ['missing', INPUT],
       ['undefined', { ...INPUT, [field]: undefined }],
@@ -78,6 +83,8 @@ describe('normalizeComponentHistoryInput', () => {
       distance: -0,
       position: ' rear ',
       subcomponent: ' ',
+      lubricated: ' 2026-04-12 ',
+      stretch: -0,
     };
     const snapshot = structuredClone(input);
 

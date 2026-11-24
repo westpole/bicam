@@ -16,6 +16,8 @@ const DETAILS: ComponentHistoryDetails = {
   distance: 412.5,
   position: null,
   subcomponent: null,
+  lubricated: null,
+  stretch: null,
 };
 
 const POSITIONS: ComponentPosition[] = ['front', 'rear'];
@@ -37,6 +39,8 @@ const TYPES_WITHOUT_POSITION = COMPONENT_TYPES.filter((type) => !TYPES_WITH_POSI
 const TYPES_WITHOUT_SUBCOMPONENT = COMPONENT_TYPES.filter(
   (type) => !SUBCOMPONENT_TABLE.some(([listed]) => listed === type),
 );
+
+const TYPES_WITHOUT_CHAIN_CARE = COMPONENT_TYPES.filter((type) => type !== 'chain');
 
 /**
  * Builds the expected result for one failing field.
@@ -152,9 +156,68 @@ describe('validateComponentHistoryEntry', () => {
     });
   });
 
+  describe('lubricated', () => {
+    it.each(['2026-02-01', '2026-03-01', '2026-05-01', '2024-02-29'])(
+      'accepts %s on a chain installed on 2026-03-01',
+      (lubricated) => {
+        const details = { ...DETAILS, lubricated };
+
+        expect(validateComponentHistoryEntry('chain', details)).toStrictEqual({ ok: true, details });
+      },
+    );
+
+    it.each(['', '2023-02-29', '2026-4-12', '12.04.2026', 'yesterday'])(
+      'rejects %j on a chain as invalidFormat',
+      (lubricated) => {
+        expect(validateComponentHistoryEntry('chain', { ...DETAILS, lubricated })).toEqual(
+          failure('lubricated', 'invalidFormat'),
+        );
+      },
+    );
+
+    describe.each(TYPES_WITHOUT_CHAIN_CARE)('on %s', (type) => {
+      it.each(['2026-04-12', 'yesterday'])('rejects %s as notAllowed', (lubricated) => {
+        expect(validateComponentHistoryEntry(type, { ...DETAILS, lubricated })).toEqual(
+          failure('lubricated', 'notAllowed'),
+        );
+      });
+    });
+  });
+
+  describe('stretch', () => {
+    it.each([0, 0.01, 0.29, 0.5, 0.75, 5])('accepts %s on a chain', (stretch) => {
+      const details = { ...DETAILS, stretch };
+
+      expect(validateComponentHistoryEntry('chain', details)).toStrictEqual({ ok: true, details });
+    });
+
+    it.each<[number, ComponentErrorCode]>([
+      [-0.01, 'outOfRange'],
+      [5.01, 'outOfRange'],
+      [NaN, 'invalidFormat'],
+      [Infinity, 'invalidFormat'],
+      [-Infinity, 'invalidFormat'],
+      [0.755, 'invalidFormat'],
+    ])('rejects %s on a chain as %s', (stretch, code) => {
+      expect(validateComponentHistoryEntry('chain', { ...DETAILS, stretch })).toEqual(failure('stretch', code));
+    });
+
+    describe.each(TYPES_WITHOUT_CHAIN_CARE)('on %s', (type) => {
+      it.each([0, 0.5, -1, NaN])('rejects %s as notAllowed', (stretch) => {
+        expect(validateComponentHistoryEntry(type, { ...DETAILS, stretch })).toEqual(failure('stretch', 'notAllowed'));
+      });
+    });
+  });
+
+  it('covers the 15 types without chain care', () => {
+    expect(TYPES_WITHOUT_CHAIN_CARE).toHaveLength(15);
+  });
+
   it('reports one error per failing field, in field order', () => {
     expect(
       validateComponentHistoryEntry('wheel', {
+        stretch: 0,
+        lubricated: '2026-04-12',
         subcomponent: 'rotor',
         position: 'rear',
         distance: -1,
@@ -169,6 +232,8 @@ describe('validateComponentHistoryEntry', () => {
         { field: 'distance', code: 'outOfRange' },
         { field: 'position', code: 'notAllowed' },
         { field: 'subcomponent', code: 'invalidOption' },
+        { field: 'lubricated', code: 'notAllowed' },
+        { field: 'stretch', code: 'notAllowed' },
       ],
     });
   });

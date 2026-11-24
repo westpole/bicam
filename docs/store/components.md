@@ -1,7 +1,7 @@
 # Components slice
 
 > **Status:** In progress (batch #15, `addComponent`, `updateComponent`, `removeComponent`, and `addComponentHistoryEntry`
-> without `lubricated` and `stretch` implemented, see [tickets/plan.md](../../tickets/plan.md))
+> implemented, see [tickets/plan.md](../../tickets/plan.md))
 > **Owner layer:** Zustand, `src/store/components/`
 > **Root key:** `components` (see [README.md](./README.md))
 

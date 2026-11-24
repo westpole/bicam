@@ -64,6 +64,8 @@ function seedHistory(component: BicycleComponent, count: number): void {
       distance: null,
       position: null,
       subcomponent: null,
+      lubricated: null,
+      stretch: null,
     }),
   );
 
@@ -288,6 +290,19 @@ describe('components slice', () => {
         expect(useAppStore.getState()).toBe(before);
       });
 
+      it.each<Partial<ComponentHistoryInput>>([{ lubricated: '2026-04-12' }, { stretch: 0.5 }, { stretch: 0 }])(
+        'rejects a new type for a chain with %j',
+        (input) => {
+          addEntryOrFail(chain.id, { ...ENTRY_INPUT, ...input });
+          const before = useAppStore.getState();
+
+          const result = before.updateComponent(chain.id, { type: 'cassette' });
+
+          expect(result).toEqual({ ok: false, errors: [{ field: 'type', code: 'notAllowed' }] });
+          expect(useAppStore.getState()).toBe(before);
+        },
+      );
+
       it('rejects a new type when only a later entry conflicts', () => {
         withBrakesEntry({ subcomponent: 'hose' });
         const before = withBrakesEntry({ subcomponent: 'rotor' });
@@ -343,6 +358,8 @@ describe('components slice', () => {
             distance: null,
             position: null,
             subcomponent: 'rim',
+            lubricated: null,
+            stretch: null,
           };
           const seeded: BicycleComponent = { ...brakes, history: [entry] };
           useAppStore.setState(({ components }) => ({
@@ -428,6 +445,8 @@ describe('components slice', () => {
         distance: 412.5,
         position: null,
         subcomponent: null,
+        lubricated: null,
+        stretch: null,
       });
 
       const stored = useAppStore.getState().components.byId[chain.id];
@@ -510,13 +529,61 @@ describe('components slice', () => {
     });
 
     describe.each(COMPONENT_TYPES)('on %s', (type) => {
-      it.each([undefined, null, '', '  '])('stores the position and subcomponent %j as null', (value) => {
+      it.each([undefined, null, '', '  '])('stores the position, subcomponent, and lubricated %j as null', (value) => {
         const { id } = addOrFail({ type, model: 'Model' });
 
-        const entry = addEntryOrFail(id, { ...ENTRY_INPUT, position: value, subcomponent: value });
+        const entry = addEntryOrFail(id, { ...ENTRY_INPUT, position: value, subcomponent: value, lubricated: value });
 
-        expect(entry).toMatchObject({ position: null, subcomponent: null });
+        expect(entry).toMatchObject({ position: null, subcomponent: null, lubricated: null });
       });
+
+      it.each([undefined, null])('stores the stretch %s as null', (stretch) => {
+        const { id } = addOrFail({ type, model: 'Model' });
+
+        expect(addEntryOrFail(id, { ...ENTRY_INPUT, stretch }).stretch).toBeNull();
+      });
+    });
+
+    it('keeps every lubrication of the same installation', () => {
+      const entries = [
+        addEntryOrFail(chain.id, { date: '2026-03-01', installed: '2026-03-01', lubricated: ' 2026-02-20 ' }),
+        addEntryOrFail(chain.id, {
+          date: '2026-04-12',
+          installed: '2026-03-01',
+          lubricated: '2026-04-12',
+          stretch: 0.25,
+        }),
+      ];
+
+      expect(entries).toMatchObject([
+        { lubricated: '2026-02-20', stretch: null },
+        { lubricated: '2026-04-12', stretch: 0.25 },
+      ]);
+      expect(useAppStore.getState().components.byId[chain.id].history).toEqual(entries);
+    });
+
+    // toBe uses Object.is, which tells 0 from -0.
+    it.each([0, -0])('stores the stretch %s as 0', (stretch) => {
+      expect(addEntryOrFail(chain.id, { ...ENTRY_INPUT, stretch }).stretch).toBe(0);
+    });
+
+    it('rejects chain care on another type and leaves state unchanged', () => {
+      const before = useAppStore.getState();
+
+      const result = before.addComponentHistoryEntry(first.id, {
+        ...ENTRY_INPUT,
+        lubricated: '2026-04-12',
+        stretch: -0,
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        errors: [
+          { field: 'lubricated', code: 'notAllowed' },
+          { field: 'stretch', code: 'notAllowed' },
+        ],
+      });
+      expect(useAppStore.getState()).toBe(before);
     });
 
     it('validates the position and subcomponent against the component type', () => {
@@ -543,7 +610,7 @@ describe('components slice', () => {
 
     it('keeps the stored data plain JSON', () => {
       addEntryOrFail(chain.id, ENTRY_INPUT);
-      addEntryOrFail(chain.id, { ...ENTRY_INPUT, distance: -0 });
+      addEntryOrFail(chain.id, { ...ENTRY_INPUT, distance: -0, lubricated: '2026-04-12', stretch: -0 });
       addEntryOrFail(chain.id, { ...ENTRY_INPUT, distance: undefined });
       const { components } = useAppStore.getState();
 

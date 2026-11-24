@@ -57,6 +57,13 @@ export interface ComponentHistoryEntry {
   position: ComponentPosition | null;
   /** Part of the component, or `null` for the whole component. Only for the types in `SUBCOMPONENTS`. */
   subcomponent: Subcomponent | null;
+  /**
+   * Date the chain was waxed or lubricated, or `null`. Not compared with `installed`. Only for the types in
+   * `CHAIN_CARE_TYPES`.
+   */
+  lubricated: IsoDate | null;
+  /** Chain wear in percent, or `null` when not measured. Only for the types in `CHAIN_CARE_TYPES`. */
+  stretch: number | null;
 }
 
 /** Every user-editable history field: a {@link ComponentHistoryEntry} without its generated `id`. */
@@ -74,6 +81,10 @@ export interface ComponentHistoryInput {
   position?: string | null;
   /** Raw value of a select; missing, `null`, or blank means the whole component. */
   subcomponent?: string | null;
+  /** Date the chain was waxed or lubricated; missing, `null`, or blank means not recorded. */
+  lubricated?: string | null;
+  /** Chain wear in percent; missing or `null` means not measured. */
+  stretch?: number | null;
 }
 
 /**

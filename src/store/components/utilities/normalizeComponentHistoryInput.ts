@@ -17,14 +17,15 @@ function toOptionalNumber(value: number | null | undefined): number | null {
  * Picks known fields only and does not mutate `input`.
  *
  * - Trims every string.
- * - A missing, `null`, or blank `position` or `subcomponent` becomes `null`.
- * - A missing or `null` `distance` becomes `null`; `-0` becomes `0`.
+ * - A missing, `null`, or blank `position`, `subcomponent`, or `lubricated` becomes `null`.
+ * - A missing or `null` `distance` or `stretch` becomes `null`; `-0` becomes `0`.
  *
  * @param input - Raw history input.
  * @returns New history input, ready for `validateComponentHistoryEntry`.
  * @example
  * normalizeComponentHistoryInput({ date: ' 2026-04-12 ', installed: '2026-03-01', position: 'rear' });
- * // { date: '2026-04-12', installed: '2026-03-01', distance: null, position: 'rear', subcomponent: null }
+ * // { date: '2026-04-12', installed: '2026-03-01', distance: null, position: 'rear', subcomponent: null,
+ * //   lubricated: null, stretch: null }
  */
 export function normalizeComponentHistoryInput(input: ComponentHistoryInput): NormalizedComponentHistoryInput {
   return {
@@ -33,5 +34,7 @@ export function normalizeComponentHistoryInput(input: ComponentHistoryInput): No
     distance: toOptionalNumber(input.distance),
     position: toOptionalText(input.position),
     subcomponent: toOptionalText(input.subcomponent),
+    lubricated: toOptionalText(input.lubricated),
+    stretch: toOptionalNumber(input.stretch),
   };
 }
