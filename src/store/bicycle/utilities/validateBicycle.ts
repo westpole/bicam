@@ -1,8 +1,8 @@
 import { CONTROL_CHARACTER_PATTERN } from '../../common/constants';
 import { checkText } from '../../common/utilities/checkText';
+import { isIsoDate } from '../../common/utilities/isIsoDate';
 import { BICYCLE_LIMITS, MULTILINE_FORBIDDEN_PATTERN, SIZE_PATTERN } from '../constants';
 import type { BicycleDetails, BicycleErrorCode, BicycleField, BicycleValidationError } from '../types';
-import { isIsoDate } from './isIsoDate';
 
 /**
  * Checks the installed component ids: count, each id's text rules, then duplicates.

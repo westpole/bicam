@@ -1,10 +1,8 @@
+import type { IsoDate } from '../common/types';
 import type { ComponentId } from '../components/types';
 
 /** Generated bicycle identifier (UUID v4). Assigned by `addBicycle` and never changed. */
 export type BicycleId = string;
-
-/** ISO 8601 calendar date without time or time zone: `YYYY-MM-DD`. */
-export type IsoDate = string;
 
 /**
  * A stored bicycle. Plain JSON: unknown optional values are `null`. Field limits are documented in

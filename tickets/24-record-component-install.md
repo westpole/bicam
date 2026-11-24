@@ -1,7 +1,7 @@
 # [FEATURE] Record an installation and distance in component history
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #15)
 > **Sprint:** `15-store-component-entity`
@@ -32,14 +32,14 @@ how far it was ridden.
 **So that** I know its age and wear
 
 **Acceptance Criteria:**
-- [ ] `ComponentHistoryEntry` has `id`, `date`, `installed`, and `distance`.
-- [ ] Two entries with the same `installed` and different `date` and `distance` are both kept. `date` may be before,
+- [x] `ComponentHistoryEntry` has `id`, `date`, `installed`, and `distance`.
+- [x] Two entries with the same `installed` and different `date` and `distance` are both kept. `date` may be before,
       equal to, or after `installed`.
-- [ ] Given a stored component and valid input, the action returns `{ ok: true, entry }` with a UUID v4 `id`, and the
+- [x] Given a stored component and valid input, the action returns `{ ok: true, entry }` with a UUID v4 `id`, and the
       entry is appended to that component's `history`. Other components keep their references.
-- [ ] A missing or `null` `distance` is stored as `null`; `0` is stored as `0`; `-0` is stored as `0`.
-- [ ] Entries keep insertion order even when their dates are out of order; two entries may share every value except `id`.
-- [ ] The resulting state survives `JSON.parse(JSON.stringify(state))` unchanged.
+- [x] A missing or `null` `distance` is stored as `null`; `0` is stored as `0`; `-0` is stored as `0`.
+- [x] Entries keep insertion order even when their dates are out of order; two entries may share every value except `id`.
+- [x] The resulting state survives `JSON.parse(JSON.stringify(state))` unchanged.
 
 **Out of scope:** `position` and `subcomponent` (#25), `lubricated` and `stretch` (#26), computing distance from rides.
 
@@ -49,14 +49,14 @@ how far it was ridden.
 **So that** a form can mark them all at once
 
 **Acceptance Criteria:**
-- [ ] `date` and `installed`: blank → `required`; not a real `YYYY-MM-DD` date (`2023-02-30`) → `invalidFormat`.
-- [ ] `distance`: `NaN` or `Infinity` → `invalidFormat`; below 0 or above 500 000 → `outOfRange`; more than one decimal
+- [x] `date` and `installed`: blank → `required`; not a real `YYYY-MM-DD` date (`2023-02-30`) → `invalidFormat`.
+- [x] `distance`: `NaN` or `Infinity` → `invalidFormat`; below 0 or above 500 000 → `outOfRange`; more than one decimal
       (`412.55`) → `invalidFormat`.
-- [ ] Several failing fields return one error each, in the order `date`, `installed`, `distance`.
-- [ ] An unknown component → only `{ field: 'componentId', code: 'notFound' }`, also for `'__proto__'` and when the
+- [x] Several failing fields return one error each, in the order `date`, `installed`, `distance`.
+- [x] An unknown component → only `{ field: 'componentId', code: 'notFound' }`, also for `'__proto__'` and when the
       input is invalid too.
-- [ ] A component with 500 entries → only `{ field: 'history', code: 'tooMany' }`, also when the input is invalid too.
-- [ ] On failure no id is generated and `components` keeps the same object reference.
+- [x] A component with 500 entries → only `{ field: 'history', code: 'tooMany' }`, also when the input is invalid too.
+- [x] On failure no id is generated and `components` keeps the same object reference.
 
 **Out of scope:** rejecting future dates.
 
@@ -98,11 +98,11 @@ No visual assets (store-only ticket).
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Store tests passing (`npm run test:store`); 90% branch threshold met
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function and type; store docs match the code
-- [ ] `code-reviewer` subagent run and findings addressed
+- [x] All acceptance criteria met
+- [x] Store tests passing (`npm run test:store`); 90% branch threshold met
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function and type; store docs match the code
+- [x] `code-reviewer` subagent run and findings addressed
 
 ---
 

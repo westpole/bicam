@@ -1,4 +1,4 @@
-import type { TextErrorCode } from '../common/types';
+import type { IsoDate, TextErrorCode } from '../common/types';
 
 /** Generated component identifier (UUID v4). Assigned by `addComponent` and never changed. */
 export type ComponentId = string;
@@ -25,10 +25,32 @@ export type BicycleComponentType =
   | 'shifters'
   | 'derailleur';
 
-/** One dated record in a component's history. Its data fields are added with the history actions. */
+/**
+ * One dated record in a component's history. Plain JSON: unknown optional values are `null`. Field limits are
+ * documented in `docs/store/components.md` §2.2.
+ */
 export interface ComponentHistoryEntry {
   /** Generated UUID that identifies the entry within the component. Never changes. */
   id: HistoryEntryId;
+  /** Date of this record. Not compared with `installed`. */
+  date: IsoDate;
+  /** Date the part was installed. Later records of the same installation repeat it. */
+  installed: IsoDate;
+  /** Kilometres ridden on the part since `installed`, as of `date`, or `null` when unknown. */
+  distance: number | null;
+}
+
+/** Every user-editable history field: a {@link ComponentHistoryEntry} without its generated `id`. */
+export type ComponentHistoryDetails = Omit<ComponentHistoryEntry, 'id'>;
+
+/** Raw history entry data as a form provides it. Normalized by `normalizeComponentHistoryInput` before validation. */
+export interface ComponentHistoryInput {
+  /** See {@link ComponentHistoryEntry.date}. */
+  date: string;
+  /** See {@link ComponentHistoryEntry.installed}. */
+  installed: string;
+  /** Kilometres; missing or `null` means unknown. */
+  distance?: number | null;
 }
 
 /**
@@ -64,7 +86,7 @@ export type ComponentUpdate = Partial<ComponentInput>;
 export type ComponentField = Exclude<keyof BicycleComponent, 'history'>;
 
 /** Why a field failed validation. Codes, not text: the UI translates them. See `docs/store/components.md` §5. */
-export type ComponentErrorCode = TextErrorCode | 'invalidOption' | 'notFound';
+export type ComponentErrorCode = TextErrorCode | 'invalidOption' | 'outOfRange' | 'tooMany' | 'notFound';
 
 /** One failing field. Validation reports at most one error per field. */
 export interface ComponentValidationError {
@@ -87,6 +109,28 @@ export type ComponentResult =
   | { ok: true; component: BicycleComponent }
   | { ok: false; errors: ComponentValidationError[] };
 
+/**
+ * A field that a history validation error can point at: a field of {@link ComponentHistoryEntry}, the component the
+ * caller named, or its whole history.
+ */
+export type ComponentHistoryField = keyof ComponentHistoryEntry | 'componentId' | 'history';
+
+/** One failing history field. Validation reports at most one error per field. */
+export interface ComponentHistoryValidationError {
+  /** The failing field. */
+  field: ComponentHistoryField;
+  /** Why it failed. */
+  code: ComponentErrorCode;
+}
+
+/**
+ * Result of a history write: the stored entry on success, every failing field otherwise. On success `entry` is the
+ * object held in the store; treat it as read-only.
+ */
+export type ComponentHistoryResult =
+  | { ok: true; entry: ComponentHistoryEntry }
+  | { ok: false; errors: ComponentHistoryValidationError[] };
+
 /** Component actions on `useAppStore`. A failed action never changes state. See `docs/store/components.md` §4. */
 export interface ComponentActions {
   /**
@@ -105,6 +149,12 @@ export interface ComponentActions {
    * id.
    */
   removeComponent: (id: ComponentId) => boolean;
+  /**
+   * Normalizes and validates `input` for the type of the component stored under `componentId`, generates a new entry
+   * id, and appends the entry to that component's history. Before the input is checked, fails with only `notFound` on
+   * `componentId` for an unknown component, or only `tooMany` on `history` when its history is full.
+   */
+  addComponentHistoryEntry: (componentId: ComponentId, input: ComponentHistoryInput) => ComponentHistoryResult;
 }
 
 /** Normalized component collection. `allIds` holds the display (insertion) order. */

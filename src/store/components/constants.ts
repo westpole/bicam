@@ -9,9 +9,15 @@ Object.freeze(INITIAL_COMPONENT_COLLECTION.byId);
 Object.freeze(INITIAL_COMPONENT_COLLECTION.allIds);
 Object.freeze(INITIAL_COMPONENT_COLLECTION);
 
-/** Component field limits, counted in UTF-16 code units after trimming. Documented in `docs/store/components.md` §2. */
+/**
+ * Component field limits. Lengths are counted in UTF-16 code units after trimming; distances are in kilometres.
+ * Documented in `docs/store/components.md` §2.
+ */
 export const COMPONENT_LIMITS = {
   modelMaxLength: 60,
+  historyMaxCount: 500,
+  distanceMax: 500_000,
+  distanceMaxDecimals: 1,
 } as const;
 
 /** Every component type. Lists each {@link BicycleComponentType} exactly once. */

@@ -80,8 +80,8 @@ src/store/
 ├── constants.ts            # INITIAL_APP_STATE
 ├── __tests__/
 ├── common/                 # helpers shared by the slices, no state
-│   ├── types.ts            # TextErrorCode
-│   ├── constants.ts        # CONTROL_CHARACTER_PATTERN
+│   ├── types.ts            # IsoDate, TextErrorCode
+│   ├── constants.ts        # CONTROL_CHARACTER_PATTERN, ISO_DATE_PATTERN
 │   ├── utilities/          # one function per file
 │   └── __tests__/
 ├── bicycle/
@@ -91,7 +91,7 @@ src/store/
 │   ├── utilities/          # one function per file
 │   └── __tests__/
 └── components/
-    ├── types.ts            # BicycleComponent, ComponentInput, ComponentCollection, results, errors
+    ├── types.ts            # BicycleComponent, ComponentHistoryEntry, inputs, ComponentCollection, results, errors
     ├── constants.ts        # COMPONENT_LIMITS, COMPONENT_TYPES, INITIAL_COMPONENT_COLLECTION
     ├── createComponentsSlice.ts
     ├── utilities/          # one function per file

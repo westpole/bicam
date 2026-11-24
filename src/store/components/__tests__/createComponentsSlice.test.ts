@@ -1,11 +1,19 @@
 import { INITIAL_APP_STATE } from '../../constants';
 import { useAppStore } from '../../useAppStore';
-import { COMPONENT_TYPES } from '../constants';
-import type { BicycleComponent, ComponentInput, ComponentUpdate } from '../types';
+import { COMPONENT_LIMITS, COMPONENT_TYPES } from '../constants';
+import type {
+  BicycleComponent,
+  ComponentHistoryEntry,
+  ComponentHistoryInput,
+  ComponentInput,
+  ComponentUpdate,
+} from '../types';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 const CHAIN_INPUT: ComponentInput = { type: 'chain', model: 'Shimano CN-M8100' };
+
+const ENTRY_INPUT: ComponentHistoryInput = { date: '2026-04-12', installed: '2026-03-01', distance: 412.5 };
 
 /**
  * Adds a component and fails the test if the store rejects it.
@@ -24,19 +32,42 @@ function addOrFail(input: ComponentInput): BicycleComponent {
 }
 
 /**
- * Puts a history entry on a stored component. Written with `setState` because no action writes history yet.
+ * Adds a history entry and fails the test if the store rejects it.
+ *
+ * @param componentId - Id of a stored component.
+ * @param input - Valid history input.
+ * @returns The stored entry, including its generated id.
+ */
+function addEntryOrFail(componentId: string, input: ComponentHistoryInput): ComponentHistoryEntry {
+  const result = useAppStore.getState().addComponentHistoryEntry(componentId, input);
+
+  if (!result.ok) {
+    throw new Error(`Fixture rejected: ${JSON.stringify(result.errors)}`);
+  }
+
+  return result.entry;
+}
+
+/**
+ * Fills a stored component's history in one write, which is faster than adding hundreds of entries.
  *
  * @param component - A stored component.
- * @returns The stored component with its history.
+ * @param count - Number of entries.
  */
-function seedHistory(component: BicycleComponent): BicycleComponent {
-  const seeded: BicycleComponent = { ...component, history: [{ id: 'entry-1' }] };
+function seedHistory(component: BicycleComponent, count: number): void {
+  const history = Array.from(
+    { length: count },
+    (_, index): ComponentHistoryEntry => ({
+      id: `entry-${index}`,
+      date: '2026-04-12',
+      installed: '2026-03-01',
+      distance: null,
+    }),
+  );
 
   useAppStore.setState(({ components }) => ({
-    components: { ...components, byId: { ...components.byId, [component.id]: seeded } },
+    components: { ...components, byId: { ...components.byId, [component.id]: { ...component, history } } },
   }));
-
-  return seeded;
 }
 
 describe('components slice', () => {
@@ -133,7 +164,9 @@ describe('components slice', () => {
 
     beforeEach(() => {
       first = addOrFail({ type: 'saddle', model: 'Fizik Argo' });
-      chain = seedHistory(addOrFail(CHAIN_INPUT));
+      const { id } = addOrFail(CHAIN_INPUT);
+      addEntryOrFail(id, ENTRY_INPUT);
+      chain = useAppStore.getState().components.byId[id];
       last = addOrFail({ type: 'stem', model: 'Zipp Service Course' });
     });
 
@@ -261,6 +294,175 @@ describe('components slice', () => {
 
       expect(before.removeComponent(id)).toBe(false);
       expect(useAppStore.getState()).toBe(before);
+    });
+  });
+
+  describe('addComponentHistoryEntry', () => {
+    let first: BicycleComponent;
+    let chain: BicycleComponent;
+
+    beforeEach(() => {
+      first = addOrFail({ type: 'saddle', model: 'Fizik Argo' });
+      chain = addOrFail(CHAIN_INPUT);
+    });
+
+    it('appends the normalized entry under a generated UUID', () => {
+      const result = useAppStore.getState().addComponentHistoryEntry(chain.id, {
+        date: ' 2026-04-12 ',
+        installed: ' 2026-03-01',
+        distance: 412.5,
+      });
+
+      if (!result.ok) {
+        throw new Error('expected success');
+      }
+      const { id } = result.entry;
+      expect(id).toMatch(UUID_PATTERN);
+      expect(result.entry).toStrictEqual({ id, date: '2026-04-12', installed: '2026-03-01', distance: 412.5 });
+
+      const stored = useAppStore.getState().components.byId[chain.id];
+      expect(stored).toStrictEqual({ ...chain, history: [result.entry] });
+      expect(stored.history[0]).toBe(result.entry);
+    });
+
+    it.each(COMPONENT_TYPES)('adds an entry to a component of type %s', (type) => {
+      const { id } = addOrFail({ type, model: 'Model' });
+
+      const entry = addEntryOrFail(id, ENTRY_INPUT);
+
+      expect(useAppStore.getState().components.byId[id].history).toEqual([entry]);
+    });
+
+    it('keeps the other components, the place in allIds, and earlier entries', () => {
+      const earlier = addEntryOrFail(chain.id, ENTRY_INPUT);
+      const { allIds } = useAppStore.getState().components;
+
+      addEntryOrFail(chain.id, ENTRY_INPUT);
+
+      const { components } = useAppStore.getState();
+      expect(components.byId[first.id]).toBe(first);
+      expect(components.allIds).toBe(allIds);
+      expect(components.byId[chain.id].history[0]).toBe(earlier);
+    });
+
+    it('does not mutate the previous collection', () => {
+      const before = useAppStore.getState().components;
+
+      addEntryOrFail(chain.id, ENTRY_INPUT);
+
+      expect(before.byId[chain.id]).toBe(chain);
+      expect(chain.history).toEqual([]);
+    });
+
+    it('keeps later records of the same installation', () => {
+      const entries = [
+        addEntryOrFail(chain.id, { date: '2026-03-01', installed: '2026-03-01', distance: 0 }),
+        addEntryOrFail(chain.id, { date: '2026-04-12', installed: '2026-03-01', distance: 412.5 }),
+      ];
+
+      expect(useAppStore.getState().components.byId[chain.id].history).toEqual(entries);
+    });
+
+    it('keeps insertion order when dates are out of order, before and after the installation', () => {
+      const dates = ['2026-05-01', '2026-02-28', '2026-03-01'];
+
+      dates.forEach((date) => addEntryOrFail(chain.id, { date, installed: '2026-03-01' }));
+
+      expect(useAppStore.getState().components.byId[chain.id].history.map(({ date }) => date)).toEqual(dates);
+    });
+
+    it('keeps entries that share every value except the id', () => {
+      const one = addEntryOrFail(chain.id, ENTRY_INPUT);
+      const two = addEntryOrFail(chain.id, ENTRY_INPUT);
+
+      expect(one.id).not.toBe(two.id);
+      expect(one).toEqual({ ...two, id: one.id });
+      expect(useAppStore.getState().components.byId[chain.id].history).toEqual([one, two]);
+    });
+
+    // toBe uses Object.is, which tells 0 from -0.
+    it.each([
+      [undefined, null],
+      [null, null],
+      [0, 0],
+      [-0, 0],
+    ])('stores the distance %s as %s', (distance, expected) => {
+      expect(addEntryOrFail(chain.id, { ...ENTRY_INPUT, distance }).distance).toBe(expected);
+    });
+
+    it('ignores an id smuggled into the input', () => {
+      const input = { ...ENTRY_INPUT, id: 'chosen-id' };
+
+      expect(addEntryOrFail(chain.id, input).id).toMatch(UUID_PATTERN);
+    });
+
+    it('keeps the stored data plain JSON', () => {
+      addEntryOrFail(chain.id, ENTRY_INPUT);
+      addEntryOrFail(chain.id, { ...ENTRY_INPUT, distance: -0 });
+      addEntryOrFail(chain.id, { ...ENTRY_INPUT, distance: undefined });
+      const { components } = useAppStore.getState();
+
+      expect(JSON.parse(JSON.stringify(components))).toStrictEqual(components);
+    });
+
+    it('returns every error, generates no id, and leaves state unchanged for invalid input', () => {
+      const randomUUID = vi.spyOn(crypto, 'randomUUID');
+      const before = useAppStore.getState();
+
+      const result = before.addComponentHistoryEntry(chain.id, {
+        date: '  ',
+        installed: '2023-02-30',
+        distance: 412.55,
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        errors: [
+          { field: 'date', code: 'required' },
+          { field: 'installed', code: 'invalidFormat' },
+          { field: 'distance', code: 'invalidFormat' },
+        ],
+      });
+      expect(randomUUID).not.toHaveBeenCalled();
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    describe.each<[string, ComponentHistoryInput]>([
+      ['valid', ENTRY_INPUT],
+      ['invalid', { date: '', installed: '', distance: NaN }],
+    ])('with %s input', (_name, input) => {
+      it.each(['unknown-id', 'toString', '__proto__'])('returns only notFound for the component %j', (id) => {
+        const randomUUID = vi.spyOn(crypto, 'randomUUID');
+        const before = useAppStore.getState();
+
+        const result = before.addComponentHistoryEntry(id, input);
+
+        expect(result).toEqual({ ok: false, errors: [{ field: 'componentId', code: 'notFound' }] });
+        expect(randomUUID).not.toHaveBeenCalled();
+        expect(useAppStore.getState()).toBe(before);
+      });
+
+      it('returns only tooMany for a full history', () => {
+        seedHistory(chain, COMPONENT_LIMITS.historyMaxCount);
+        const randomUUID = vi.spyOn(crypto, 'randomUUID');
+        const before = useAppStore.getState();
+
+        const result = before.addComponentHistoryEntry(chain.id, input);
+
+        expect(result).toEqual({ ok: false, errors: [{ field: 'history', code: 'tooMany' }] });
+        expect(randomUUID).not.toHaveBeenCalled();
+        expect(useAppStore.getState()).toBe(before);
+      });
+    });
+
+    it('accepts the 500th entry', () => {
+      seedHistory(chain, 499);
+
+      const entry = addEntryOrFail(chain.id, ENTRY_INPUT);
+
+      const { history } = useAppStore.getState().components.byId[chain.id];
+      expect(history).toHaveLength(500);
+      expect(history[499]).toBe(entry);
     });
   });
 

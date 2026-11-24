@@ -1,7 +1,7 @@
 # Components slice
 
-> **Status:** In progress (batch #15, `addComponent`, `updateComponent`, and `removeComponent` implemented, see
-> [tickets/plan.md](../../tickets/plan.md))
+> **Status:** In progress (batch #15, `addComponent`, `updateComponent`, `removeComponent`, and `addComponentHistoryEntry`
+> with `date`, `installed`, and `distance` implemented, see [tickets/plan.md](../../tickets/plan.md))
 > **Owner layer:** Zustand, `src/store/components/`
 > **Root key:** `components` (see [README.md](./README.md))
 
@@ -58,8 +58,8 @@ interface ComponentCollection {
 
 Initial value: `{ byId: {}, allIds: [] }`.
 
-`ComponentId` and `IsoDate` are not new. `ComponentId` moved here from `src/store/bicycle/types.ts` in #22;
-`IsoDate` moves from there to `src/store/common/types.ts` in #24.
+`ComponentId` and `IsoDate` are not new. `ComponentId` moved here from `src/store/bicycle/types.ts` in #22, and
+`IsoDate` moved from there to `src/store/common/types.ts` in #24.
 
 The entity is named `BicycleComponent` and its type `BicycleComponentType`, because `Component` and `ComponentType` are
 also React exports.

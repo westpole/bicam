@@ -2,11 +2,21 @@ import type { StateCreator } from 'zustand';
 
 import { definedChanges } from '../common/utilities/definedChanges';
 import type { AppStore } from '../types';
-import type { BicycleComponent, ComponentActions, ComponentResult } from './types';
+import { COMPONENT_LIMITS } from './constants';
+import type {
+  BicycleComponent,
+  ComponentActions,
+  ComponentHistoryEntry,
+  ComponentHistoryResult,
+  ComponentResult,
+} from './types';
 import { createComponentId } from './utilities/createComponentId';
+import { createHistoryEntryId } from './utilities/createHistoryEntryId';
 import { hasComponent } from './utilities/hasComponent';
+import { normalizeComponentHistoryInput } from './utilities/normalizeComponentHistoryInput';
 import { normalizeComponentInput } from './utilities/normalizeComponentInput';
 import { validateComponent } from './utilities/validateComponent';
+import { validateComponentHistoryEntry } from './utilities/validateComponentHistoryEntry';
 
 /**
  * Creates the component actions for {@link useAppStore}. Data lives in `state.components`; every successful write
@@ -82,5 +92,35 @@ export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActi
     }));
 
     return true;
+  },
+
+  addComponentHistoryEntry: (componentId, input): ComponentHistoryResult => {
+    const collection = get().components;
+
+    if (!hasComponent(collection, componentId)) {
+      return { ok: false, errors: [{ field: 'componentId', code: 'notFound' }] };
+    }
+
+    const stored = collection.byId[componentId];
+
+    if (stored.history.length >= COMPONENT_LIMITS.historyMaxCount) {
+      return { ok: false, errors: [{ field: 'history', code: 'tooMany' }] };
+    }
+
+    const details = normalizeComponentHistoryInput(input);
+    const errors = validateComponentHistoryEntry(stored.type, details);
+
+    if (errors.length > 0) {
+      return { ok: false, errors };
+    }
+
+    const entry: ComponentHistoryEntry = { id: createHistoryEntryId(), ...details };
+    const component: BicycleComponent = { ...stored, history: [...stored.history, entry] };
+
+    set((state) => ({
+      components: { byId: { ...state.components.byId, [componentId]: component }, allIds: state.components.allIds },
+    }));
+
+    return { ok: true, entry };
   },
 });
