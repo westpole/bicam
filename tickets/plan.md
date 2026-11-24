@@ -3,7 +3,7 @@
 > **Process:** follow [README.md](./README.md) for how plans and tickets are generated.
 > **Batch branch:** `15-store-component-entity` (exists, created from `master` at `1a20ee9`)
 > **Batch issue:** #15 (from the branch name; used in every commit message of this batch)
-> **Batch status:** Ready for Dev
+> **Batch status:** In Progress
 
 ## Goal
 
@@ -82,7 +82,7 @@ A move must not change bicycle behavior. Existing bicycle test cases stay as the
    change to `Done`.
 8. When every ticket is `Done`, remove `plan.md` and the ticket files, set the status line of
    [docs/store/components.md](../docs/store/components.md) to `Implemented (batch #15)`,
-   remove "(planned, batch #15)" from the document table in [docs/store/README.md](../docs/store/README.md), commit,
+   remove the "in progress" notes on `components` from [docs/store/README.md](../docs/store/README.md), commit,
    and open the PR.
 
 ### Branching rules
@@ -125,7 +125,7 @@ A move must not change bicycle behavior. Existing bicycle test cases stay as the
 
 | Ticket | Title | Type | Priority | Size | Status | Blocked by |
 | --- | --- | --- | --- | --- | --- | --- |
-| [#22](./22-add-component.md) | Add a component to the store | Feature | P1 | M | Ready for Dev | — |
+| [#22](./22-add-component.md) | Add a component to the store | Feature | P1 | M | Done | — |
 | [#23](./23-edit-remove-component.md) | Edit and remove a component | Feature | P1 | S | Ready for Dev | #22 |
 | [#24](./24-record-component-install.md) | Record an installation and distance in component history | Feature | P1 | M | Ready for Dev | #23 |
 | [#25](./25-history-position-subcomponent.md) | Record position and subcomponent | Feature | P1 | M | Ready for Dev | #24 |

@@ -66,7 +66,7 @@ All text is trimmed before it is validated and stored. Lengths are counted after
 | `purchased` | `IsoDate \| null` | No | `YYYY-MM-DD`, must be a real calendar date (`2023-02-30` is rejected) | Date of purchase. `null` when unknown. |
 | `size` | `string \| null` | No | 1–10 chars from `A–Z a–z 0–9`, space, `.`, `/`, `-` | Holds letter sizes (`'ML'`, `'M/L'`, `'XS'`) and numeric sizes (`'51'`, `'56.5'`). Stored as typed: no case change, no unit. `null` when unknown. |
 | `frameGeometry` | `string \| null` | No | 1–500 chars; line breaks allowed, other control characters rejected | Free-text notes (stack, reach, angles, …). `null` when unknown. |
-| `components` | `ComponentId[]` | No (defaults to `[]`) | Up to 100 ids; each 1–64 chars, trimmed, no control characters; no duplicates | Ids of the components installed on this bicycle now. Not checked against the `components` slice yet (placeholder). |
+| `components` | `ComponentId[]` | No (defaults to `[]`) | Up to 100 ids; each 1–64 chars, trimmed, no control characters; no duplicates | Ids of the components installed on this bicycle now. Not checked against the `components` slice yet. |
 
 Limits live in `BICYCLE_LIMITS` (`src/store/bicycle/constants.ts`).
 

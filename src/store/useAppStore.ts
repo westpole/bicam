@@ -2,13 +2,14 @@ import { create } from 'zustand';
 
 import { createBicycleSlice } from './bicycle/createBicycleSlice';
 import { hasBicycle } from './bicycle/utilities/hasBicycle';
+import { createComponentsSlice } from './components/createComponentsSlice';
 import { INITIAL_APP_STATE } from './constants';
 import type { AppStore } from './types';
 
 /**
  * The app's single global store: shared UI state (menu visibility, active screen, selected bicycle) that the header,
- * the menu, and the main viewport all depend on, plus the domain data (`bicycle`; `events`, `components`, `history`
- * are placeholders). Not persisted, so the app always starts empty on `home` with the menu closed. See
+ * the menu, and the main viewport all depend on, plus the domain data (`bicycle`, `components`; `events` and
+ * `history` are placeholders). Not persisted, so the app always starts empty on `home` with the menu closed. See
  * `docs/store/README.md`.
  *
  * Slices own their domain keys only. Navigation side effects of domain actions are added here, by wrapping the slice
@@ -26,6 +27,7 @@ export const useAppStore = create<AppStore>()((set, get, api) => {
   return {
     ...INITIAL_APP_STATE,
     ...bicycleSlice,
+    ...createComponentsSlice(set, get, api),
     removeBicycle: (id) => {
       const removed = bicycleSlice.removeBicycle(id);
 

@@ -1,4 +1,5 @@
 import type { BicycleActions, BicycleCollection, BicycleId } from './bicycle/types';
+import type { ComponentActions, ComponentCollection } from './components/types';
 
 /**
  * Top-level screens shown in the `<main>` viewport. `home` is the start screen (the user's bicycles);
@@ -36,14 +37,14 @@ export interface AppStoreState {
   bicycle: BicycleCollection;
   /** Reserved for maintenance and ride events. */
   events: ReservedSlice;
-  /** Reserved for components. */
-  components: ReservedSlice;
+  /** The user's components. */
+  components: ComponentCollection;
   /** Reserved for the change and maintenance log. */
   history: ReservedSlice;
 }
 
-/** Actions exposed by {@link useAppStore}: UI actions plus the bicycle actions. */
-export interface AppStoreActions extends BicycleActions {
+/** Actions exposed by {@link useAppStore}: UI actions plus the bicycle and component actions. */
+export interface AppStoreActions extends BicycleActions, ComponentActions {
   /** Opens the app menu. Idempotent. */
   openMenu: () => void;
   /** Closes the app menu. Idempotent. */

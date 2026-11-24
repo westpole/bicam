@@ -1,7 +1,7 @@
 # [FEATURE] Add a component to the store
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #15)
 > **Sprint:** `15-store-component-entity`

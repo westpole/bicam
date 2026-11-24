@@ -1,8 +1,7 @@
+import type { ComponentId } from '../components/types';
+
 /** Generated bicycle identifier (UUID v4). Assigned by `addBicycle` and never changed. */
 export type BicycleId = string;
-
-/** Identifier of a component (the `components` slice is a placeholder for now). */
-export type ComponentId = string;
 
 /** ISO 8601 calendar date without time or time zone: `YYYY-MM-DD`. */
 export type IsoDate = string;

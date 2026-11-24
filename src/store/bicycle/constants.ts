@@ -20,9 +20,6 @@ export const BICYCLE_LIMITS = {
   componentsMaxCount: 100,
 } as const;
 
-/** Matches any control character (C0, DEL, C1). Not allowed in single-line text. */
-export const CONTROL_CHARACTER_PATTERN = /\p{Cc}/u;
-
 /** Matches any control character except line breaks. Not allowed in multi-line text (`frameGeometry`). */
 export const MULTILINE_FORBIDDEN_PATTERN = /(?![\r\n])\p{Cc}/u;
 

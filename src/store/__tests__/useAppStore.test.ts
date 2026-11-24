@@ -22,14 +22,14 @@ describe('useAppStore', () => {
     expect(useAppStore.getState()).toMatchObject({ isMenuOpen: false, activeScreen: 'home' });
   });
 
-  it('starts with an empty bicycle collection and empty placeholder slices', () => {
+  it('starts with empty bicycle and component collections and empty placeholder slices', () => {
     expect(INITIAL_APP_STATE).toEqual({
       isMenuOpen: false,
       activeScreen: 'home',
       selectedBicycleId: null,
       bicycle: { byId: {}, allIds: [] },
       events: {},
-      components: {},
+      components: { byId: {}, allIds: [] },
       history: {},
     });
     expect(getStateData()).toEqual(INITIAL_APP_STATE);
