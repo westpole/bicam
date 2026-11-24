@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { expectMenuButtonBesideTitle, expectMenuFlow, expectShellLayout } from '../fixtures/shell';
+import { expectAddBicycleFlow, expectMenuButtonBesideTitle, expectMenuFlow, expectShellLayout } from '../fixtures/shell';
 
 /** Mobile web (portrait and landscape projects): the app shell renders the project name. */
 test.describe('web app shell', () => {
@@ -50,10 +50,16 @@ test.describe('web app shell', () => {
     await expectMenuButtonBesideTitle(page);
   });
 
-  test('opens the menu, closes it, and navigates to a placeholder screen', async ({ page }) => {
+  test('opens the menu, closes it, and navigates to the chosen screen', async ({ page }) => {
     await page.goto('/');
 
     await expectMenuFlow(page);
+  });
+
+  test('adds a bicycle from the form and lists it on the home screen', async ({ page }) => {
+    await page.goto('/');
+
+    await expectAddBicycleFlow(page);
   });
 
   test('caches the detected language', async ({ page }) => {

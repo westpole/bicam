@@ -250,8 +250,8 @@ Selecting the whole `bicycle` slice and mapping it in `useMemo` follows the stor
 ## 7. Out of scope
 
 - Event icons on row 2 (deferred, §8.1) and the `events` slice itself.
-- Adding, editing, or deleting bicycles from the UI (the "Add bicycle" screen is still a placeholder). Until it exists,
-  bicycles appear only in stories and tests that seed the store.
+- Adding, editing, or deleting bicycles from the UI. Adding came later, in batch #17: see
+  [add-bicycle.md](./add-bicycle.md).
 - Real bicycle photos, sorting, filtering, search, or a max content width on desktop.
 - A back button or any way back to `home` from details other than the existing menu flow (still an open item from
   [app-menu.md](./app-menu.md) §6).

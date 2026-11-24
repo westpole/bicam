@@ -29,7 +29,47 @@
   },
   "screens": {
     "addBicycle": {
-      "title": "Add bicycle"
+      "title": "Add bicycle",
+      "save": "Save bicycle",
+      "cancel": "Cancel",
+      "fields": {
+        "name": {
+          "label": "Name",
+          "hint": "Shown as the bicycle's title."
+        },
+        "company": {
+          "label": "Company",
+          "hint": "Manufacturer or brand."
+        },
+        "model": {
+          "label": "Model",
+          "hint": "For example, Grizl CF SL 7."
+        },
+        "purchased": {
+          "label": "Purchase date",
+          "hint": "Optional."
+        },
+        "size": {
+          "label": "Frame size",
+          "hint": "Optional. For example, M/L or 56."
+        },
+        "frameGeometry": {
+          "label": "Frame geometry",
+          "hint": "Optional. Stack, reach, angles, and other notes."
+        }
+      },
+      "errors": {
+        "form": "The bicycle could not be saved.",
+        "required": "This field is required.",
+        "tooLong": "Use {{max}} characters or fewer.",
+        "duplicate": "Another bicycle already has this name.",
+        "rejected": "This value cannot be used.",
+        "invalidFormat": {
+          "text": "Remove the characters that are not allowed.",
+          "purchased": "Enter a complete date with a four-digit year, or leave it empty.",
+          "size": "Use only letters A–Z, digits, spaces, and the characters . / -"
+        }
+      }
     },
     "addComponent": {
       "title": "Add component"

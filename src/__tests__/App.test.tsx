@@ -114,7 +114,7 @@ describe('App', () => {
     ['Add bicycle', 'addBicycle'],
     ['Add clothes set', 'addClothesSet'],
     ['Before ride check-in', 'beforeRideCheckIn'],
-  ] as const)('navigates to the %s placeholder', async (label, screenId) => {
+  ] as const)('navigates to the %s screen', async (label, screenId) => {
     render(<App />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Open menu' }));
@@ -169,6 +169,56 @@ describe('App', () => {
     const main = screen.getByRole('main');
     expect(within(main).getByRole('heading', { level: 2, name: 'Add bicycle' })).toBeInTheDocument();
     expect(within(main).queryByRole('list', { name: 'Bicycles' })).not.toBeInTheDocument();
+  });
+
+  it('saves a new bicycle from the form and shows it on the home screen', async () => {
+    useAppStore.setState({ activeScreen: 'addBicycle', bicycle: toBicycleCollection(BICYCLES) });
+    render(<App />);
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Name' }), ' Racer ');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Company' }), 'Trek');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Model' }), 'Madone');
+    await userEvent.click(screen.getByRole('button', { name: 'Save bicycle' }));
+
+    const { activeScreen, bicycle } = useAppStore.getState();
+    expect(activeScreen).toBe('home');
+    expect(bicycle.allIds).toHaveLength(BICYCLES.length + 1);
+    expect(bicycle.byId[bicycle.allIds[BICYCLES.length]]).toMatchObject({
+      name: 'Racer',
+      company: 'Trek',
+      model: 'Madone',
+      purchased: null,
+      size: null,
+      frameGeometry: null,
+      components: [],
+    });
+    const list = within(screen.getByRole('main')).getByRole('list', { name: 'Bicycles' });
+    expect(within(list).getAllByRole('button')[BICYCLES.length]).toHaveAccessibleName('Racer');
+  });
+
+  it('stays on the form and explains the errors when the store rejects the bicycle', async () => {
+    useAppStore.setState({ activeScreen: 'addBicycle', bicycle: toBicycleCollection(BICYCLES) });
+    render(<App />);
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Name' }), 'roadie');
+    await userEvent.click(screen.getByRole('button', { name: 'Save bicycle' }));
+
+    expect(useAppStore.getState().activeScreen).toBe('addBicycle');
+    expect(useAppStore.getState().bicycle.allIds).toHaveLength(BICYCLES.length);
+    expect(screen.getByText('Another bicycle already has this name.')).toBeInTheDocument();
+    expect(screen.getAllByText('This field is required.')).toHaveLength(2);
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveFocus();
+  });
+
+  it('returns home without adding anything when the form is cancelled', async () => {
+    useAppStore.setState({ activeScreen: 'addBicycle' });
+    render(<App />);
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Name' }), 'Racer');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(useAppStore.getState().activeScreen).toBe('home');
+    expect(useAppStore.getState().bicycle.allIds).toEqual([]);
   });
 
   it("opens the clicked bicycle's details placeholder in place of the list", async () => {
