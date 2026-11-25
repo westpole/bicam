@@ -100,7 +100,8 @@ the `storybook-expert` skill already names: `useAppStore` in `src/store/useAppSt
 | `navigateTo(screen)` | action | Sets `activeScreen: screen` **and** `isMenuOpen: false` in one update, so choosing an option never leaves the menu open. |
 | `reset()` | action | Restores the defaults above (the React skill requires a `reset` on every store). |
 
-- No `persist` middleware: reopening the app starts on `home` with the menu closed. No `immer`: the state is flat.
+- UI state is not saved: reopening the app starts on `home` with the menu closed. (Domain data is, see
+  [docs/store/README.md](../store/README.md) §4.) No `immer`: the state is flat.
 - The default values live in `src/store/constants.ts` (`INITIAL_APP_STATE`) so `reset()`, tests, and story decorators
   share one baseline.
 - There is no router. `activeScreen` is the only navigation state until the app needs URLs.

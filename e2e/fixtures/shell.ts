@@ -228,3 +228,28 @@ export async function expectIncludeComponentFlow(page: Page): Promise<void> {
     /Chain.*Shimano CN-M8100/,
   ]);
 }
+
+/**
+ * Asserts that the data from {@link expectAddBicycleFlow} and {@link expectIncludeComponentFlow} was restored. Run it
+ * after the app restarted.
+ *
+ * - (a) The app starts on the home screen, not on the details screen that was open, and lists the bicycle.
+ * - (b) The bicycle's details still list its component.
+ *
+ * @param page - Page showing the restarted app.
+ * @example
+ * await page.reload();
+ * await expectRestoredBicycle(page);
+ */
+export async function expectRestoredBicycle(page: Page): Promise<void> {
+  // (a) Home.
+  const card = page.getByRole('list', { name: 'Bicycles' }).getByRole('button');
+  await expect(card).toHaveText([/Gravel Grinder/]);
+
+  // (b) Details.
+  await card.click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Gravel Grinder' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Components' }).getByRole('listitem')).toHaveText([
+    /Chain.*Shimano CN-M8100/,
+  ]);
+}

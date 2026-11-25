@@ -4,10 +4,10 @@ Playwright tests for the web build (mobile viewports) and the Electron app. Proj
 
 | Project | Folder | Covers |
 | --- | --- | --- |
-| `web-mobile-portrait`, `web-mobile-landscape` | `mobile/` | Web app shell on a Pixel 7 (title, i18n fallback, no console errors, no horizontal scroll) |
+| `web-mobile-portrait`, `web-mobile-landscape` | `mobile/` | Web app shell on a Pixel 7 (title, i18n fallback, no console errors, no horizontal scroll, data kept after a reload) |
 | `electron-smoke` | `electron/` | App starts, one visible window, loads `build/index.html`, quits on last window close |
 | `electron-ui` | `ui/` | Main window layout and light/dark color scheme |
-| `electron-integration` | `integration/` | Security posture: no Node globals, `window.open`/navigation blocked, permissions denied, CSP enforced |
+| `electron-integration` | `integration/` | Security posture: no Node globals, `window.open`/navigation blocked, permissions denied, CSP enforced. Persistence: data kept after a restart |
 | `electron-visual` | `visual/` | Screenshot baselines (Linux/Docker only), light and dark: empty home, open menu, home with the shared bicycle fixtures, add bicycle form (untouched and with errors), bicycle details, include component dialog |
 
 ## Running locally

@@ -126,7 +126,7 @@ Invariant: after each action completes, `activeScreen === 'bicycleDetails'` ⇔ 
 - **Two `set` calls:** the wrapper updates `bicycle` first, then the UI fields, both synchronously inside one action.
   React batches them into one render, so the UI never shows the in-between state. A non-React subscriber could see it
   for one notification; `App`'s guard (§4.5) also covers that case.
-- When persistence is added, `selectedBicycleId` is UI state and is excluded by `partialize`, like `isMenuOpen` and
+- `selectedBicycleId` is UI state and is excluded from persistence by `partialize`, like `isMenuOpen` and
   `activeScreen`.
 
 ## 4. Components

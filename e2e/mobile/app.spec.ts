@@ -5,6 +5,7 @@ import {
   expectIncludeComponentFlow,
   expectMenuButtonBesideTitle,
   expectMenuFlow,
+  expectRestoredBicycle,
   expectShellLayout,
 } from '../fixtures/shell';
 
@@ -67,6 +68,16 @@ test.describe('web app shell', () => {
 
     await expectAddBicycleFlow(page);
     await expectIncludeComponentFlow(page);
+  });
+
+  test('restores bicycles and components after a reload', async ({ page }) => {
+    await page.goto('/');
+    await expectAddBicycleFlow(page);
+    await expectIncludeComponentFlow(page);
+
+    await page.reload();
+
+    await expectRestoredBicycle(page);
   });
 
   test('caches the detected language', async ({ page }) => {
