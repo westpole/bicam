@@ -93,7 +93,7 @@ flowchart TD
 | Shell | `Box` (`src/ui/components/AppShell`) | `display: grid`, `gridTemplateRows: 'auto minmax(0, 1fr)'`, `height: 100vh` overridden by `100dvh` where supported, `overflow: hidden` | `minmax(0, 1fr)` lets row 2 shrink below its content height, so the overflow scrolls inside `<main>` instead of stretching the page. `dvh` follows the mobile browser chrome as it shows and hides. |
 | Header row | MUI `AppBar` `component="header"` `position="static"` + `Toolbar` | Toolbar min-height comes from the theme mixins: 56px by default, 48px in landscape under 600px wide, 64px at 600px wide and up (the `sm` rule wins over landscape) | Not `position="fixed"`: the grid row already pins it, so no offset spacer is needed and `<main>` content never slides under it. |
 | Menu button | `IconButton` `edge="start"` `color="inherit"` `size="large"` | 48 × 48 hit area | Meets WCAG 2.5.5 touch target size. Clicking does nothing in this batch (see §7). |
-| Title | `Typography` `variant="h6"` `component="h1"` `noWrap` | Inherits the AppBar text color | Stays the page's only `<h1>`, so existing heading queries keep working. |
+| Title | `Typography` `variant="h6"` `component="h1"` `noWrap` | Inherits the AppBar text color | Stays the page's only `<h1>`, so existing heading queries keep working. With `onHomeClick` (set by `App`) the text is an MUI `Link` to `home`: 48px tall, underlined on hover, `preventDefault` + `navigateTo('home')` because there is no URL routing. The link then truncates instead of the `<h1>`, which would clip its focus ring. |
 | Main viewport | `Box` `component="main"` `tabIndex={0}` | `overflowY: 'auto'`, `overscrollBehaviorY: 'contain'`, `minHeight: 0`, `p: { xs: 2, sm: 3 }`, a visible `:focus-visible` outline | The only vertical scroll container. `overscroll-behavior` stops scroll chaining and pull-to-refresh bounce from moving the header. `tabIndex={0}` lets keyboard users scroll it even when it has no focusable content (axe rule `scrollable-region-focusable`). |
 
 **Lint note:** the repo has no `jsx-a11y` ESLint rules today. If one such as `jsx-a11y/no-noninteractive-tabindex` is
@@ -159,8 +159,8 @@ Storybook a11y setting is `test: 'todo'` (warn only), so stories added in this b
 - The menu button has a translated `aria-label` (`header.menuButton.label` = "Open menu"). `aria-controls` and
   `aria-expanded` are added when a navigation drawer exists.
 - Keyboard: the menu button is the first focusable element. The focus ring comes from MUI.
-- Keyboard users can scroll `<main>`: it has `tabIndex={0}` and a visible focus outline, and it is the second tab stop
-  after the menu button.
+- Keyboard users can scroll `<main>`: it has `tabIndex={0}` and a visible focus outline, and it comes after the
+  header controls (menu button, title link, theme toggle) in tab order.
 - New translation keys go into `src/i18n/locales/en/translation.json` first (type-checked via `i18next.d.ts`).
 
 ## 7. Out of scope

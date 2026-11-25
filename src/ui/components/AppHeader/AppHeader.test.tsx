@@ -1,5 +1,5 @@
 import { ThemeProvider } from '@mui/material/styles';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { theme } from '@ui/theme';
@@ -127,6 +127,49 @@ describe('AppHeader', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Open menu' }));
 
     expect(onMenuClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the title as plain text when no home handler is given', () => {
+    renderHeader();
+
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('renders the title as a truncating, inherit-colored link inside the h1 when a home handler is given', () => {
+    renderHeader({ onHomeClick: vi.fn() });
+
+    const heading = screen.getByRole('heading', { level: 1, name: 'Bicam' });
+    const link = screen.getByRole('link', { name: 'Bicam' });
+
+    expect(heading).toContainElement(link);
+    // The heading must not clip the link's focus ring, so only the link truncates.
+    expect(heading).not.toHaveClass('MuiTypography-noWrap');
+    expect(link).toHaveClass('MuiTypography-noWrap');
+    expect(link).toHaveClass('MuiLink-underlineHover');
+  });
+
+  it('calls onHomeClick without following the link when the title is clicked', () => {
+    const onHomeClick = vi.fn();
+    const onMenuClick = vi.fn();
+    renderHeader({ onHomeClick, onMenuClick });
+
+    // fireEvent returns false when the handler prevented the default action.
+    expect(fireEvent.click(screen.getByRole('link', { name: 'Bicam' }))).toBe(false);
+
+    expect(onHomeClick).toHaveBeenCalledTimes(1);
+    expect(onMenuClick).not.toHaveBeenCalled();
+  });
+
+  it('calls onHomeClick when Enter is pressed on the title', async () => {
+    const onHomeClick = vi.fn();
+    renderHeader({ onHomeClick });
+
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(screen.getByRole('link', { name: 'Bicam' })).toHaveFocus();
+    await userEvent.keyboard('{Enter}');
+
+    expect(onHomeClick).toHaveBeenCalledTimes(1);
   });
 
   it('omits the theme toggle when no toggle handler is given', () => {

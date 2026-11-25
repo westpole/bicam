@@ -1,7 +1,9 @@
+import type { MouseEvent } from 'react';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import AppBar from '@mui/material/AppBar';
 import IconButton from '@mui/material/IconButton';
+import Link from '@mui/material/Link';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +21,9 @@ import type { AppHeaderProps } from './types';
  * "Close menu" while open, with matching `aria-expanded` (and `aria-controls` when `menuId` is given).
  * Presentational: the open state and menu id come from props, not the store or the menu component.
  *
+ * When `onHomeClick` is given, the title text is a link to the home screen. The app has no URL routing, so the link
+ * only calls the handler and the URL does not change.
+ *
  * When `onColorSchemeToggle` is given, a light/dark theme toggle sits at the right edge. It shows the scheme it
  * switches to (moon in light, sun in dark) with a matching label. The scheme itself comes from props.
  *
@@ -31,6 +36,7 @@ import type { AppHeaderProps } from './types';
  *       menuOpen={isMenuOpen}
  *       menuId={APP_MENU_ID}
  *       onMenuClick={toggleMenu}
+ *       onHomeClick={goHome}
  *       colorScheme={colorScheme}
  *       onColorSchemeToggle={toggleColorScheme}
  *     />
@@ -41,11 +47,22 @@ export function AppHeader({
   menuOpen = false,
   menuId,
   onMenuClick,
+  onHomeClick,
   colorScheme = 'light',
   onColorSchemeToggle,
 }: AppHeaderProps) {
   const { t } = useTranslation();
   const isDark = colorScheme === 'dark';
+
+  /**
+   * Goes home without following the `#` placeholder href.
+   *
+   * @param event - The link click.
+   */
+  function handleHomeClick(event: MouseEvent) {
+    event.preventDefault();
+    onHomeClick?.();
+  }
 
   return (
     <AppBar component="header" position="static">
@@ -63,9 +80,26 @@ export function AppHeader({
         >
           {menuOpen ? <CloseIcon /> : <MenuIcon />}
         </IconButton>
-        {/* minWidth: 0 lets the flex item shrink so `noWrap` truncates with an ellipsis. */}
-        <Typography variant="h6" component="h1" noWrap sx={{ minWidth: 0 }}>
-          {t('app.title')}
+        {/*
+          minWidth: 0 lets the flex item shrink so `noWrap` truncates with an ellipsis. With a link, the link truncates
+          instead: an `overflow: hidden` heading would clip the link's focus ring.
+        */}
+        <Typography variant="h6" component="h1" noWrap={!onHomeClick} sx={{ minWidth: 0 }}>
+          {onHomeClick ? (
+            // py: 1 makes the link as tall as the buttons (48px).
+            <Link
+              href="#"
+              color="inherit"
+              underline="hover"
+              noWrap
+              onClick={handleHomeClick}
+              sx={{ display: 'block', py: 1 }}
+            >
+              {t('app.title')}
+            </Link>
+          ) : (
+            t('app.title')
+          )}
         </Typography>
         {onColorSchemeToggle && (
           // ml: 'auto' pushes the toggle to the right edge; same 48 × 48 hit area as the menu button.

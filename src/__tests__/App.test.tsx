@@ -258,6 +258,34 @@ describe('App', () => {
     expect(within(main).queryByRole('heading', { level: 2, name: 'Gravel Grinder' })).not.toBeInTheDocument();
   });
 
+  it('returns home from the details screen when the app title is clicked', async () => {
+    useAppStore.setState({
+      bicycle: toBicycleCollection(BICYCLES),
+      activeScreen: 'bicycleDetails',
+      selectedBicycleId: BICYCLES[0].id,
+    });
+    render(<App />);
+
+    await userEvent.click(screen.getByRole('link', { name: 'Bicam' }));
+
+    expect(useAppStore.getState()).toMatchObject({ activeScreen: 'home', selectedBicycleId: null });
+    expect(within(screen.getByRole('main')).getByRole('list', { name: 'Bicycles' })).toBeInTheDocument();
+    expect(window.location.hash).toBe('');
+  });
+
+  it('closes the open menu and goes home when the app title is clicked, keeping focus on the title', async () => {
+    useAppStore.setState({ activeScreen: 'addComponent' });
+    render(<App />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Bicam' }));
+
+    expect(useAppStore.getState()).toMatchObject({ isMenuOpen: false, activeScreen: 'home' });
+    await waitFor(() => expect(screen.queryByRole('navigation')).not.toBeInTheDocument());
+    expect(screen.getByRole('main')).not.toHaveAttribute('inert');
+    expect(screen.getByRole('link', { name: 'Bicam' })).toHaveFocus();
+  });
+
   it('returns to the bicycle list when the shown bicycle is removed', () => {
     useAppStore.setState({ bicycle: toBicycleCollection(BICYCLES) });
     act(() => {
