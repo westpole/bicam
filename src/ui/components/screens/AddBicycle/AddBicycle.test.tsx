@@ -118,6 +118,7 @@ describe('AddBicycle', () => {
     ['frameGeometry', 'tooLong', 'Use 500 characters or fewer.'],
     ['name', 'tooMany', 'This value cannot be used.'],
     ['name', 'notFound', 'This value cannot be used.'],
+    ['name', 'alreadyInstalled', 'This value cannot be used.'],
   ] as const)('explains a %s rejected as %s', async (field, code, message) => {
     await submitRejected([{ field, code }]);
 

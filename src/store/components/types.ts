@@ -12,6 +12,7 @@ export type BicycleComponentType =
   | 'bottomBracket'
   | 'cassette'
   | 'frame'
+  | 'fork'
   | 'seatpost'
   | 'saddle'
   | 'pedals'

@@ -1,5 +1,12 @@
 import type { BicycleActions, BicycleCollection, BicycleId } from './bicycle/types';
-import type { ComponentActions, ComponentCollection } from './components/types';
+import type {
+  BicycleComponent,
+  ComponentActions,
+  ComponentCollection,
+  ComponentErrorCode,
+  ComponentField,
+  ComponentInput,
+} from './components/types';
 
 /**
  * Top-level screens shown in the `<main>` viewport. `home` is the start screen (the user's bicycles);
@@ -43,6 +50,19 @@ export interface AppStoreState {
   history: ReservedSlice;
 }
 
+/** One failing field of {@link AppStoreActions.addComponentToBicycle}. At most one error per field. */
+export interface BicycleComponentValidationError {
+  /** A field of the component, `bicycleId` for an unknown bicycle, or `components` for a full one. */
+  field: ComponentField | 'bicycleId' | 'components';
+  /** Why it failed. */
+  code: ComponentErrorCode;
+}
+
+/** Result of {@link AppStoreActions.addComponentToBicycle}. `component` is the stored object; treat it as read-only. */
+export type BicycleComponentResult =
+  | { ok: true; component: BicycleComponent }
+  | { ok: false; errors: BicycleComponentValidationError[] };
+
 /** Actions exposed by {@link useAppStore}: UI actions plus the bicycle and component actions. */
 export interface AppStoreActions extends BicycleActions, ComponentActions {
   /** Opens the app menu. Idempotent. */
@@ -58,6 +78,13 @@ export interface AppStoreActions extends BicycleActions, ComponentActions {
    * changing nothing, for an unknown id.
    */
   openBicycleDetails: (id: BicycleId) => boolean;
+  /**
+   * Stores a new component (see {@link ComponentActions.addComponent}) and appends its id to the bicycle's
+   * `components`. Nothing is stored on failure. Before the input is checked, fails with only `notFound` on `bicycleId`
+   * for an unknown bicycle, or only `tooMany` on `components` when the bicycle is full. Use `updateBicycle` to add a
+   * component that is already stored.
+   */
+  addComponentToBicycle: (bicycleId: BicycleId, input: ComponentInput) => BicycleComponentResult;
   /** Restores the initial state, including all domain data. */
   reset: () => void;
 }

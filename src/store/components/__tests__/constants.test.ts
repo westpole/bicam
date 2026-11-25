@@ -7,6 +7,7 @@ const ALL_TYPES: Record<BicycleComponentType, true> = {
   bottomBracket: true,
   cassette: true,
   frame: true,
+  fork: true,
   seatpost: true,
   saddle: true,
   pedals: true,
@@ -27,7 +28,7 @@ const ALL_POSITIONS: Record<ComponentPosition, true> = { front: true, rear: true
 describe('component constants', () => {
   it('lists every component type exactly once', () => {
     expect([...COMPONENT_TYPES].sort()).toEqual(Object.keys(ALL_TYPES).sort());
-    expect(COMPONENT_TYPES).toHaveLength(16);
+    expect(COMPONENT_TYPES).toHaveLength(17);
   });
 
   it('lists every position exactly once', () => {

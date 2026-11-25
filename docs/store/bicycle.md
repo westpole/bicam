@@ -66,7 +66,7 @@ All text is trimmed before it is validated and stored. Lengths are counted after
 | `purchased` | `IsoDate \| null` | No | `YYYY-MM-DD`, must be a real calendar date (`2023-02-30` is rejected) | Date of purchase. `null` when unknown. |
 | `size` | `string \| null` | No | 1–10 chars from `A–Z a–z 0–9`, space, `.`, `/`, `-` | Holds letter sizes (`'ML'`, `'M/L'`, `'XS'`) and numeric sizes (`'51'`, `'56.5'`). Stored as typed: no case change, no unit. `null` when unknown. |
 | `frameGeometry` | `string \| null` | No | 1–500 chars; line breaks allowed, other control characters rejected | Free-text notes (stack, reach, angles, …). `null` when unknown. |
-| `components` | `ComponentId[]` | No (defaults to `[]`) | Up to 100 ids; each 1–64 chars, trimmed, no control characters; no duplicates | Ids of the components installed on this bicycle now. Every id must be a stored component; removing a component also removes its id here (see [components.md §4](./components.md#links-between-slices)). |
+| `components` | `ComponentId[]` | No (defaults to `[]`) | Up to 100 ids; each 1–64 chars, trimmed, no control characters; no duplicates | Ids of the components installed on this bicycle now. Every id must be a stored component that is on no other bicycle; removing a component also removes its id here (see [components.md §4](./components.md#links-between-slices)). |
 
 Limits live in `BICYCLE_LIMITS` (`src/store/bicycle/constants.ts`).
 
@@ -97,8 +97,8 @@ Normalization (`normalizeBicycleInput`) runs before validation and returns `Bicy
 
 | Action | Returns | Behavior |
 | --- | --- | --- |
-| `addBicycle(input: BicycleInput)` | `BicycleResult` | Normalizes and validates `input`, then generates an `id`, stores the bicycle, and appends the id to `allIds`. Fails with `{ field: 'name', code: 'duplicate' }` when another bicycle has the same name (case-insensitive). No id is generated on failure. |
-| `updateBicycle(id: BicycleId, changes: BicycleUpdate)` | `BicycleResult` | `BicycleUpdate` is `Partial<BicycleInput>`. Merges `changes` into the stored bicycle, then normalizes and validates the result. Renaming is allowed: the new name must not match another bicycle's name (changing the case of its own name is fine). The `id` and position in `allIds` are kept. Fails with `{ field: 'id', code: 'notFound' }` for an unknown id. Passing `null` (or blank text) clears an optional field; omitting a key, or passing `undefined`, leaves it unchanged. An `id` key in `changes` is ignored. |
+| `addBicycle(input: BicycleInput)` | `BicycleResult` | Normalizes and validates `input`, then generates an `id`, stores the bicycle, and appends the id to `allIds`. Fails with `{ field: 'name', code: 'duplicate' }` when another bicycle has the same name (case-insensitive), and on `components` with `notFound` or `alreadyInstalled` (see §5). No id is generated on failure. |
+| `updateBicycle(id: BicycleId, changes: BicycleUpdate)` | `BicycleResult` | `BicycleUpdate` is `Partial<BicycleInput>`. Merges `changes` into the stored bicycle, then normalizes and validates the result. Renaming is allowed: the new name must not match another bicycle's name (changing the case of its own name is fine). The `id` and position in `allIds` are kept. Fails with `{ field: 'id', code: 'notFound' }` for an unknown id, and on `components` with `notFound` or `alreadyInstalled` (see §5); the bicycle's own components never count as installed elsewhere. Passing `null` (or blank text) clears an optional field; omitting a key, or passing `undefined`, leaves it unchanged. An `id` key in `changes` is ignored. |
 | `removeBicycle(id: BicycleId)` | `boolean` | Removes the bicycle from `byId` and `allIds`. Returns `false` (and leaves state unchanged) for an unknown id. When the removed bicycle is the one on the details screen (`selectedBicycleId`), the store's wrapper in `useAppStore.ts` also sets `selectedBicycleId: null` and `activeScreen: 'home'` (see [README.md](./README.md) §5). |
 
 Ids are matched exactly. Name clashes are checked case-insensitively. A failed action never changes state.
@@ -110,7 +110,8 @@ Lookups use own-property checks (`hasBicycle`), so a caller-supplied id that mat
 
 ```ts
 type BicycleField = keyof Bicycle;
-type BicycleErrorCode = 'required' | 'tooLong' | 'invalidFormat' | 'tooMany' | 'duplicate' | 'notFound';
+type BicycleErrorCode =
+  | 'required' | 'tooLong' | 'invalidFormat' | 'tooMany' | 'duplicate' | 'notFound' | 'alreadyInstalled';
 
 interface BicycleValidationError {
   field: BicycleField;
@@ -130,6 +131,7 @@ type BicycleResult =
 | `tooMany` | `components` has more than 100 ids. |
 | `duplicate` | `name` is already used by another bicycle (case-insensitive), or `components` lists an id twice. |
 | `notFound` | `updateBicycle` was called with an unknown `id` (returned alone), or `components` lists an id that is not a stored component (checked after the other `components` rules). |
+| `alreadyInstalled` | `components` lists a component that is on another bicycle (checked after `notFound`). |
 
 Validation reports every failing field at once (one error per field, in field order), so a form can mark all of them.
 On success, the returned `bicycle` is the object held in the store; treat it as read-only.

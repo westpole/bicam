@@ -21,7 +21,7 @@ type HistoryEntryId = string;   // UUID v4, generated
 type IsoDate = string;          // 'YYYY-MM-DD'
 
 type BicycleComponentType =
-  | 'chain' | 'bottomBracket' | 'cassette' | 'frame' | 'seatpost' | 'saddle' | 'pedals' | 'wheel'
+  | 'chain' | 'bottomBracket' | 'cassette' | 'frame' | 'fork' | 'seatpost' | 'saddle' | 'pedals' | 'wheel'
   | 'handlebar' | 'stem' | 'barTape' | 'tire' | 'frontMount' | 'brakes' | 'shifters' | 'derailleur';
 
 type ComponentPosition = 'front' | 'rear';
@@ -117,7 +117,7 @@ Text is trimmed before it is validated and stored. Lengths are counted after tri
 | Field | Type | Required | Limits | Notes |
 | --- | --- | --- | --- | --- |
 | `id` | `string` | Generated | UUID v4 | Assigned by `addComponent`; never changes and cannot be set by the caller. |
-| `type` | `BicycleComponentType` | Yes | One of the 16 types | Can be changed only while every history entry is also valid for the new type (§4). |
+| `type` | `BicycleComponentType` | Yes | One of the 17 types | Can be changed only while every history entry is also valid for the new type (§4). |
 | `model` | `string` | Yes | 1–60 chars; no control characters | Free text, e.g. `'Shimano CN-M8100'`. Not unique: a rider can own two identical chains. |
 | `history` | `ComponentHistoryEntry[]` | Starts as `[]` | Up to 500 entries | Written only by the history actions (§4). Insertion order; the store does not sort it. |
 
@@ -205,10 +205,17 @@ A failed action never changes state and does not call `set`. Lookups by componen
 ### Links between slices
 
 - `addBicycle` and `updateBicycle` reject a component id that is not stored, with
-  `{ field: 'components', code: 'notFound' }`. The bicycle slice may read `components`; it never writes it.
+  `{ field: 'components', code: 'notFound' }`, and one that is on another bicycle with
+  `{ field: 'components', code: 'alreadyInstalled' }`. The bicycle slice may read `components`; it never writes it.
 - `removeComponent` is wrapped in `useAppStore.ts`. The wrapper returns `false` for an unknown id; otherwise it removes
   the id from the bicycles that list it, then calls the slice action. In this order no subscriber sees a bicycle that
   points at a missing component. The slices still write only their own key.
+- `addComponentToBicycle(bicycleId, input)` lives in `useAppStore.ts`. It stores a new component, then appends its id to
+  the bicycle. It returns `BicycleComponentResult` (`src/store/types.ts`): `ComponentResult` plus two errors that are
+  checked before the input and returned alone, `{ field: 'bicycleId', code: 'notFound' }` and
+  `{ field: 'components', code: 'tooMany' }`. Nothing is stored on failure. A component that is already stored is added
+  with `updateBicycle`.
+- `getInstalledComponents` lists a bicycle's components; `getSpareComponents` lists the components on no bicycle.
 - `removeBicycle` does not remove components: a rider keeps the parts when a bicycle goes.
 
 ## 5. Results and error codes
@@ -266,9 +273,4 @@ On success, the returned object is the one held in the store; treat it as read-o
 | `derailleur` is both a component type and a subcomponent of `shifters`. | Confirmed by the user, as in the request. The same part can then be logged in two places. |
 | One date, `lubricated`, covers waxing and lubrication. | Confirmed by the user. |
 | `stretch` is a percentage, 0–5, as on a chain checker. | Confirmed by the user. |
-
-## 7. Open questions
-
-| Question | Why it matters | Current answer |
-| --- | --- | --- |
-| Can one component be listed on two bicycles at once? | A part is physically on one bicycle at a time. | Not checked. |
+| A component is on at most one bicycle. `addBicycle` and `updateBicycle` enforce it. | A part is physically on one bicycle at a time (confirmed by the user). The shared validator covers every caller, not only the details screen. To move a part, take it off the first bicycle, then add it to the other. |

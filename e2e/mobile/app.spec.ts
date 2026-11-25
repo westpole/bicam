@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-import { expectAddBicycleFlow, expectMenuButtonBesideTitle, expectMenuFlow, expectShellLayout } from '../fixtures/shell';
+import {
+  expectAddBicycleFlow,
+  expectIncludeComponentFlow,
+  expectMenuButtonBesideTitle,
+  expectMenuFlow,
+  expectShellLayout,
+} from '../fixtures/shell';
 
 /** Mobile web (portrait and landscape projects): the app shell renders the project name. */
 test.describe('web app shell', () => {
@@ -56,10 +62,11 @@ test.describe('web app shell', () => {
     await expectMenuFlow(page);
   });
 
-  test('adds a bicycle from the form and lists it on the home screen', async ({ page }) => {
+  test('adds a bicycle from the form, then includes a component on its details screen', async ({ page }) => {
     await page.goto('/');
 
     await expectAddBicycleFlow(page);
+    await expectIncludeComponentFlow(page);
   });
 
   test('caches the detected language', async ({ page }) => {

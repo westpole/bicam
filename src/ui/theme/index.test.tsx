@@ -50,6 +50,10 @@ describe('theme', () => {
     expect(theme.shape.borderRadius).toBe(8);
   });
 
+  it('removes the elevation overlay from dialogs, so error text keeps its contrast in dark mode', () => {
+    expect(theme.components?.MuiDialog?.styleOverrides?.paper).toEqual({ backgroundImage: 'none' });
+  });
+
   it('configures flat primary AppBar defaults without enableColorOnDark', () => {
     const appBar = theme.components?.MuiAppBar;
 

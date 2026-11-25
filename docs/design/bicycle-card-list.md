@@ -5,7 +5,8 @@
 > plan and ticket files removed after completion)
 > **Builds on:** [app-shell-and-theme.md](./app-shell-and-theme.md), [app-menu.md](./app-menu.md),
 > [docs/store/bicycle.md](../store/bicycle.md)
-> **Last updated:** 2026-11-22
+> **Superseded in part:** the details placeholder is now a real screen, see [bicycle-details.md](./bicycle-details.md)
+> **Last updated:** 2026-11-25
 
 ## 1. Goal
 
@@ -16,7 +17,7 @@ Show the user's bicycles on the start screen (`home`) as a vertical stack of car
   **event icons** (row 2). This batch builds the two-row layout and leaves row 2 empty; the icons need the `events`
   slice and are deferred (§8.1).
 - The image is the `DirectionsBike` icon from `@mui/icons-material` for now (a new dependency, see §6).
-- The whole card is **clickable** and opens a **Bicycle details** placeholder screen for that bicycle.
+- The whole card is **clickable** and opens the **Bicycle details** screen for that bicycle (a placeholder in this batch).
 
 ## 2. Wireframes
 
@@ -77,6 +78,8 @@ change when event icons are added.
 
 ### 2.4 Bicycle details placeholder (after clicking a card)
 
+Since replaced by the real screen: see [bicycle-details.md](./bicycle-details.md).
+
 ```text
 ┌────────────────────────────────────┐
 │ ≡  Bicam                           │
@@ -94,11 +97,10 @@ flowchart TD
   App["App.tsx<br/>reads bicycle, activeScreen, selectedBicycleId"] --> AppShell
   AppShell --> Main["main {children}"]
   Main -->|"activeScreen = home"| Home["Home bicycles onBicycleClick"]
-  Main -->|"activeScreen = bicycleDetails"| Details["BicycleDetails name"]
+  Main -->|"activeScreen = bicycleDetails"| Details["BicycleDetails (see bicycle-details.md)"]
   Main -->|"menu screens"| Screens["SCREEN_COMPONENTS[...]"]
   Home --> CardList["CardList items onItemClick aria-label"]
   CardList --> Card["Paper li → ButtonBase<br/>media | title + empty row 2"]
-  Details --> ScreenPlaceholder
 ```
 
 ## 3. State (`src/store/`) — ticket #20
@@ -193,6 +195,8 @@ When real bicycle photos exist, this becomes `Avatar src=…` with the icon as t
 
 ### 4.4 `BicycleDetails` screen (`src/ui/components/screens/BicycleDetails/`)
 
+Since replaced by the real screen: see [bicycle-details.md](./bicycle-details.md).
+
 | Prop | Type | Notes |
 | --- | --- | --- |
 | `name` | `string` | The selected bicycle's name. |
@@ -211,6 +215,7 @@ const bicycles = useMemo(
   () => bicycleCollection.allIds.map((id) => bicycleCollection.byId[id]),
   [bicycleCollection],
 );
+// The props of BicycleDetails are in bicycle-details.md.
 // The selection may briefly point at a removed bicycle, so the details screen is only rendered when it resolves.
 const selectedBicycle = selectedBicycleId === null ? undefined : bicycleCollection.byId[selectedBicycleId];
 
@@ -220,7 +225,7 @@ const ActiveScreen = isMenuScreen ? SCREEN_COMPONENTS[activeScreen] : null;
 // inside <AppShell>:
 {ActiveScreen && <ActiveScreen />}
 {activeScreen === 'home' && <Home bicycles={bicycles} onBicycleClick={openBicycleDetails} />}
-{activeScreen === 'bicycleDetails' && selectedBicycle && <BicycleDetails name={selectedBicycle.name} />}
+{activeScreen === 'bicycleDetails' && selectedBicycle && <BicycleDetails bicycle={selectedBicycle} … />}
 ```
 
 Selecting the whole `bicycle` slice and mapping it in `useMemo` follows the store rule in
@@ -285,7 +290,7 @@ Moved out of this batch because it cannot be finished before the `events` slice 
 | Layer | Lane | What it proves |
 | --- | --- | --- |
 | Store (#20) | `npm run test:store` | `selectedBicycleId` default; `openBicycleDetails` for known/unknown ids; `navigateTo` clears the selection; removing the selected bicycle returns to `home`, removing another does not; `reset` |
-| Components (#19, #21) | `npm run test:react` | `CardList` order, Paper per card, media + title + empty row 2, click/Enter/Space call `onItemClick`; `Home` maps bicycles and renders nothing when empty; `BicycleDetails` heading; `App` flow with the real store (seed → click card → details) |
+| Components (#19, #21) | `npm run test:react` | `CardList` order, Paper per card, media + title + empty row 2, click/Enter/Space call `onItemClick`; `Home` maps bicycles and renders nothing when empty; `BicycleDetails` heading (placeholder at the time); `App` flow with the real store (seed → click card → details) |
 | Stories | `npm run test:storybook` | Desktop, Mobile (`mobile1`), and Dark stories for `CardList`, `Home` (with long names and many items), `BicycleDetails`, and the App home → details flow, with play assertions and `a11y.test: 'error'`; no horizontal overflow at 320px |
 | Coverage | `npm run test:all:coverage` | New `src/ui/**` files meet 90/85/90/90; `src/store/**` meets the 90% branch threshold |
 | E2E | not changed | `home` is still empty without seeded data, so the existing layout and visual baselines stay valid |

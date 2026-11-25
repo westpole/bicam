@@ -1,3 +1,4 @@
+import { linkComponent } from '../bicycle/utilities/linkComponent';
 import { INITIAL_APP_STATE } from '../constants';
 import type { AppStoreState } from '../types';
 import { useAppStore } from '../useAppStore';
@@ -155,8 +156,10 @@ describe('useAppStore', () => {
       const removed = addComponent('Removed');
       const kept = addComponent('Kept');
       const first = addBicycleWith('First', [removed, kept]);
-      const second = addBicycleWith('Second', [removed]);
-      const other = addBicycleWith('Other', [kept]);
+      const second = addBicycleWith('Second', []);
+      const other = addBicycleWith('Other', []);
+      // The actions never put one component on two bicycles, so seed it directly.
+      useAppStore.setState((state) => ({ bicycle: linkComponent(state.bicycle, second, removed) }));
       const before = useAppStore.getState();
 
       expect(before.removeComponent(removed)).toBe(true);
@@ -211,6 +214,69 @@ describe('useAppStore', () => {
       expect(before.removeBicycle(id)).toBe(true);
 
       expect(useAppStore.getState().components).toBe(before.components);
+    });
+
+    it('stores a new component and lists it last on the bicycle', () => {
+      const chain = addComponent('CN-M8100');
+      const bicycleId = addBicycleWith('Gravel', [chain]);
+      const otherId = addBicycleWith('Roadie', []);
+      const other = useAppStore.getState().bicycle.byId[otherId];
+
+      const result = useAppStore.getState().addComponentToBicycle(bicycleId, { type: 'saddle', model: ' Argo ' });
+
+      if (!result.ok) throw new Error('the component was rejected');
+      expect(result.component).toMatchObject({ type: 'saddle', model: 'Argo', history: [] });
+      const { bicycle, components } = useAppStore.getState();
+      expect(components.byId[result.component.id]).toBe(result.component);
+      expect(bicycle.byId[bicycleId].components).toEqual([chain, result.component.id]);
+      expect(bicycle.byId[otherId]).toBe(other);
+    });
+
+    it('never shows subscribers a missing component while a new one is added to a bicycle', () => {
+      const bicycleId = addBicycleWith('Gravel', []);
+      const missing: string[][] = [];
+      const unsubscribe = useAppStore.subscribe((state) => missing.push(findMissingComponents(state)));
+
+      useAppStore.getState().addComponentToBicycle(bicycleId, { type: 'saddle', model: 'Argo' });
+      unsubscribe();
+
+      expect(missing).toEqual([[], []]);
+    });
+
+    it('rejects an invalid new component for a bicycle without changing state', () => {
+      const bicycleId = addBicycleWith('Gravel', []);
+      const before = useAppStore.getState();
+
+      expect(before.addComponentToBicycle(bicycleId, { type: 'motor', model: ' ' })).toEqual({
+        ok: false,
+        errors: [
+          { field: 'type', code: 'invalidOption' },
+          { field: 'model', code: 'required' },
+        ],
+      });
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it.each(['missing-id', 'toString'])('rejects a new component for the unknown bicycle %j, before its input', (id) => {
+      const before = useAppStore.getState();
+
+      expect(before.addComponentToBicycle(id, { type: '', model: '' })).toEqual({
+        ok: false,
+        errors: [{ field: 'bicycleId', code: 'notFound' }],
+      });
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it('rejects a new component for a full bicycle, before its input, and stores nothing', () => {
+      const ids = Array.from({ length: 100 }, (_, index) => addComponent(`Chain ${index}`));
+      const bicycleId = addBicycleWith('Gravel', ids);
+      const before = useAppStore.getState();
+
+      expect(before.addComponentToBicycle(bicycleId, { type: '', model: '' })).toEqual({
+        ok: false,
+        errors: [{ field: 'components', code: 'tooMany' }],
+      });
+      expect(useAppStore.getState()).toBe(before);
     });
 
     it('can update a bicycle after one of its components was removed', () => {

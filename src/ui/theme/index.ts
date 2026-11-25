@@ -14,6 +14,8 @@ import { BORDER_RADIUS, DARK_PALETTE, LIGHT_PALETTE } from './constants';
  *   Breakpoints are the MUI defaults.
  * - `MuiAppBar` defaults to a flat `primary` bar with a 1px divider bottom border. `enableColorOnDark` stays off,
  *   so in dark mode the bar uses the dark `background.paper` surface instead of `primary.main`.
+ * - `MuiDialog` has no elevation overlay, so in dark mode it uses the plain `background.paper` surface; on the overlay,
+ *   `error.main` text would fall below the 4.5:1 contrast of WCAG AA.
  *
  * Extend palette, typography, and component overrides here instead of per-component styles.
  */
@@ -25,6 +27,11 @@ export const theme = createTheme({
   },
   shape: { borderRadius: BORDER_RADIUS },
   components: {
+    MuiDialog: {
+      styleOverrides: {
+        paper: { backgroundImage: 'none' },
+      },
+    },
     MuiAppBar: {
       defaultProps: {
         color: 'primary',
