@@ -138,23 +138,64 @@ describe('components slice', () => {
       expect(Object.isFrozen(first.limits)).toBe(false);
     });
 
-    it('ignores the new stored fields smuggled into the input', () => {
-      const input = {
+    it('stores the label, the starting distance, and the given limits over the defaults', () => {
+      const component = addOrFail({
         ...CHAIN_INPUT,
+        label: ' A ',
+        initialDistance: 412.5,
+        limits: { distance: 4000, stretch: 0.75, cleaning: null },
+      });
+
+      expect(component).toMatchObject({
         label: 'A',
-        initialDistance: 500,
-        limits: EMPTY_COMPONENT_LIMITS,
-        usage: [{ id: 'period-1' }],
-        retired: { date: '2026-04-12', bicycleId: 'bike-1' },
+        initialDistance: 412.5,
+        limits: { distance: 4000, stretch: 0.75, lubrication: 300, cleaning: null },
+      });
+    });
+
+    it('uses no limits as the base for a type that is not known, and reports only the type', () => {
+      expect(useAppStore.getState().addComponent({ type: 'engine', model: 'V8' })).toEqual({
+        ok: false,
+        errors: [{ field: 'type', code: 'invalidOption' }],
+      });
+    });
+
+    it('rejects chain-only limits on another type', () => {
+      const before = useAppStore.getState();
+
+      expect(before.addComponent({ type: 'tire', model: 'GP5000', limits: { distance: 4000, stretch: 0.5 } })).toEqual({
+        ok: false,
+        errors: [{ field: 'limits.stretch', code: 'notAllowed' }],
+      });
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it('reports every new field once, in field order', () => {
+      const input = {
+        type: 'chain',
+        model: 'X12',
+        label: 'x'.repeat(21),
+        initialDistance: -1,
+        limits: { distance: 0, stretch: 0, lubrication: 0, cleaning: 0 },
       };
 
-      expect(addOrFail(input)).toMatchObject({
-        label: null,
-        initialDistance: 0,
-        limits: DEFAULT_COMPONENT_LIMITS.chain,
-        usage: [],
-        retired: null,
+      expect(useAppStore.getState().addComponent(input)).toEqual({
+        ok: false,
+        errors: [
+          { field: 'label', code: 'tooLong' },
+          { field: 'initialDistance', code: 'outOfRange' },
+          { field: 'limits.distance', code: 'outOfRange' },
+          { field: 'limits.stretch', code: 'outOfRange' },
+          { field: 'limits.lubrication', code: 'outOfRange' },
+          { field: 'limits.cleaning', code: 'outOfRange' },
+        ],
       });
+    });
+
+    it('ignores usage and retired smuggled into the input', () => {
+      const input = { ...CHAIN_INPUT, usage: [{ id: 'period-1' }], retired: { date: '2026-04-12', bicycleId: 'b' } };
+
+      expect(addOrFail(input)).toMatchObject({ usage: [], retired: null });
     });
 
     it('accepts a model that is at the limit only after trimming', () => {
@@ -261,7 +302,7 @@ describe('components slice', () => {
         chain = stored;
       }
 
-      it('keeps label, initialDistance, limits, usage, and retired, and ignores them in the changes', () => {
+      it('keeps label, initialDistance, limits, usage, and retired when the changes leave them out', () => {
         storeOnChain({
           label: 'A',
           initialDistance: 120,
@@ -269,18 +310,137 @@ describe('components slice', () => {
           usage: [PERIOD],
           retired: { date: '2026-04-12', bicycleId: 'bike-1' },
         });
+
+        const result = useAppStore.getState().updateComponent(chain.id, { model: 'KMC X12' });
+
+        expect(result).toEqual({ ok: true, component: { ...chain, model: 'KMC X12' } });
+      });
+
+      it('changes the label and single limits, and ignores usage and retired', () => {
+        storeOnChain({ label: 'A', limits: CUSTOM_LIMITS, usage: [PERIOD] });
         const changes = {
-          model: 'KMC X12',
-          label: 'B',
-          initialDistance: 0,
-          limits: EMPTY_COMPONENT_LIMITS,
+          label: ' B ',
+          limits: { stretch: 0.5, cleaning: null },
           usage: [],
-          retired: null,
+          retired: { date: '2026-04-12', bicycleId: 'bike-1' },
         };
 
         const result = useAppStore.getState().updateComponent(chain.id, changes);
 
-        expect(result).toEqual({ ok: true, component: { ...chain, model: 'KMC X12' } });
+        expect(result).toEqual({
+          ok: true,
+          component: { ...chain, label: 'B', limits: { ...CUSTOM_LIMITS, stretch: 0.5, cleaning: null } },
+        });
+      });
+
+      it('changes the starting distance of a component without history distances', () => {
+        const tire = addOrFail({ type: 'tire', model: 'GP5000' });
+
+        expect(useAppStore.getState().updateComponent(tire.id, { initialDistance: 850.5 })).toEqual({
+          ok: true,
+          component: { ...tire, initialDistance: 850.5 },
+        });
+      });
+
+      it('clears the label with null or blank text', () => {
+        storeOnChain({ label: 'A' });
+
+        expect(useAppStore.getState().updateComponent(chain.id, { label: null })).toMatchObject({
+          ok: true,
+          component: { label: null },
+        });
+        storeOnChain({ label: 'A' });
+        expect(useAppStore.getState().updateComponent(chain.id, { label: '  ' })).toMatchObject({
+          ok: true,
+          component: { label: null },
+        });
+      });
+
+      it('starts a type change from the new type defaults, then applies the given limits', () => {
+        const tire = addOrFail({ type: 'tire', model: 'GP5000', limits: { distance: 4000 } });
+
+        const result = useAppStore.getState().updateComponent(tire.id, { type: 'chain', limits: { stretch: 0.75 } });
+
+        expect(result).toMatchObject({
+          ok: true,
+          component: { limits: { distance: null, stretch: 0.75, lubrication: 300, cleaning: 1500 } },
+        });
+      });
+
+      it('drops chain limits on a change to another type, so they never block it', () => {
+        storeOnChain({ limits: CUSTOM_LIMITS });
+
+        const result = useAppStore.getState().updateComponent(chain.id, { type: 'cassette' });
+
+        expect(result).toMatchObject({ ok: true, component: { limits: EMPTY_COMPONENT_LIMITS } });
+      });
+
+      it('rejects chain-only limits on another type', () => {
+        const tire = addOrFail({ type: 'tire', model: 'GP5000' });
+
+        expect(useAppStore.getState().updateComponent(tire.id, { limits: { lubrication: 300 } })).toEqual({
+          ok: false,
+          errors: [{ field: 'limits.lubrication', code: 'notAllowed' }],
+        });
+      });
+
+      describe('once a whole-component history entry has a distance', () => {
+        beforeEach(() => {
+          storeOnChain({ initialDistance: 120 });
+        });
+
+        it('rejects a new initialDistance, changing nothing', () => {
+          const before = useAppStore.getState();
+
+          expect(before.updateComponent(chain.id, { initialDistance: 0 })).toEqual({
+            ok: false,
+            errors: [{ field: 'initialDistance', code: 'notAllowed' }],
+          });
+          expect(useAppStore.getState()).toBe(before);
+        });
+
+        it('accepts the unchanged initialDistance', () => {
+          const result = useAppStore.getState().updateComponent(chain.id, { initialDistance: 120, model: 'X11' });
+
+          expect(result.ok).toBe(true);
+        });
+
+        it('reports notAllowed instead of the number rules, among the other errors in field order', () => {
+          const changes = { model: '', initialDistance: -1, limits: { cleaning: 0 } };
+
+          expect(useAppStore.getState().updateComponent(chain.id, changes)).toEqual({
+            ok: false,
+            errors: [
+              { field: 'model', code: 'required' },
+              { field: 'initialDistance', code: 'notAllowed' },
+              { field: 'limits.cleaning', code: 'outOfRange' },
+            ],
+          });
+        });
+      });
+
+      it('allows a new initialDistance while only subcomponent entries have a distance', () => {
+        const wheel = addOrFail({ type: 'wheel', model: 'G1800' });
+        addEntryOrFail(wheel.id, { ...ENTRY_INPUT, subcomponent: 'rim' });
+
+        expect(useAppStore.getState().updateComponent(wheel.id, { initialDistance: 300 }).ok).toBe(true);
+      });
+
+      it('allows a new initialDistance while whole-component entries have no distance', () => {
+        const saddle = addOrFail({ type: 'saddle', model: 'Argo' });
+        addEntryOrFail(saddle.id, { ...ENTRY_INPUT, distance: null });
+
+        expect(useAppStore.getState().updateComponent(saddle.id, { initialDistance: 300 }).ok).toBe(true);
+      });
+
+      it('does not write when the given values equal the stored ones', () => {
+        storeOnChain({ label: 'A', limits: CUSTOM_LIMITS });
+        const before = useAppStore.getState();
+
+        const result = before.updateComponent(chain.id, { label: ' A ', limits: { ...CUSTOM_LIMITS } });
+
+        expect(result).toEqual({ ok: true, component: chain });
+        expect(useAppStore.getState()).toBe(before);
       });
 
       it('rejects a new type once the component has usage periods', () => {
@@ -319,7 +479,7 @@ describe('components slice', () => {
 
         const result = useAppStore.getState().updateComponent(chain.id, { model: 'KMC X12' });
 
-        expect(result.ok && result.component.limits).toBe(CUSTOM_LIMITS);
+        expect(result.ok && result.component.limits).toEqual(CUSTOM_LIMITS);
       });
 
       it('applies the default limits of a new type', () => {

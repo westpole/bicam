@@ -11,6 +11,7 @@ import { AppMenu } from '@ui/components/AppMenu/AppMenu';
 import { APP_MENU_ID } from '@ui/components/AppMenu/constants';
 import { AppShell } from '@ui/components/AppShell/AppShell';
 import { AddBicycle } from '@ui/components/screens/AddBicycle/AddBicycle';
+import { AddComponent } from '@ui/components/screens/AddComponent/AddComponent';
 import { BicycleDetails } from '@ui/components/screens/BicycleDetails/BicycleDetails';
 import { SCREEN_COMPONENTS } from '@ui/components/screens/constants';
 import { Home } from '@ui/components/screens/Home/Home';
@@ -19,7 +20,8 @@ import { Home } from '@ui/components/screens/Home/Home';
  * Root application view: the app shell with its header, the app menu in the shell's overlay slot, and the active
  * screen in the main viewport: on `home`, the user's bicycles as cards (empty when there are none); on
  * `bicycleDetails`, the selected bicycle's details and components; on `addBicycle`, the new-bicycle form, which returns
- * to `home` when saved or cancelled; otherwise the chosen menu screen. The header title links back to `home`.
+ * to `home` when saved or cancelled; on `addComponent`, the spare-component form, which stays open after a save so
+ * several parts can be added in a row; otherwise the chosen menu screen. The header title links back to `home`.
  *
  * `App` is the only component that reads `useAppStore`; it passes state and actions down as props, so the header,
  * menu, and screens stay presentational. The light/dark mode is owned by MUI's `ThemeProvider` (it applies the scheme
@@ -40,6 +42,7 @@ export function App() {
   const closeMenu = useAppStore((state) => state.closeMenu);
   const navigateTo = useAppStore((state) => state.navigateTo);
   const addBicycle = useAppStore((state) => state.addBicycle);
+  const addComponent = useAppStore((state) => state.addComponent);
   const updateBicycle = useAppStore((state) => state.updateBicycle);
   const addComponentToBicycle = useAppStore((state) => state.addComponentToBicycle);
   const openBicycleDetails = useAppStore((state) => state.openBicycleDetails);
@@ -77,9 +80,12 @@ export function App() {
     return result;
   };
 
-  // `home`, `bicycleDetails`, and `addBicycle` are rendered below with props.
+  // `home`, `bicycleDetails`, `addBicycle`, and `addComponent` are rendered below with props.
   const isPropLessScreen =
-    activeScreen !== 'home' && activeScreen !== 'bicycleDetails' && activeScreen !== 'addBicycle';
+    activeScreen !== 'home' &&
+    activeScreen !== 'bicycleDetails' &&
+    activeScreen !== 'addBicycle' &&
+    activeScreen !== 'addComponent';
   const ActiveScreen = isPropLessScreen ? SCREEN_COMPONENTS[activeScreen] : null;
 
   return (
@@ -100,6 +106,7 @@ export function App() {
       {ActiveScreen && <ActiveScreen />}
       {activeScreen === 'home' && <Home bicycles={bicycles} onBicycleClick={openBicycleDetails} />}
       {activeScreen === 'addBicycle' && <AddBicycle onSubmit={submitBicycle} onCancel={goHome} />}
+      {activeScreen === 'addComponent' && <AddComponent onSubmit={addComponent} onCancel={goHome} />}
       {activeScreen === 'bicycleDetails' && selectedBicycle && (
         <BicycleDetails
           bicycle={selectedBicycle}

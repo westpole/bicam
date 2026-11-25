@@ -219,13 +219,37 @@ export interface ComponentInput {
   type: string;
   /** See {@link BicycleComponent.model}. */
   model: string;
+  /** See {@link BicycleComponent.label}. Missing, `null`, or blank means no label. */
+  label?: string | null;
+  /** Kilometres; missing means 0 for a new component, and the stored value in an update. */
+  initialDistance?: number;
+  /**
+   * Limits to set. A missing key takes the type's default for a new component, and the stored value in an update (the
+   * new type's default after a type change). `null` means no limit.
+   */
+  limits?: Partial<ComponentLimits>;
 }
 
 /** Changes for `updateComponent`: any input field. Omitted or `undefined` keys stay unchanged. */
 export type ComponentUpdate = Partial<ComponentInput>;
 
+/** Values that `normalizeComponentInput` takes for the fields the input leaves out. */
+export type ComponentInputBase = Pick<ComponentDetails, 'initialDistance' | 'limits'>;
+
+/**
+ * Output of `normalizeComponentInput`: complete {@link ComponentDetails} whose type is not checked yet. A stored
+ * component fits too.
+ */
+export interface NormalizedComponentInput extends Omit<ComponentDetails, 'type'> {
+  /** Trimmed; not yet known to be a {@link BicycleComponentType}. */
+  type: string;
+}
+
+/** A limit as a validation error names it. */
+export type ComponentLimitField = `limits.${keyof ComponentLimits}`;
+
 /** A field of {@link BicycleComponent} that a validation error can point at. */
-export type ComponentField = Exclude<keyof BicycleComponent, 'history' | 'usage' | 'retired'>;
+export type ComponentField = 'id' | 'type' | 'model' | 'label' | 'initialDistance' | ComponentLimitField;
 
 /** Why a field failed validation. Codes, not text: the UI translates them. See `docs/store/components.md` §5. */
 export type ComponentErrorCode =
@@ -244,12 +268,9 @@ export interface ComponentValidationError {
   code: ComponentErrorCode;
 }
 
-/**
- * Result of validating normalized component input: the fields that {@link ComponentInput} carries, with a known type,
- * or every failing field.
- */
+/** Result of validating normalized component input: details with a known type, or every failing field. */
 export type ComponentValidation =
-  | { ok: true; details: Pick<ComponentDetails, 'type' | 'model'> }
+  | { ok: true; details: ComponentDetails }
   | { ok: false; errors: ComponentValidationError[] };
 
 /**
@@ -299,16 +320,17 @@ export type ComponentHistoryResult =
 export interface ComponentActions {
   /**
    * Normalizes and validates `input`, generates a new id, and appends the id to `allIds`. The component is stored with
-   * no label, an `initialDistance` of 0, the default limits of its type, no usage, and an empty history.
+   * no usage and an empty history. A missing `initialDistance` is 0, and missing limits take the defaults of the type.
    */
   addComponent: (input: ComponentInput) => ComponentResult;
   /**
    * Merges `changes` into the component stored under `id`, then normalizes and validates it. Omitted or `undefined`
-   * keys are unchanged; the id, `label`, `initialDistance`, `usage`, `retired`, the history, and the place in `allIds`
-   * are always kept, and such keys in `changes` are ignored. A new type replaces `limits` with that type's defaults.
-   * When nothing changes, the stored component is returned and state is not written. Fails with `notFound` on `id` for
-   * an unknown id, and with `notAllowed` on `type` for a new type once the component has usage periods or when any
-   * stored history entry is not valid for it.
+   * keys are unchanged, and so are omitted limits; the id, `usage`, `retired`, the history, and the place in `allIds`
+   * are always kept, and such keys in `changes` are ignored. A new type starts from that type's default limits, before
+   * `changes.limits` applies. When nothing changes, the stored component is returned and state is not written. Fails
+   * with `notFound` on `id` for an unknown id; with `notAllowed` on `type` for a new type once the component has usage
+   * periods or when any stored history entry is not valid for it; and with `notAllowed` on `initialDistance` for a new
+   * value once a whole-component history entry has a distance.
    */
   updateComponent: (id: ComponentId, changes: ComponentUpdate) => ComponentResult;
   /**

@@ -170,9 +170,9 @@ Text is trimmed before it is validated and stored. Lengths are counted after tri
 | `id` | `string` | Generated | UUID v4 | Assigned by `addComponent`; never changes and cannot be set by the caller. |
 | `type` | `BicycleComponentType` | Yes | One of the 17 types | Can be changed only while the component has no usage periods and every history entry is also valid for the new type (§4). A new type replaces `limits` with that type's defaults. |
 | `model` | `string` | Yes | 1–60 chars; no control characters | Free text, e.g. `'Shimano CN-M8100'`. Not unique: a rider can own two identical chains. |
-| `label` | `string \| null` | Starts as `null` | — | Tells identical components apart (`'A'`, `'red link'`). Not unique. No action writes it yet; `updateComponent` keeps it. |
-| `initialDistance` | `number` | Starts at 0 | — | Kilometres the part had before it was tracked. No action writes it yet; `updateComponent` keeps it. |
-| `limits` | `ComponentLimits` | Type defaults | — | When the part is due for replacement or care (§2.3). `addComponent` stores the defaults of its type. `updateComponent` keeps them, unless the type changes. |
+| `label` | `string \| null` | No | 1–20 chars; no control characters; blank becomes `null` | Tells identical components apart (`'A'`, `'red link'`). Not unique. |
+| `initialDistance` | `number` | No (defaults to 0) | 0–500 000, at most 1 decimal | Kilometres the part had before it was tracked. Cannot change once a whole-component history entry has a distance (§4), because that distance already includes it. |
+| `limits` | `ComponentLimits` | No (type defaults) | `distance`, `lubrication`, `cleaning`: above 0, up to 500 000, at most 1 decimal. `stretch`: above 0, up to 5, at most 2 decimals. `null` means no limit | When the part is due for replacement or care (§2.3). `stretch`, `lubrication`, and `cleaning` are for the types in `CHAIN_CARE_TYPES` only; on another type they are `notAllowed`. A limit of 0 is `outOfRange`, because it would be due at once. |
 | `usage` | `ComponentUsagePeriod[]` | Starts as `[]` | — | When the part was in use, and on which bicycle (§2.3). `updateComponent` keeps it. |
 | `retired` | `{ date, bicycleId } \| null` | Starts as `null` | — | When and from which bicycle the part was retired. `updateComponent` keeps it. |
 | `history` | `ComponentHistoryEntry[]` | Starts as `[]` | Up to 500 entries | Written only by the history actions (§4). Insertion order; the store does not sort it. |
@@ -253,8 +253,11 @@ Stored values are codes, not labels. The UI translates them with `t()`.
 
 ```ts
 interface ComponentInput {
-  type: string;   // raw value from a select; '' when nothing is chosen
+  type: string;                       // raw value from a select; '' when nothing is chosen
   model: string;
+  label?: string | null;              // missing, null, or blank: no label
+  initialDistance?: number;           // missing: 0 when adding, the stored value in an update
+  limits?: Partial<ComponentLimits>;  // a missing key: see below; null: no limit
 }
 type ComponentUpdate = Partial<ComponentInput>;
 
@@ -274,18 +277,21 @@ type ComponentHistoryUpdate = Partial<ComponentHistoryInput>;
 
 Normalization runs before validation:
 
-1. Pick known fields only (`id`, `history`, `label`, `initialDistance`, `limits`, `usage`, `retired`, and any other extra
-   key are dropped).
+1. Pick known fields only (`id`, `history`, `usage`, `retired`, and any other extra key are dropped; so are unknown
+   keys of `limits`).
 2. Trim every string.
-3. Optional text that is missing, `null`, or blank becomes `null`. A missing number becomes `null`.
+3. Optional text that is missing, `null`, or blank becomes `null`. A missing history number becomes `null`.
 4. `-0` becomes `0`, because `-0` does not survive a JSON round trip.
+5. Component input is completed from a base before validation (`normalizeComponentInput`): a missing
+   `initialDistance` or limit takes the base value. `addComponent` uses 0 and the type's defaults; `updateComponent`
+   uses the stored values, or, when the type changes, the new type's default limits.
 
 In updates, `null` (or blank text) clears an optional field. An omitted or `undefined` key is unchanged.
 
 | Action | Returns | Behavior |
 | --- | --- | --- |
-| `addComponent(input)` | `ComponentResult` | Validates, generates an `id`, and appends the id to `allIds`. Stores the component with `label: null`, `initialDistance: 0`, the default limits of its type, `usage: []`, `retired: null`, and `history: []`. |
-| `updateComponent(id, changes)` | `ComponentResult` | Changes `type` and/or `model`. Keeps `id`, `label`, `initialDistance`, `usage`, `retired`, `history`, and the place in `allIds`; such keys in `changes` are ignored. Keeps `limits` too, unless the type changes: a new type gets its defaults. State is not written when nothing changes. A new `type` is rejected with `{ field: 'type', code: 'notAllowed' }` once the component has usage periods, or when any stored entry fails validation for it, whatever that entry's own error code is. |
+| `addComponent(input)` | `ComponentResult` | Validates, generates an `id`, and appends the id to `allIds`. Stores the component with `usage: []`, `retired: null`, and `history: []`. A missing `initialDistance` is 0, and missing limits take the type's defaults. |
+| `updateComponent(id, changes)` | `ComponentResult` | Changes `type`, `model`, `label`, `initialDistance`, and single limits. Keeps `id`, `usage`, `retired`, `history`, and the place in `allIds`; such keys in `changes` are ignored. Omitted limits keep their stored values, unless the type changes: then they start from the new type's defaults. State is not written when nothing changes. A new `type` is rejected with `{ field: 'type', code: 'notAllowed' }` once the component has usage periods, or when any stored entry fails validation for it, whatever that entry's own error code is. A new `initialDistance` is rejected with `{ field: 'initialDistance', code: 'notAllowed' }` once a whole-component history entry has a distance; the unchanged value is accepted. |
 | `removeComponent(id)` | `boolean` | Removes the component and its history. `false` for an unknown id. The wrapper in `useAppStore.ts` also removes the id from every `Bicycle.components` (see [Links between slices](#links-between-slices)). |
 | `addComponentHistoryEntry(componentId, input)` | `ComponentHistoryResult` | Validates against the component's type, generates an entry `id`, and appends the entry. |
 | `updateComponentHistoryEntry(componentId, entryId, changes)` | `ComponentHistoryResult` | Merges, normalizes, and validates. Keeps the entry's `id` and place. |
@@ -313,7 +319,9 @@ A failed action never changes state and does not call `set`. Lookups by componen
 ## 5. Results and error codes
 
 ```ts
-type ComponentField = 'id' | 'type' | 'model' | 'label' | 'initialDistance' | 'limits';
+type ComponentField =
+  | 'id' | 'type' | 'model' | 'label' | 'initialDistance'
+  | 'limits.distance' | 'limits.stretch' | 'limits.lubrication' | 'limits.cleaning';
 type ComponentHistoryField = keyof ComponentHistoryEntry | 'componentId' | 'history';
 
 type ComponentErrorCode =
@@ -334,16 +342,16 @@ type ComponentHistoryResult =
 | Code | Raised when |
 | --- | --- |
 | `required` | `type`, `model`, `date`, or `installed` is empty after trimming, or `lubricated` is missing while `cleaned` is a valid date. |
-| `tooLong` | `model` is over 60 characters. |
-| `invalidFormat` | `model` has a control character; a date is not a real `YYYY-MM-DD` date; a number is not finite or has too many decimals. |
+| `tooLong` | `model` is over 60 characters, or `label` over 20. |
+| `invalidFormat` | `model` or `label` has a control character; a date is not a real `YYYY-MM-DD` date; a number is not finite or has too many decimals. |
 | `invalidOption` | `type`, `position`, `subcomponent`, or `lubricant` is not one of its allowed values. A subcomponent of another type (`rim` on `brakes`) is also `invalidOption`. |
-| `outOfRange` | `distance` or `stretch` is negative or above its maximum. |
-| `notAllowed` | A history field is set on a type that does not have it (§3); `lubricant` is set without `lubricated`; `cleaned` is not the same date as `lubricated`; or a type change conflicts with stored history or usage periods. |
+| `outOfRange` | A number (`distance`, `stretch`, `initialDistance`, or a limit) is negative or above its maximum, or a limit is 0. |
+| `notAllowed` | A history field is set on a type that does not have it (§3); `lubricant` is set without `lubricated`; `cleaned` is not the same date as `lubricated`; a chain-only limit is set on another type; a type change conflicts with stored history or usage periods; or a new `initialDistance` conflicts with a stored history distance. |
 | `tooMany` | The component already has 500 history entries (field `history`). |
 | `notFound` | Unknown component (field `id` for component actions, `componentId` for history actions) or unknown entry (field `id`). |
 
-Validation reports every failing field at once, at most one error per field, in field order. For one field,
-`notAllowed` is checked first. Numbers are then checked in the order finite, range, decimals.
+Validation reports every failing field at once, at most one error per field, in field order (for components,
+`COMPONENT_FIELD_ORDER`). For one field, `notAllowed` is checked first. Numbers are then checked in the order finite, range, decimals.
 
 `notFound` and `tooMany` are checked before the input and are always returned alone. Only `addComponentHistoryEntry`
 returns `tooMany`, so entries of a full history can still be edited. `notFound` comes first; for history

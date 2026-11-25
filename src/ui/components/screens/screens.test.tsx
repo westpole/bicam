@@ -5,7 +5,6 @@ import { render, screen } from '@testing-library/react';
 import { theme } from '@ui/theme';
 
 import { AddClothesSet } from './AddClothesSet/AddClothesSet';
-import { AddComponent } from './AddComponent/AddComponent';
 import { BeforeRideCheckIn } from './BeforeRideCheckIn/BeforeRideCheckIn';
 import { SCREEN_COMPONENTS } from './constants';
 import { ScreenPlaceholder } from './ScreenPlaceholder/ScreenPlaceholder';
@@ -26,7 +25,6 @@ function renderScreen(Component: ComponentType) {
 
 describe('placeholder screens', () => {
   it.each([
-    ['AddComponent', AddComponent, 'Add component'],
     ['AddClothesSet', AddClothesSet, 'Add clothes set'],
     ['BeforeRideCheckIn', BeforeRideCheckIn, 'Before ride check-in'],
   ] as const)('%s renders its translated title as an h2 with the coming-soon text', (_name, Component, title) => {
@@ -41,12 +39,12 @@ describe('placeholder screens', () => {
 
   it('maps every prop-less menu screen, and only those, to its component', () => {
     expect(SCREEN_COMPONENTS).toEqual({
-      addComponent: AddComponent,
       addClothesSet: AddClothesSet,
       beforeRideCheckIn: BeforeRideCheckIn,
     });
     expect(SCREEN_COMPONENTS).not.toHaveProperty('home');
     expect(SCREEN_COMPONENTS).not.toHaveProperty('addBicycle');
+    expect(SCREEN_COMPONENTS).not.toHaveProperty('addComponent');
   });
 });
 

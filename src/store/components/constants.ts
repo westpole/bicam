@@ -1,6 +1,7 @@
 import type {
   BicycleComponentType,
   ComponentCollection,
+  ComponentField,
   ComponentLimits,
   ComponentLimitsByType,
   ComponentPosition,
@@ -23,6 +24,10 @@ Object.freeze(INITIAL_COMPONENT_COLLECTION);
  */
 export const COMPONENT_LIMITS = {
   modelMaxLength: 60,
+  labelMaxLength: 20,
+  initialDistanceMax: 500_000,
+  /** Largest `limits.distance`, `limits.lubrication`, and `limits.cleaning`, in kilometres. */
+  limitDistanceMax: 500_000,
   historyMaxCount: 500,
   distanceMax: 1_000_000,
   distanceMaxDecimals: 1,
@@ -71,6 +76,29 @@ export const SUBCOMPONENTS: Readonly<Partial<Record<BicycleComponentType, readon
   brakes: ['lever', 'hose', 'caliper', 'rotor', 'brakePads', 'brakeFluid'],
   shifters: ['shifter', 'hose', 'cable', 'derailleur'],
 };
+
+/** Every limit, in field order. */
+export const COMPONENT_LIMIT_KEYS: readonly (keyof ComponentLimits)[] = [
+  'distance',
+  'stretch',
+  'lubrication',
+  'cleaning',
+];
+
+/** Limits that only the types in `CHAIN_CARE_TYPES` can have. */
+export const CHAIN_LIMIT_KEYS: readonly (keyof ComponentLimits)[] = ['stretch', 'lubrication', 'cleaning'];
+
+/** The fields that component validation reports, in the order it reports them. */
+export const COMPONENT_FIELD_ORDER: readonly ComponentField[] = [
+  'type',
+  'model',
+  'label',
+  'initialDistance',
+  'limits.distance',
+  'limits.stretch',
+  'limits.lubrication',
+  'limits.cleaning',
+];
 
 /** Every lubricant. Lists each {@link Lubricant} exactly once. */
 export const LUBRICANTS: readonly Lubricant[] = ['oil', 'wax'];

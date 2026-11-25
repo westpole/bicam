@@ -224,6 +224,60 @@ describe('App', () => {
     expect(useAppStore.getState().bicycle.allIds).toEqual([]);
   });
 
+  it('stores three labelled spare chains in a row from the "Add component" form, staying on it', async () => {
+    useAppStore.setState({ activeScreen: 'addComponent' });
+    render(<App />);
+
+    for (const label of ['A', 'B', 'C']) {
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Type' }), 'chain');
+      await userEvent.type(screen.getByRole('textbox', { name: 'Model' }), 'KMC X12');
+      await userEvent.type(screen.getByRole('textbox', { name: 'Label' }), label);
+      await userEvent.click(screen.getByRole('button', { name: 'Save component' }));
+
+      expect(screen.getByRole('status')).toHaveTextContent(`Chain KMC X12 (${label}) was added.`);
+    }
+
+    const { activeScreen, bicycle, components } = useAppStore.getState();
+    expect(activeScreen).toBe('addComponent');
+    expect(bicycle.allIds).toEqual([]);
+    expect(components.allIds.map((id) => components.byId[id])).toEqual(
+      ['A', 'B', 'C'].map((label) =>
+        expect.objectContaining({
+          type: 'chain',
+          model: 'KMC X12',
+          label,
+          initialDistance: 0,
+          limits: { distance: null, stretch: 0.5, lubrication: 300, cleaning: 1500 },
+          usage: [],
+        }),
+      ),
+    );
+  });
+
+  it('keeps the "Add component" form open and explains the errors when the store rejects the component', async () => {
+    useAppStore.setState({ activeScreen: 'addComponent' });
+    render(<App />);
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Starting distance' }), '1,5');
+    await userEvent.click(screen.getByRole('button', { name: 'Save component' }));
+
+    expect(useAppStore.getState().components.allIds).toEqual([]);
+    expect(screen.getByRole('combobox', { name: 'Type' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: 'Starting distance' })).toHaveAccessibleDescription(
+      'Enter a number, for example 412.5.',
+    );
+  });
+
+  it('returns home without adding anything when the "Add component" form is cancelled', async () => {
+    useAppStore.setState({ activeScreen: 'addComponent' });
+    render(<App />);
+    await userEvent.type(screen.getByRole('textbox', { name: 'Model' }), 'KMC X12');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(useAppStore.getState()).toMatchObject({ activeScreen: 'home', components: INITIAL_APP_STATE.components });
+  });
+
   it("opens the clicked bicycle's details in place of the list", async () => {
     useAppStore.setState({ bicycle: toBicycleCollection(BICYCLES) });
     render(<App />);

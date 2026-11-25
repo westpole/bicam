@@ -12,7 +12,6 @@ interface PlaceholderStoryArgs {
 
 /** Expected `<h2>` text per screen (English). */
 const TITLES: Record<PropLessScreen, string> = {
-  addComponent: 'Add component',
   addClothesSet: 'Add clothes set',
   beforeRideCheckIn: 'Before ride check-in',
 };
@@ -44,7 +43,7 @@ const meta = {
   argTypes: {
     screen: { control: 'select', options: Object.keys(SCREEN_COMPONENTS) },
   },
-  args: { screen: 'addComponent' },
+  args: { screen: 'addClothesSet' },
   play: async ({ args, canvas, canvasElement }) => {
     const heading = canvas.getByRole('heading', { level: 2, name: TITLES[args.screen] });
     await expect(heading).toBeVisible();
@@ -59,16 +58,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-export const AddComponentDesktop: Story = {
-  globals: { viewport: { value: 'desktop', isRotated: false } },
-  args: { screen: 'addComponent' },
-};
-
-export const AddComponentMobile: Story = {
-  globals: { viewport: { value: 'mobile1', isRotated: false } },
-  args: { screen: 'addComponent' },
-};
 
 export const AddClothesSetDesktop: Story = {
   globals: { viewport: { value: 'desktop', isRotated: false } },

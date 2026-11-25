@@ -13,10 +13,11 @@ import { BICYCLE_LIMITS } from '@store/bicycle/constants';
 import { COMPONENT_TYPES } from '@store/components/constants';
 import type { ComponentInput } from '@store/components/types';
 
+import { NATIVE_SELECT_SLOT_PROPS } from '../utilities/constants';
+import { getComponentErrorMessage } from '../utilities/getComponentErrorMessage';
 import {
   DIALOG_FIELDS_SX,
   EMPTY_COMPONENT_VALUES,
-  NATIVE_SELECT_SLOT_PROPS,
   NEW_COMPONENT,
   NEW_COMPONENT_FIELDS,
 } from './constants';
@@ -26,7 +27,6 @@ import type {
   NewComponentErrors,
   NewComponentField,
 } from './types';
-import { getErrorMessage } from './utilities/getErrorMessage';
 import { isBicycleFull } from './utilities/isBicycleFull';
 import { toFormErrors } from './utilities/toFormErrors';
 
@@ -164,7 +164,7 @@ export function IncludeComponentDialog({
                   label={t(`screens.bicycleDetails.includeComponent.fields.${field}.label`)}
                   helperText={
                     code
-                      ? getErrorMessage(t, code)
+                      ? getComponentErrorMessage(t, field, code)
                       : t(`screens.bicycleDetails.includeComponent.fields.${field}.hint`)
                   }
                   error={code !== undefined}

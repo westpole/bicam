@@ -46,6 +46,19 @@
       "brakes": "Brakes",
       "shifters": "Shifters",
       "derailleur": "Derailleur"
+    },
+    "errors": {
+      "required": "This field is required.",
+      "tooLong": "Use {{max}} characters or fewer.",
+      "invalidFormat": {
+        "text": "Remove the characters that are not allowed.",
+        "number": "Enter a number, for example {{example}}."
+      },
+      "outOfRange": {
+        "distance": "Enter a number from 0 to {{max, number}}.",
+        "limit": "Enter a number above 0 and up to {{max, number}}."
+      },
+      "rejected": "This value cannot be used."
     }
   },
   "screens": {
@@ -122,16 +135,60 @@
         },
         "errors": {
           "form": "The component could not be included.",
-          "full": "This bicycle already has the maximum of {{max}} components.",
-          "required": "This field is required.",
-          "tooLong": "Use {{max}} characters or fewer.",
-          "invalidFormat": "Remove the characters that are not allowed.",
-          "rejected": "This value cannot be used."
+          "full": "This bicycle already has the maximum of {{max}} components."
         }
       }
     },
     "addComponent": {
-      "title": "Add component"
+      "title": "Add component",
+      "save": "Save component",
+      "cancel": "Cancel",
+      "chooseType": "Choose a type",
+      "limitsTitle": "Limits",
+      "limitsHint": "When the part is due for replacement or care. Leave a field empty for no limit.",
+      "saved": "{{type}} {{model}} was added.",
+      "savedWithLabel": "{{type}} {{model}} ({{label}}) was added.",
+      "units": {
+        "km": "km",
+        "percent": "%"
+      },
+      "fields": {
+        "type": {
+          "label": "Type",
+          "hint": "Kind of component."
+        },
+        "model": {
+          "label": "Model",
+          "hint": "For example, Shimano CN-M8100."
+        },
+        "label": {
+          "label": "Label",
+          "hint": "Optional. Tells identical parts apart, for example A or red link."
+        },
+        "initialDistance": {
+          "label": "Starting distance",
+          "hint": "Optional. Kilometres the part already had; leave empty for a new part."
+        },
+        "limitDistance": {
+          "label": "Replace after",
+          "hint": "Optional. Distance after which the part is worn out."
+        },
+        "limitStretch": {
+          "label": "Replace at stretch",
+          "hint": "0.5 % for 11–13-speed chains, 0.75 % for 5–10-speed chains."
+        },
+        "limitLubrication": {
+          "label": "Top up lubricant every",
+          "hint": "Distance between top-ups."
+        },
+        "limitCleaning": {
+          "label": "Clean and relubricate every",
+          "hint": "Distance between full cleans."
+        }
+      },
+      "errors": {
+        "form": "The component could not be saved."
+      }
     },
     "addClothesSet": {
       "title": "Add clothes set"

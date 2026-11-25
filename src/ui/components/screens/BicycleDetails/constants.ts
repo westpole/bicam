@@ -44,11 +44,5 @@ export const SECTION_HEADER_SX: SxProps<Theme> = {
   justifyContent: 'space-between',
 };
 
-/**
- * Makes a `TextField` a native `<select>`, which opens the system picker on phones. It always shows an option, so the
- * label must not sit on top of it.
- */
-export const NATIVE_SELECT_SLOT_PROPS = { select: { native: true }, inputLabel: { shrink: true } } as const;
-
 /** Form fields in the dialog. The top padding keeps the first field's floating label from being clipped. */
 export const DIALOG_FIELDS_SX: SxProps<Theme> = { pt: 1 };

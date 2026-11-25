@@ -9,14 +9,14 @@ import type {
   ComponentHistoryEntry,
   ComponentHistoryResult,
   ComponentResult,
-  ComponentValidationError,
 } from './types';
 import { createComponentId } from './utilities/createComponentId';
 import { createHistoryEntryId } from './utilities/createHistoryEntryId';
+import { findUpdateConflicts } from './utilities/findUpdateConflicts';
 import { getDefaultLimits } from './utilities/getDefaultLimits';
 import { hasComponent } from './utilities/hasComponent';
-import { isBicycleComponentType } from './utilities/isBicycleComponentType';
-import { isHistoryValidForType } from './utilities/isHistoryValidForType';
+import { hasSameDetails } from './utilities/hasSameDetails';
+import { mergeComponentErrors } from './utilities/mergeComponentErrors';
 import { normalizeComponentHistoryInput } from './utilities/normalizeComponentHistoryInput';
 import { normalizeComponentInput } from './utilities/normalizeComponentInput';
 import { validateComponent } from './utilities/validateComponent';
@@ -34,20 +34,16 @@ import { validateComponentHistoryEntry } from './utilities/validateComponentHist
  */
 export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActions> = (set, get) => ({
   addComponent: (input): ComponentResult => {
-    const validation = validateComponent(normalizeComponentInput(input));
+    const base = { initialDistance: 0, limits: getDefaultLimits(input.type.trim()) };
+    const validation = validateComponent(normalizeComponentInput(input, base));
 
     if (!validation.ok) {
       return validation;
     }
 
-    const { type, model } = validation.details;
     const component: BicycleComponent = {
       id: createComponentId(),
-      type,
-      model,
-      label: null,
-      initialDistance: 0,
-      limits: getDefaultLimits(type),
+      ...validation.details,
       usage: [],
       retired: null,
       history: [],
@@ -71,34 +67,28 @@ export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActi
     }
 
     const stored = collection.byId[id];
+    const defined = definedChanges(changes);
+    const type = defined.type ?? stored.type;
+    // A new type starts from its own defaults, so limits that do not fit it are not carried over.
+    const limits = type.trim() === stored.type ? stored.limits : getDefaultLimits(type.trim());
     // normalizeComponentInput picks known fields only, so keys of other stored fields in `changes` are ignored.
-    const input = normalizeComponentInput({ ...stored, ...definedChanges(changes) });
+    const input = normalizeComponentInput(
+      { ...stored, ...defined, type, limits: defined.limits },
+      { initialDistance: stored.initialDistance, limits },
+    );
     const validation = validateComponent(input);
-    // Once the component has been in use, a new type would move its distance to another kind of part.
-    const hasTypeConflict =
-      input.type !== stored.type &&
-      isBicycleComponentType(input.type) &&
-      (stored.usage.length > 0 || !isHistoryValidForType(input.type, stored.history));
-    const typeErrors: ComponentValidationError[] = hasTypeConflict ? [{ field: 'type', code: 'notAllowed' }] : [];
+    const conflicts = findUpdateConflicts(stored, input);
 
-    // A conflicting type is a known one, so `validation` has no other error for `type`.
-    if (!validation.ok) {
-      return { ok: false, errors: [...typeErrors, ...validation.errors] };
+    if (!validation.ok || conflicts.length > 0) {
+      return { ok: false, errors: mergeComponentErrors(conflicts, validation.ok ? [] : validation.errors) };
     }
-
-    if (hasTypeConflict) {
-      return { ok: false, errors: typeErrors };
-    }
-
-    const { type, model } = validation.details;
 
     // Nothing to write: keep the stored object, so subscribers are not notified.
-    if (type === stored.type && model === stored.model) {
+    if (hasSameDetails(validation.details, stored)) {
       return { ok: true, component: stored };
     }
 
-    const limits = type === stored.type ? stored.limits : getDefaultLimits(type);
-    const component: BicycleComponent = { ...stored, type, model, limits };
+    const component: BicycleComponent = { ...stored, ...validation.details };
 
     set((state) => ({
       components: { byId: { ...state.components.byId, [id]: component }, allIds: state.components.allIds },

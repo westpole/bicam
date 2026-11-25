@@ -55,4 +55,4 @@ One column, at most `sm` wide:
 - Removing a component from a bicycle, moving it between bicycles, and editing it.
 - Component history (installed date, distance, care) on the screen.
 - Editing or deleting the bicycle.
-- The "Add component" menu screen, which is still a placeholder.
+- The "Add component" menu screen (since implemented, see [add-component.md](./add-component.md)).

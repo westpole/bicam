@@ -31,8 +31,8 @@ export interface IncludeComponentDialogProps extends IncludeComponentHandlers {
   onClose: () => void;
 }
 
-/** A field of the "new component" form. */
-export type NewComponentField = keyof ComponentInput;
+/** A field of the "new component" form: the quick path has the type and the model only. */
+export type NewComponentField = 'type' | 'model';
 
 /** The store's error code for each invalid field. */
 export type NewComponentErrors = Partial<Record<NewComponentField, ComponentErrorCode>>;
