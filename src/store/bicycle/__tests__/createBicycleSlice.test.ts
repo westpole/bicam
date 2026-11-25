@@ -185,10 +185,31 @@ describe('bicycle slice', () => {
       expect(addOrFail({ ...minimalInput('Roadie'), components }).components).toEqual(expected);
     });
 
-    it('accepts a component that another bicycle lists', () => {
+    it('rejects a component that is on another bicycle', () => {
       addOrFail({ ...minimalInput('Roadie'), components: ['chain-1'] });
+      const before = useAppStore.getState();
+
+      const result = before.addBicycle({ ...minimalInput('Gravel'), components: ['cassette-1', 'chain-1'] });
+
+      expect(result).toEqual({ ok: false, errors: [{ field: 'components', code: 'alreadyInstalled' }] });
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it('accepts a component again after its bicycle was removed', () => {
+      const { id } = addOrFail({ ...minimalInput('Roadie'), components: ['chain-1'] });
+      useAppStore.getState().removeBicycle(id);
 
       expect(addOrFail({ ...minimalInput('Gravel'), components: ['chain-1'] }).components).toEqual(['chain-1']);
+    });
+
+    it('reports an unknown component before one that is on another bicycle', () => {
+      addOrFail({ ...minimalInput('Roadie'), components: ['chain-1'] });
+
+      const result = useAppStore
+        .getState()
+        .addBicycle({ ...minimalInput('Gravel'), components: ['chain-1', 'unknown-id'] });
+
+      expect(result).toEqual({ ok: false, errors: [{ field: 'components', code: 'notFound' }] });
     });
 
     it.each(['unknown-id', 'CHAIN-1', 'toString', '__proto__'])('rejects the unknown component %j', (id) => {
@@ -297,6 +318,30 @@ describe('bicycle slice', () => {
       const result = useAppStore.getState().updateBicycle(gravel.id, { components: ['chain-2', 'cassette-1'] });
 
       expect(result).toMatchObject({ ok: true, bicycle: { components: ['chain-2', 'cassette-1'] } });
+    });
+
+    it("keeps the bicycle's own components while adding a spare one", () => {
+      const result = useAppStore.getState().updateBicycle(gravel.id, { components: ['chain-1', 'cassette-1'] });
+
+      expect(result).toMatchObject({ ok: true, bicycle: { components: ['chain-1', 'cassette-1'] } });
+    });
+
+    it('rejects a component that is on another bicycle', () => {
+      const before = useAppStore.getState();
+
+      const result = before.updateBicycle(roadie.id, { components: ['chain-1'] });
+
+      expect(result).toEqual({ ok: false, errors: [{ field: 'components', code: 'alreadyInstalled' }] });
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it('accepts a component after the other bicycle gave it up', () => {
+      useAppStore.getState().updateBicycle(gravel.id, { components: [] });
+
+      expect(useAppStore.getState().updateBicycle(roadie.id, { components: ['chain-1'] })).toMatchObject({
+        ok: true,
+        bicycle: { components: ['chain-1'] },
+      });
     });
 
     it('accepts an empty components list', () => {

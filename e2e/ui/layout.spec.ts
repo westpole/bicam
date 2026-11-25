@@ -1,5 +1,10 @@
 import { expect, test } from '../fixtures/electron';
-import { expectAddBicycleFlow, expectMenuFlow, expectShellLayout } from '../fixtures/shell';
+import {
+  expectAddBicycleFlow,
+  expectIncludeComponentFlow,
+  expectMenuFlow,
+  expectShellLayout,
+} from '../fixtures/shell';
 
 /** Electron UI: layout and theming of the main window. */
 test.describe('main window layout', () => {
@@ -22,8 +27,9 @@ test.describe('main window layout', () => {
     await expectMenuFlow(mainWindow);
   });
 
-  test('adds a bicycle from the form and lists it on the home screen', async ({ mainWindow }) => {
+  test('adds a bicycle from the form, then includes a component on its details screen', async ({ mainWindow }) => {
     await expectAddBicycleFlow(mainWindow);
+    await expectIncludeComponentFlow(mainWindow);
   });
 
   test('follows the system dark color scheme', async ({ mainWindow }) => {

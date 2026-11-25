@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 
+import { BICYCLE_LIMITS } from './bicycle/constants';
 import { createBicycleSlice } from './bicycle/createBicycleSlice';
 import { hasBicycle } from './bicycle/utilities/hasBicycle';
+import { linkComponent } from './bicycle/utilities/linkComponent';
 import { unlinkComponent } from './bicycle/utilities/unlinkComponent';
 import { createComponentsSlice } from './components/createComponentsSlice';
 import { hasComponent } from './components/utilities/hasComponent';
@@ -15,8 +17,8 @@ import type { AppStore } from './types';
  * `docs/store/README.md`.
  *
  * Slices own their domain keys only. Navigation and cross-slice side effects of domain actions are added here, by
- * wrapping the slice action (see `removeBicycle` and `removeComponent`), so a slice never writes UI state or another
- * slice's key.
+ * wrapping the slice action (see `removeBicycle`, `removeComponent`, and `addComponentToBicycle`), so a slice never
+ * writes UI state or another slice's key.
  *
  * Read it with atomic selectors so components only re-render for the fields they use.
  *
@@ -57,6 +59,27 @@ export const useAppStore = create<AppStore>()((set, get, api) => {
       }
 
       return componentsSlice.removeComponent(id);
+    },
+    addComponentToBicycle: (bicycleId, input) => {
+      const { bicycle } = get();
+
+      if (!hasBicycle(bicycle, bicycleId)) {
+        return { ok: false, errors: [{ field: 'bicycleId', code: 'notFound' }] };
+      }
+
+      // Checked first, so a full bicycle never leaves a stored component behind.
+      if (bicycle.byId[bicycleId].components.length >= BICYCLE_LIMITS.componentsMaxCount) {
+        return { ok: false, errors: [{ field: 'components', code: 'tooMany' }] };
+      }
+
+      const result = componentsSlice.addComponent(input);
+
+      // Link last, so no subscriber sees a bicycle that points at a missing component.
+      if (result.ok) {
+        set((state) => ({ bicycle: linkComponent(state.bicycle, bicycleId, result.component.id) }));
+      }
+
+      return result;
     },
     openMenu: () => set({ isMenuOpen: true }),
     closeMenu: () => set({ isMenuOpen: false }),

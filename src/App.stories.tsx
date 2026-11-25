@@ -5,6 +5,7 @@ import { expect, waitFor, within } from 'storybook/test';
 import { INITIAL_APP_STATE } from '@store/constants';
 import type { AppStoreState } from '@store/types';
 import { useAppStore } from '@store/useAppStore';
+import { SPARE_COMPONENTS, toComponentCollection } from '@ui/components/ComponentList/__mocks__/components';
 import { BICYCLES, MANY_BICYCLES, toBicycleCollection } from '@ui/components/screens/Home/__mocks__/bicycles';
 
 import { App } from './App';
@@ -142,8 +143,8 @@ export const HomeWithBicycles: Story = {
 };
 
 /**
- * Home → details flow: click the second card, see its details placeholder, leave it through the menu, then go back
- * home with the title link.
+ * Home → details flow: click the second card, see its details, leave them through the menu, then go back home with the
+ * title link.
  *
  * @param context - The story context.
  */
@@ -153,7 +154,7 @@ async function playHomeToDetails({ canvas, canvasElement, userEvent }: Parameter
 
   await userEvent.click(canvas.getByRole('button', { name: 'Roadie' }));
   await expect(within(main).getByRole('heading', { level: 2, name: 'Roadie' })).toBeVisible();
-  await expect(within(main).getByText('This screen is coming soon.')).toBeVisible();
+  await expect(within(main).getByText('No components on this bicycle yet.')).toBeVisible();
   await expect(within(main).queryByRole('list', { name: 'Bicycles' })).not.toBeInTheDocument();
   await expect(canvas.getAllByRole('heading', { level: 1 })).toHaveLength(1);
 
@@ -209,6 +210,52 @@ export const AddBicycleFlowMobile: Story = {
   globals: { viewport: { value: 'mobile1', isRotated: false } },
   args: { initialState: { activeScreen: 'addBicycle', bicycle: toBicycleCollection(BICYCLES) } },
   play: playAddBicycle,
+};
+
+/**
+ * Include component flow on the details screen: create a component, then include a spare one.
+ *
+ * @param context - The story context.
+ */
+async function playIncludeComponent({ canvas, canvasElement, userEvent }: Parameters<NonNullable<Story['play']>>[0]) {
+  // The dialog renders in a portal, outside the story canvas.
+  const page = within(canvasElement.ownerDocument.body);
+  await canvas.findByRole('heading', { level: 2, name: 'Gravel Grinder' });
+
+  await userEvent.click(canvas.getByRole('button', { name: 'Include component' }));
+  await userEvent.selectOptions(await page.findByRole('combobox', { name: 'Type' }), 'Cassette');
+  await userEvent.type(page.getByRole('textbox', { name: 'Model' }), 'CS-M8100');
+  await userEvent.click(page.getByRole('button', { name: 'Include' }));
+  await waitFor(() => expect(page.queryByRole('dialog')).not.toBeInTheDocument());
+
+  await userEvent.click(canvas.getByRole('button', { name: 'Include component' }));
+  await userEvent.selectOptions(await page.findByRole('combobox', { name: 'Component' }), 'Chain: KMC X12');
+  await userEvent.click(page.getByRole('button', { name: 'Include' }));
+  await waitFor(() => expect(page.queryByRole('dialog')).not.toBeInTheDocument());
+
+  const list = canvas.getByRole('list', { name: 'Components' });
+  await expect(within(list).getAllByRole('listitem').map((row) => row.textContent)).toEqual([
+    'CassetteCS-M8100',
+    'ChainKMC X12',
+  ]);
+}
+
+export const IncludeComponentFlow: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  args: {
+    initialState: {
+      activeScreen: 'bicycleDetails',
+      selectedBicycleId: BICYCLES[0].id,
+      bicycle: toBicycleCollection(BICYCLES),
+      components: toComponentCollection(SPARE_COMPONENTS),
+    },
+  },
+  play: playIncludeComponent,
+};
+
+export const IncludeComponentFlowMobile: Story = {
+  ...IncludeComponentFlow,
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
 };
 
 /** More cards than fit: `<main>` scrolls while the header stays put. */

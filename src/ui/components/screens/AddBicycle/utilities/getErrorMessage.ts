@@ -28,6 +28,7 @@ export function getErrorMessage(t: TFunction, field: AddBicycleField, code: Bicy
     // Not raised for the form's own fields today.
     case 'tooMany':
     case 'notFound':
+    case 'alreadyInstalled':
       return t('screens.addBicycle.errors.rejected');
   }
 }

@@ -191,3 +191,40 @@ export async function expectAddBicycleFlow(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Save bicycle' }).click();
   await expect(page.getByRole('list', { name: 'Bicycles' }).getByRole('button')).toHaveText([/Gravel Grinder/]);
 }
+
+/**
+ * The include component flow (design doc `docs/design/bicycle-details.md`). Run it right after
+ * {@link expectAddBicycleFlow}.
+ *
+ * - (a) The bicycle's card opens its details, with no components.
+ * - (b) Saving an empty component is rejected and focuses the type.
+ * - (c) The corrected component is saved and listed.
+ *
+ * @param page - Page showing the home screen with only the "Gravel Grinder" bicycle.
+ * @example
+ * await expectIncludeComponentFlow(page);
+ */
+export async function expectIncludeComponentFlow(page: Page): Promise<void> {
+  // (a) Details.
+  await page.getByRole('list', { name: 'Bicycles' }).getByRole('button').click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Gravel Grinder' })).toBeVisible();
+  await expect(page.getByText('No components on this bicycle yet.')).toBeVisible();
+
+  // (b) Rejected.
+  const include = page.getByRole('button', { name: 'Include component' });
+  await include.click();
+  const dialog = page.getByRole('dialog', { name: 'Include component' });
+  await dialog.getByRole('button', { name: 'Include' }).click();
+  await expect(dialog.getByRole('combobox', { name: 'Type' })).toBeFocused();
+  await expect(dialog.getByRole('textbox', { name: 'Model' })).toHaveAttribute('aria-invalid', 'true');
+
+  // (c) Saved.
+  await dialog.getByRole('combobox', { name: 'Type' }).selectOption('Chain');
+  await dialog.getByRole('textbox', { name: 'Model' }).fill('Shimano CN-M8100');
+  await dialog.getByRole('button', { name: 'Include' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(include).toBeFocused();
+  await expect(page.getByRole('list', { name: 'Components' }).getByRole('listitem')).toHaveText([
+    /Chain.*Shimano CN-M8100/,
+  ]);
+}

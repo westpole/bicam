@@ -27,6 +27,26 @@
       "eventsPlaceholder": "events placeholder"
     }
   },
+  "components": {
+    "types": {
+      "chain": "Chain",
+      "bottomBracket": "Bottom bracket",
+      "cassette": "Cassette",
+      "frame": "Frame",
+      "seatpost": "Seatpost",
+      "saddle": "Saddle",
+      "pedals": "Pedals",
+      "wheel": "Wheel",
+      "handlebar": "Handlebar",
+      "stem": "Stem",
+      "barTape": "Bar tape",
+      "tire": "Tire",
+      "frontMount": "Front mount",
+      "brakes": "Brakes",
+      "shifters": "Shifters",
+      "derailleur": "Derailleur"
+    }
+  },
   "screens": {
     "addBicycle": {
       "title": "Add bicycle",
@@ -68,6 +88,44 @@
           "text": "Remove the characters that are not allowed.",
           "purchased": "Enter a complete date with a four-digit year, or leave it empty.",
           "size": "Use only letters A–Z, digits, spaces, and the characters . / -"
+        }
+      }
+    },
+    "bicycleDetails": {
+      "notSpecified": "Not specified",
+      "components": {
+        "title": "Components",
+        "empty": "No components on this bicycle yet.",
+        "include": "Include component"
+      },
+      "includeComponent": {
+        "title": "Include component",
+        "save": "Include",
+        "cancel": "Cancel",
+        "newComponent": "New component",
+        "chooseType": "Choose a type",
+        "spareComponent": "{{type}}: {{model}}",
+        "fields": {
+          "component": {
+            "label": "Component",
+            "hint": "Create a new one, or choose one that is not on any bicycle."
+          },
+          "type": {
+            "label": "Type",
+            "hint": "Kind of component."
+          },
+          "model": {
+            "label": "Model",
+            "hint": "For example, Shimano CN-M8100."
+          }
+        },
+        "errors": {
+          "form": "The component could not be included.",
+          "full": "This bicycle already has the maximum of {{max}} components.",
+          "required": "This field is required.",
+          "tooLong": "Use {{max}} characters or fewer.",
+          "invalidFormat": "Remove the characters that are not allowed.",
+          "rejected": "This value cannot be used."
         }
       }
     },

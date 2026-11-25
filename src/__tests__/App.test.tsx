@@ -4,6 +4,7 @@ import { ThemeProvider } from '@mui/material/styles';
 
 import { INITIAL_APP_STATE } from '@store/constants';
 import { useAppStore } from '@store/useAppStore';
+import { COMPONENTS, SPARE_COMPONENTS, toComponentCollection } from '@ui/components/ComponentList/__mocks__/components';
 import { BICYCLES, toBicycleCollection } from '@ui/components/screens/Home/__mocks__/bicycles';
 import { theme } from '@ui/theme';
 
@@ -221,7 +222,7 @@ describe('App', () => {
     expect(useAppStore.getState().bicycle.allIds).toEqual([]);
   });
 
-  it("opens the clicked bicycle's details placeholder in place of the list", async () => {
+  it("opens the clicked bicycle's details in place of the list", async () => {
     useAppStore.setState({ bicycle: toBicycleCollection(BICYCLES) });
     render(<App />);
 
@@ -230,11 +231,83 @@ describe('App', () => {
     expect(useAppStore.getState()).toMatchObject({ activeScreen: 'bicycleDetails', selectedBicycleId: BICYCLES[1].id });
     const main = screen.getByRole('main');
     expect(within(main).getByRole('heading', { level: 2, name: 'Roadie' })).toBeInTheDocument();
-    expect(within(main).getByText('This screen is coming soon.')).toBeInTheDocument();
+    expect(within(main).getByText('Grizl CF SL 7')).toBeInTheDocument();
+    expect(within(main).getByText('No components on this bicycle yet.')).toBeInTheDocument();
     expect(within(main).queryByRole('list', { name: 'Bicycles' })).not.toBeInTheDocument();
   });
 
-  it('opens the details placeholder from the keyboard', async () => {
+  it('creates a component from the details screen and lists it on that bicycle only', async () => {
+    useAppStore.setState({ bicycle: toBicycleCollection(BICYCLES) });
+    render(<App />);
+    await userEvent.click(screen.getByRole('button', { name: 'Roadie' }));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Include component' }));
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Type' }), 'Chain');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Model' }), ' CN-M8100 ');
+    await userEvent.click(screen.getByRole('button', { name: 'Include' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    const list = screen.getByRole('list', { name: 'Components' });
+    expect(within(list).getByRole('listitem')).toHaveTextContent('ChainCN-M8100');
+    const { activeScreen, bicycle, components } = useAppStore.getState();
+    expect(activeScreen).toBe('bicycleDetails');
+    expect(components.allIds).toHaveLength(1);
+    expect(bicycle.byId[BICYCLES[1].id].components).toEqual(components.allIds);
+    expect(bicycle.byId[BICYCLES[0].id].components).toEqual([]);
+  });
+
+  it('includes a spare component after the installed ones, and offers none that another bicycle has', async () => {
+    const [chain, wheel, tape] = COMPONENTS;
+    const [gravel, roadie] = BICYCLES;
+    useAppStore.setState({
+      activeScreen: 'bicycleDetails',
+      selectedBicycleId: gravel.id,
+      bicycle: toBicycleCollection([
+        { ...gravel, components: [chain.id, tape.id] },
+        { ...roadie, components: [wheel.id] },
+      ]),
+      components: toComponentCollection([...COMPONENTS, ...SPARE_COMPONENTS]),
+    });
+    render(<App />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Include component' }));
+    const choice = screen.getByRole('combobox', { name: 'Component' });
+    expect(within(choice).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'New component',
+      'Chain: KMC X12',
+      'Saddle: Fizik Argo',
+    ]);
+    await userEvent.selectOptions(choice, 'Saddle: Fizik Argo');
+    await userEvent.click(screen.getByRole('button', { name: 'Include' }));
+
+    expect(useAppStore.getState().bicycle.byId[gravel.id].components).toEqual([
+      chain.id,
+      tape.id,
+      SPARE_COMPONENTS[1].id,
+    ]);
+    expect(screen.getAllByRole('listitem').map((row) => row.textContent)).toEqual([
+      'ChainShimano CN-M8100',
+      'Bar tapeSupacaz Super Sticky Kush',
+      'SaddleFizik Argo',
+    ]);
+  });
+
+  it('keeps the dialog open and explains the errors when the store rejects the component', async () => {
+    useAppStore.setState({
+      activeScreen: 'bicycleDetails',
+      selectedBicycleId: BICYCLES[0].id,
+      bicycle: toBicycleCollection(BICYCLES),
+    });
+    render(<App />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Include component' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Include' }));
+
+    expect(screen.getAllByText('This field is required.')).toHaveLength(2);
+    expect(useAppStore.getState().components.allIds).toEqual([]);
+  });
+
+  it('opens the details screen from the keyboard', async () => {
     useAppStore.setState({ bicycle: toBicycleCollection(BICYCLES) });
     render(<App />);
 
@@ -244,7 +317,7 @@ describe('App', () => {
     expect(within(screen.getByRole('main')).getByRole('heading', { level: 2, name: 'Commuter' })).toBeInTheDocument();
   });
 
-  it('replaces the details placeholder with the chosen menu screen', async () => {
+  it('replaces the details screen with the chosen menu screen', async () => {
     useAppStore.setState({ bicycle: toBicycleCollection(BICYCLES) });
     render(<App />);
     await userEvent.click(screen.getByRole('button', { name: 'Gravel Grinder' }));
