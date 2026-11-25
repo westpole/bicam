@@ -21,7 +21,7 @@ type HistoryEntryId = string;   // UUID v4, generated
 type IsoDate = string;          // 'YYYY-MM-DD'
 
 type BicycleComponentType =
-  | 'chain' | 'bottomBracket' | 'cassette' | 'frame' | 'seatpost' | 'saddle' | 'pedals' | 'wheel'
+  | 'chain' | 'bottomBracket' | 'cassette' | 'frame' | 'fork' | 'seatpost' | 'saddle' | 'pedals' | 'wheel'
   | 'handlebar' | 'stem' | 'barTape' | 'tire' | 'frontMount' | 'brakes' | 'shifters' | 'derailleur';
 
 type ComponentPosition = 'front' | 'rear';
@@ -117,7 +117,7 @@ Text is trimmed before it is validated and stored. Lengths are counted after tri
 | Field | Type | Required | Limits | Notes |
 | --- | --- | --- | --- | --- |
 | `id` | `string` | Generated | UUID v4 | Assigned by `addComponent`; never changes and cannot be set by the caller. |
-| `type` | `BicycleComponentType` | Yes | One of the 16 types | Can be changed only while every history entry is also valid for the new type (§4). |
+| `type` | `BicycleComponentType` | Yes | One of the 17 types | Can be changed only while every history entry is also valid for the new type (§4). |
 | `model` | `string` | Yes | 1–60 chars; no control characters | Free text, e.g. `'Shimano CN-M8100'`. Not unique: a rider can own two identical chains. |
 | `history` | `ComponentHistoryEntry[]` | Starts as `[]` | Up to 500 entries | Written only by the history actions (§4). Insertion order; the store does not sort it. |
 

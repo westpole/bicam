@@ -28,7 +28,7 @@ One column, at most `sm` wide:
 | Field | Shown | Input |
 | --- | --- | --- |
 | Component | Only when there are spare components | Select: "New component" (default) or a spare one |
-| Type | For a new component | Select of the 16 types |
+| Type | For a new component | Select of the 17 types |
 | Model | For a new component | Text |
 
 - A component is **spare** when it is on no bicycle. Components on another bicycle are not offered, because a part is

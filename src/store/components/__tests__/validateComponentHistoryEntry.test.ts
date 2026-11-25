@@ -110,8 +110,8 @@ describe('validateComponentHistoryEntry', () => {
       });
     });
 
-    it('covers the 13 types without a position', () => {
-      expect(TYPES_WITHOUT_POSITION).toHaveLength(13);
+    it('covers the 14 types without a position', () => {
+      expect(TYPES_WITHOUT_POSITION).toHaveLength(14);
     });
 
     describe.each(TYPES_WITHOUT_POSITION)('on %s', (type) => {
@@ -143,8 +143,8 @@ describe('validateComponentHistoryEntry', () => {
       });
     });
 
-    it('covers the 13 types without subcomponents', () => {
-      expect(TYPES_WITHOUT_SUBCOMPONENT).toHaveLength(13);
+    it('covers the 14 types without subcomponents', () => {
+      expect(TYPES_WITHOUT_SUBCOMPONENT).toHaveLength(14);
     });
 
     describe.each(TYPES_WITHOUT_SUBCOMPONENT)('on %s', (type) => {
@@ -209,8 +209,8 @@ describe('validateComponentHistoryEntry', () => {
     });
   });
 
-  it('covers the 15 types without chain care', () => {
-    expect(TYPES_WITHOUT_CHAIN_CARE).toHaveLength(15);
+  it('covers the 16 types without chain care', () => {
+    expect(TYPES_WITHOUT_CHAIN_CARE).toHaveLength(16);
   });
 
   it('reports one error per failing field, in field order', () => {

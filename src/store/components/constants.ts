@@ -28,6 +28,7 @@ export const COMPONENT_TYPES: readonly BicycleComponentType[] = [
   'bottomBracket',
   'cassette',
   'frame',
+  'fork',
   'seatpost',
   'saddle',
   'pedals',
