@@ -39,16 +39,18 @@ offered for use, and can be restored.
       removed, the component becomes spare. A full bicycle is `tooMany` on `components`.
 - [ ] Unknown component: `notFound` on `componentId`, returned alone. Retiring one that is on no bicycle or already
       retired, or restoring one that is not retired: `notAllowed` on `componentId`.
-- [ ] With `replaces`, `startComponentUse`, `assignComponent`, and `addComponentToBicycle` accept `retireReplaced`,
-      which retires the replaced component in the same `set`, with the same date and reading. `retireReplaced` without
-      `replaces` is `required` on `replaces`, also when the type has room.
+- [ ] `startComponentUse` accepts `retireReplaced` next to `replaces`, and `assignComponent` and `addComponentToBicycle`
+      accept it inside `use`: `{ date, odometer, replaces?, retireReplaced? }`. It retires the replaced component in the
+      same `set`, with the same date and reading. `retireReplaced` without `replaces` is `required` on `replaces`, also
+      when the type has room.
 - [ ] Retiring a component in use without `odometer` is `required` on `odometer`. For a resting one, `odometer` is
       ignored.
 - [ ] A retired component cannot be assigned or started: `assignComponent` and `startComponentUse` return `notAllowed`
       on `componentId`; `addBicycle` and `updateBicycle` return `notAllowed` on `components`.
 - [ ] `getSpareComponents` leaves out retired components. `getComponentUsage` still returns their values.
 - [ ] `undoComponentStart` also restores a replaced component that was retired from this bicycle, and reopens its
-      period, in one `set` ([rule 10](./plan.md#rules)). When the bicycle is full, nothing comes back.
+      period, in one `set` ([rule 10](./plan.md#rules)), also when it was retired later, separately from the swap. When
+      the bicycle is full, nothing comes back.
 - [ ] Test: after a swap with `retireReplaced` at a wrong reading, undo and then a lower odometer work.
 
 **Out of scope:** retiring a spare component.

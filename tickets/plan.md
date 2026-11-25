@@ -191,8 +191,9 @@ One table, `ACTIVE_LIMITS`, in `src/store/components/constants.ts`:
    history entry has a distance, and a type other than `chain` cannot have chain limits (`notAllowed`).
 10. **Undo** removes the open period of a component in use. It reopens the period in `replacedPeriodId` when that is
     still its component's last period, its type has room, and the component rests on this bicycle or was retired from
-    it. A retired component is restored in the same `set`, if the bicycle has room. Otherwise nothing takes its place,
-    and the dialog says why. History entries stay, and the dialog warns when some of them then have a distance above the
+    it. A retired component is restored in the same `set`, if the bicycle has room, also when it was retired later and
+    not by the swap: its period must reopen to correct a wrong reading. Otherwise nothing takes its place, and the
+    dialog says why. History entries stay, and the dialog warns when some of them then have a distance above the
     component's. The UI offers undo only for a start that replaced another component or that is the latest boundary on
     the bicycle, and never for a period without a start date (migrated).
 11. Every action that writes both slices validates first, then writes them in one `set`. A failed action changes

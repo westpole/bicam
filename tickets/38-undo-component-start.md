@@ -34,8 +34,8 @@ Let the rider undo a wrong start or swap, so a wrong odometer reading can be cor
 - [ ] `undoComponentStart(componentId)` follows [rule 10](./plan.md#rules), in one `set`. Unknown component: `notFound`
       on `componentId`, returned alone. Not in use: `notAllowed` on `componentId`.
 - [ ] Undoing a swap reopens the replaced period. Several undos in a row go back one swap at a time.
-- [ ] When the replaced component was removed, taken off the bicycle, used again since, or its type has no room, nothing
-      takes its place. (#40 extends undo to a replaced component that was retired.)
+- [ ] When the replaced component was removed, taken off the bicycle with `updateBicycle`, used again since, or its type
+      has no room, nothing takes its place. (#40 extends undo to a replaced component that was retired.)
 - [ ] History entries stay. Afterwards the odometer can be lowered to the new latest boundary.
 
 **Out of scope:** undoing a stop; start the component again at the same reading.
