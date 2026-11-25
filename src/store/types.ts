@@ -85,7 +85,10 @@ export interface AppStoreActions extends BicycleActions, ComponentActions {
    * component that is already stored.
    */
   addComponentToBicycle: (bicycleId: BicycleId, input: ComponentInput) => BicycleComponentResult;
-  /** Restores the initial state, including all domain data. */
+  /**
+   * Restores the initial state, including all domain data. Also overwrites the saved data with empty collections,
+   * without a backup.
+   */
   reset: () => void;
 }
 

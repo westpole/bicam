@@ -8,7 +8,7 @@ the shape of that store, the data limits of each entity, and the rules every sli
 
 | Document | Covers |
 | --- | --- |
-| [README.md](./README.md) | Root structure, conventions, persistence notes, open questions |
+| [README.md](./README.md) | Root structure, conventions, persistence, open questions |
 | [bicycle.md](./bicycle.md) | The `bicycle` slice and the `Bicycle` entity |
 | [components.md](./components.md) | The `components` slice and the `BicycleComponent` entity |
 
@@ -66,7 +66,8 @@ These rules apply to every domain slice, now and in the future.
   with `t()`.
 - **Immutability.** Actions replace changed objects and arrays and never mutate them in place, so Zustand selectors
   see new references.
-- **`reset()`** restores `INITIAL_APP_STATE`, including all domain data.
+- **`reset()`** restores `INITIAL_APP_STATE`, including all domain data. It also overwrites the saved data (§4) with
+  empty collections, without a backup, so any UI for it must ask first. If that write fails, the old data stays saved.
 - **Reading** follows the existing rule: only `src/App.tsx` reads the store, using atomic selectors. A selector that
   builds a new array or object on each call (for example mapping `allIds` to entities) must be wrapped with
   `useShallow` or memoized, or React will re-render forever.
@@ -79,6 +80,13 @@ src/store/
 ├── types.ts                # AppStoreState, AppStoreActions, ReservedSlice, ScreenView, MenuScreen
 ├── constants.ts            # INITIAL_APP_STATE
 ├── __tests__/
+├── persistence/            # saving to localStorage, see §4
+│   ├── types.ts            # PersistedAppState, AppStorage
+│   ├── constants.ts        # APP_STORAGE_KEY, APP_STORAGE_VERSION
+│   ├── createPersistOptions.ts # options for the Zustand persist middleware
+│   ├── utilities/          # storage adapter, migrate, merge, shape checks; one function per file
+│   ├── __mocks__/
+│   └── __tests__/
 ├── common/                 # helpers shared by the slices, no state
 │   ├── types.ts            # IsoDate, TextErrorCode
 │   ├── constants.ts        # CONTROL_CHARACTER_PATTERN, ISO_DATE_PATTERN
@@ -102,13 +110,40 @@ Each future slice (`events`, `history`) gets its own folder with the same layout
 
 ## 4. Persistence
 
-The store is **not persisted** yet: data is lost when the app reloads. This is intentional for this batch. When
-persistence is added:
+The store is saved to `localStorage` with Zustand `persist` (`src/store/persistence/`), in the web build and in the
+Electron `file://` build alike. It loads synchronously while the store is created, so the first render has the data.
 
-- Use Zustand `persist` with `partialize`, so only domain keys are stored and `isMenuOpen` / `activeScreen` are not.
-- Set a `version` and a `migrate` function from day one. Any change to an entity shape after that needs a migration.
-- `localStorage` works for both the web build and the Electron `file://` build. Move to a file in Electron
-  `userData` (through a preload/IPC bridge) only if storage size or backups require it.
+- **Saved:** `bicycle` and `components`, under the key `bicam-app-store`, with a `version`. UI state (`isMenuOpen`,
+  `activeScreen`, `selectedBicycleId`) is not saved, so the app always starts on `home`. `events` and `history` are not
+  saved while they are placeholders; add them to `PersistedAppState`, `partialize`, `isPersistedAppState`,
+  `mergePersistedState`, and the unchanged check in `createAppStorage` when they hold data.
+- **Changing an entity shape** needs a higher `APP_STORAGE_VERSION`, a migration in `migratePersistedState`, and updated
+  checks in `persistence/utilities/`. Without the migration, existing users start with an empty app.
+- **Loaded data is untrusted.** `isPersistedAppState` checks types, date formats, option codes, and references (a bicycle
+  lists stored components only). It does not check field limits, so tightening a limit never makes saved data unreadable.
+- **Data that cannot be loaded** (corrupt, wrong shape, or a version without a migration, such as after a downgrade) is
+  copied to `bicam-app-store:backup:<timestamp>`, and the app starts empty. The same text is backed up only once. If the
+  copy fails, nothing is saved until the app reloads, so the original stays intact. Backups are never deleted, and
+  restoring one is a manual step for now.
+- **A failed save** (storage full or blocked) is logged and never breaks an action. Changes stay in memory, and the next
+  data change tries again. The user is not told yet.
+- **UI-only updates do not write.** `persist` writes on every update, so the adapter compares the slices by reference
+  with the ones it last read or tried to write, and skips unchanged ones. The one exception is the first update
+  after a start without saved data, or with saved data that could not be loaded (and is backed up by then): it saves the
+  empty collections.
+
+Known limits:
+
+- `localStorage` holds about 5 million characters, roughly 28,000 history entries. Move to a file in Electron `userData`
+  (through a preload/IPC bridge) only if storage size or backups require it.
+- A backup is a full copy and counts against the same quota. Unreadable data that is too large to copy blocks saving on
+  every start until the storage is cleared by hand, and a copy that nearly fills the quota can make later saves fail.
+- Chromium (and so Electron) writes `localStorage` to disk with a short delay. A crash, a killed process, or a power loss
+  can drop the last few seconds of changes, with no error logged.
+- On the web, the data goes away with the site data, and Safari may remove it after 7 days without a visit.
+- Two open tabs do not sync: the last one to save wins. Electron allows only one instance.
+- The data belongs to the origin. `npm run dev:electron` (`http://localhost`) does not share data with the packaged app,
+  and replacing `file://` with a custom protocol would need a one-time migration.
 
 ## 5. Decisions
 

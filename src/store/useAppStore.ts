@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 import { BICYCLE_LIMITS } from './bicycle/constants';
 import { createBicycleSlice } from './bicycle/createBicycleSlice';
@@ -8,13 +9,14 @@ import { unlinkComponent } from './bicycle/utilities/unlinkComponent';
 import { createComponentsSlice } from './components/createComponentsSlice';
 import { hasComponent } from './components/utilities/hasComponent';
 import { INITIAL_APP_STATE } from './constants';
+import { createPersistOptions } from './persistence/createPersistOptions';
 import type { AppStore } from './types';
 
 /**
  * The app's single global store: shared UI state (menu visibility, active screen, selected bicycle) that the header,
  * the menu, and the main viewport all depend on, plus the domain data (`bicycle`, `components`; `events` and
- * `history` are placeholders). Not persisted, so the app always starts empty on `home` with the menu closed. See
- * `docs/store/README.md`.
+ * `history` are placeholders). `bicycle` and `components` are saved to `localStorage` (see `persistence/`); UI state is
+ * not, so the app always starts on `home` with the menu closed. See `docs/store/README.md`.
  *
  * Slices own their domain keys only. Navigation and cross-slice side effects of domain actions are added here, by
  * wrapping the slice action (see `removeBicycle`, `removeComponent`, and `addComponentToBicycle`), so a slice never
@@ -26,74 +28,76 @@ import type { AppStore } from './types';
  * const isMenuOpen = useAppStore((state) => state.isMenuOpen);
  * const toggleMenu = useAppStore((state) => state.toggleMenu);
  */
-export const useAppStore = create<AppStore>()((set, get, api) => {
-  const bicycleSlice = createBicycleSlice(set, get, api);
-  const componentsSlice = createComponentsSlice(set, get, api);
+export const useAppStore = create<AppStore>()(
+  persist((set, get, api) => {
+    const bicycleSlice = createBicycleSlice(set, get, api);
+    const componentsSlice = createComponentsSlice(set, get, api);
 
-  return {
-    ...INITIAL_APP_STATE,
-    ...bicycleSlice,
-    ...componentsSlice,
-    removeBicycle: (id) => {
-      const removed = bicycleSlice.removeBicycle(id);
+    return {
+      ...INITIAL_APP_STATE,
+      ...bicycleSlice,
+      ...componentsSlice,
+      removeBicycle: (id) => {
+        const removed = bicycleSlice.removeBicycle(id);
 
-      // Leave the details screen of a bicycle that no longer exists.
-      if (removed && get().selectedBicycleId === id) {
-        set({ selectedBicycleId: null, activeScreen: 'home' });
-      }
+        // Leave the details screen of a bicycle that no longer exists.
+        if (removed && get().selectedBicycleId === id) {
+          set({ selectedBicycleId: null, activeScreen: 'home' });
+        }
 
-      return removed;
-    },
-    removeComponent: (id) => {
-      const { bicycle, components } = get();
+        return removed;
+      },
+      removeComponent: (id) => {
+        const { bicycle, components } = get();
 
-      if (!hasComponent(components, id)) {
-        return false;
-      }
+        if (!hasComponent(components, id)) {
+          return false;
+        }
 
-      const unlinked = unlinkComponent(bicycle, id);
+        const unlinked = unlinkComponent(bicycle, id);
 
-      // Unlink first, so no subscriber sees a bicycle that points at a missing component.
-      if (unlinked !== bicycle) {
-        set({ bicycle: unlinked });
-      }
+        // Unlink first, so no subscriber sees a bicycle that points at a missing component.
+        if (unlinked !== bicycle) {
+          set({ bicycle: unlinked });
+        }
 
-      return componentsSlice.removeComponent(id);
-    },
-    addComponentToBicycle: (bicycleId, input) => {
-      const { bicycle } = get();
+        return componentsSlice.removeComponent(id);
+      },
+      addComponentToBicycle: (bicycleId, input) => {
+        const { bicycle } = get();
 
-      if (!hasBicycle(bicycle, bicycleId)) {
-        return { ok: false, errors: [{ field: 'bicycleId', code: 'notFound' }] };
-      }
+        if (!hasBicycle(bicycle, bicycleId)) {
+          return { ok: false, errors: [{ field: 'bicycleId', code: 'notFound' }] };
+        }
 
-      // Checked first, so a full bicycle never leaves a stored component behind.
-      if (bicycle.byId[bicycleId].components.length >= BICYCLE_LIMITS.componentsMaxCount) {
-        return { ok: false, errors: [{ field: 'components', code: 'tooMany' }] };
-      }
+        // Checked first, so a full bicycle never leaves a stored component behind.
+        if (bicycle.byId[bicycleId].components.length >= BICYCLE_LIMITS.componentsMaxCount) {
+          return { ok: false, errors: [{ field: 'components', code: 'tooMany' }] };
+        }
 
-      const result = componentsSlice.addComponent(input);
+        const result = componentsSlice.addComponent(input);
 
-      // Link last, so no subscriber sees a bicycle that points at a missing component.
-      if (result.ok) {
-        set((state) => ({ bicycle: linkComponent(state.bicycle, bicycleId, result.component.id) }));
-      }
+        // Link last, so no subscriber sees a bicycle that points at a missing component.
+        if (result.ok) {
+          set((state) => ({ bicycle: linkComponent(state.bicycle, bicycleId, result.component.id) }));
+        }
 
-      return result;
-    },
-    openMenu: () => set({ isMenuOpen: true }),
-    closeMenu: () => set({ isMenuOpen: false }),
-    toggleMenu: () => set((state) => ({ isMenuOpen: !state.isMenuOpen })),
-    navigateTo: (screen) => set({ activeScreen: screen, selectedBicycleId: null, isMenuOpen: false }),
-    openBicycleDetails: (id) => {
-      if (!hasBicycle(get().bicycle, id)) {
-        return false;
-      }
+        return result;
+      },
+      openMenu: () => set({ isMenuOpen: true }),
+      closeMenu: () => set({ isMenuOpen: false }),
+      toggleMenu: () => set((state) => ({ isMenuOpen: !state.isMenuOpen })),
+      navigateTo: (screen) => set({ activeScreen: screen, selectedBicycleId: null, isMenuOpen: false }),
+      openBicycleDetails: (id) => {
+        if (!hasBicycle(get().bicycle, id)) {
+          return false;
+        }
 
-      set({ activeScreen: 'bicycleDetails', selectedBicycleId: id, isMenuOpen: false });
+        set({ activeScreen: 'bicycleDetails', selectedBicycleId: id, isMenuOpen: false });
 
-      return true;
-    },
-    reset: () => set({ ...INITIAL_APP_STATE }),
-  };
-});
+        return true;
+      },
+      reset: () => set({ ...INITIAL_APP_STATE }),
+    };
+  }, createPersistOptions()),
+);
