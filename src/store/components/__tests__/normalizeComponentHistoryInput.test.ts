@@ -11,6 +11,8 @@ const NORMALIZED: NormalizedComponentHistoryInput = {
   subcomponent: null,
   lubricated: null,
   stretch: null,
+  lubricant: null,
+  cleaned: null,
 };
 
 describe('normalizeComponentHistoryInput', () => {
@@ -47,7 +49,7 @@ describe('normalizeComponentHistoryInput', () => {
     });
   });
 
-  describe.each(['position', 'subcomponent', 'lubricated'] as const)('%s', (field) => {
+  describe.each(['position', 'subcomponent', 'lubricated', 'lubricant', 'cleaned'] as const)('%s', (field) => {
     it.each([
       ['missing', INPUT],
       ['undefined', { ...INPUT, [field]: undefined }],

@@ -446,7 +446,7 @@ Confirmed by the user on 2026-11-25, except where a row says "assumed":
 
 | Ticket | Title | Type | Priority | Size | Status | Blocked by |
 | --- | --- | --- | --- | --- | --- | --- |
-| [#29](./29-save-version-2-shape.md) | Save the version 2 shape and migrate version 1 | Feature | P1 | M | Ready for Dev | — |
+| [#29](./29-save-version-2-shape.md) | Save the version 2 shape and migrate version 1 | Feature | P1 | M | Done | — |
 | [#30](./30-add-spare-component.md) | Add a spare component from the menu | Feature | P1 | M | Ready for Dev | #29 |
 | [#31](./31-record-bicycle-distance.md) | Record a bicycle's distance | Feature | P1 | M | Ready for Dev | #29 |
 | [#32](./32-start-stop-swap-components.md) | Start, stop, and swap components in the store | Feature | P1 | M | Ready for Dev | #29 |

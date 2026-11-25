@@ -1,3 +1,4 @@
+import { storedComponent } from '../__mocks__/storedComponent';
 import type { Bicycle } from '../../bicycle/types';
 import type { BicycleComponent, ComponentCollection } from '../types';
 import { getInstalledComponents } from '../utilities/getInstalledComponents';
@@ -18,11 +19,13 @@ function createBicycle(components: string[]): Bicycle {
     size: null,
     frameGeometry: null,
     components,
+    odometer: 0,
+    odometerDate: null,
   };
 }
 
-const CHAIN: BicycleComponent = { id: 'chain-1', type: 'chain', model: 'CN-M8100', history: [] };
-const WHEEL: BicycleComponent = { id: 'wheel-1', type: 'wheel', model: 'G1800', history: [] };
+const CHAIN: BicycleComponent = storedComponent('chain-1', 'chain', 'CN-M8100');
+const WHEEL: BicycleComponent = storedComponent('wheel-1', 'wheel', 'G1800');
 
 const COMPONENTS: ComponentCollection = {
   byId: { 'chain-1': CHAIN, 'wheel-1': WHEEL },

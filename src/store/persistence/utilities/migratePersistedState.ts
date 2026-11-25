@@ -1,17 +1,28 @@
 import { APP_STORAGE_VERSION } from '../constants';
+import type { PersistedAppState } from '../types';
+import { isPersistedAppStateV1 } from './isPersistedAppStateV1';
+import { migrateFromVersion1 } from './migrateFromVersion1';
 
 /**
- * Upgrades saved data of another version to {@link APP_STORAGE_VERSION}. Version 1 is the first one, so there is
- * nothing to upgrade from yet, and data of a newer app version cannot be downgraded. Once there are migrations,
- * `mergePersistedState` checks their result.
+ * Upgrades saved data of another version to {@link APP_STORAGE_VERSION}. Only version 1 can be upgraded; data of any
+ * other version, including a newer app version, cannot. `mergePersistedState` checks the result.
  *
- * @param _persisted - Untrusted data as it was saved.
+ * @param persisted - Untrusted data as it was saved.
  * @param version - The version it was saved with.
- * @returns Never, until a second version exists.
- * @throws Error when there is no migration from `version`.
+ * @returns The data in the current shape.
+ * @throws Error when there is no migration from `version`, or the version 1 data has an unexpected shape.
  * @example
- * migratePersistedState(saved, 2); // throws while the current version is 1
+ * migratePersistedState({ bicycle: { byId: {}, allIds: [] }, components: { byId: {}, allIds: [] } }, 1);
+ * migratePersistedState(saved, 3); // throws while the current version is 2
  */
-export function migratePersistedState(_persisted: unknown, version: number): never {
-  throw new Error(`Cannot migrate the saved app data from version ${version} to ${APP_STORAGE_VERSION}`);
+export function migratePersistedState(persisted: unknown, version: number): PersistedAppState {
+  if (version !== 1) {
+    throw new Error(`Cannot migrate the saved app data from version ${version} to ${APP_STORAGE_VERSION}`);
+  }
+
+  if (!isPersistedAppStateV1(persisted)) {
+    throw new Error('The saved app data of version 1 has an unexpected shape');
+  }
+
+  return migrateFromVersion1(persisted);
 }

@@ -103,6 +103,8 @@ describe('useAppStore', () => {
             size: null,
             frameGeometry: null,
             components: [],
+            odometer: 0,
+            odometerDate: null,
           },
         },
         allIds: ['bike-1'],

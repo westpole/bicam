@@ -1,8 +1,9 @@
 import { INITIAL_APP_STATE } from '../../constants';
 import { useAppStore } from '../../useAppStore';
-import { COMPONENT_LIMITS, COMPONENT_TYPES } from '../constants';
+import { COMPONENT_LIMITS, COMPONENT_TYPES, DEFAULT_COMPONENT_LIMITS, EMPTY_COMPONENT_LIMITS } from '../constants';
 import type {
   BicycleComponent,
+  ComponentUsagePeriod,
   ComponentHistoryEntry,
   ComponentHistoryInput,
   ComponentHistoryUpdate,
@@ -67,6 +68,8 @@ function seedHistory(component: BicycleComponent, count: number): void {
       subcomponent: null,
       lubricated: null,
       stretch: null,
+      lubricant: null,
+      cleaned: null,
     }),
   );
 
@@ -93,7 +96,17 @@ describe('components slice', () => {
       }
       const { id } = result.component;
       expect(id).toMatch(UUID_PATTERN);
-      expect(result.component).toEqual({ id, type: 'chain', model: 'Shimano CN-M8100', history: [] });
+      expect(result.component).toEqual({
+        id,
+        type: 'chain',
+        model: 'Shimano CN-M8100',
+        label: null,
+        initialDistance: 0,
+        limits: { distance: null, stretch: 0.5, lubrication: 300, cleaning: 1500 },
+        usage: [],
+        retired: null,
+        history: [],
+      });
       expect(useAppStore.getState().components).toEqual({ byId: { [id]: result.component }, allIds: [id] });
     });
 
@@ -110,6 +123,38 @@ describe('components slice', () => {
       expect(first.id).not.toBe(second.id);
       expect(first.history).not.toBe(second.history);
       expect(useAppStore.getState().components.allIds).toEqual([first.id, second.id]);
+    });
+
+    it.each(COMPONENT_TYPES.filter((type) => type !== 'chain'))('gives a %s empty limits', (type) => {
+      expect(addOrFail({ type, model: 'Model' }).limits).toEqual(EMPTY_COMPONENT_LIMITS);
+    });
+
+    it('gives every component its own limits object, never the shared defaults', () => {
+      const first = addOrFail(CHAIN_INPUT);
+      const second = addOrFail(CHAIN_INPUT);
+
+      expect(first.limits).not.toBe(second.limits);
+      expect(first.limits).not.toBe(DEFAULT_COMPONENT_LIMITS.chain);
+      expect(Object.isFrozen(first.limits)).toBe(false);
+    });
+
+    it('ignores the new stored fields smuggled into the input', () => {
+      const input = {
+        ...CHAIN_INPUT,
+        label: 'A',
+        initialDistance: 500,
+        limits: EMPTY_COMPONENT_LIMITS,
+        usage: [{ id: 'period-1' }],
+        retired: { date: '2026-04-12', bicycleId: 'bike-1' },
+      };
+
+      expect(addOrFail(input)).toMatchObject({
+        label: null,
+        initialDistance: 0,
+        limits: DEFAULT_COMPONENT_LIMITS.chain,
+        usage: [],
+        retired: null,
+      });
     });
 
     it('accepts a model that is at the limit only after trimming', () => {
@@ -177,8 +222,12 @@ describe('components slice', () => {
 
     it.each<[string, ComponentUpdate, Partial<BicycleComponent>]>([
       ['model', { model: '  KMC X12 ' }, { model: 'KMC X12' }],
-      ['type', { type: ' cassette ' }, { type: 'cassette' }],
-      ['type and model', { type: 'wheel', model: 'DT GR 1600' }, { type: 'wheel', model: 'DT GR 1600' }],
+      ['type', { type: ' cassette ' }, { type: 'cassette', limits: EMPTY_COMPONENT_LIMITS }],
+      [
+        'type and model',
+        { type: 'wheel', model: 'DT GR 1600' },
+        { type: 'wheel', model: 'DT GR 1600', limits: EMPTY_COMPONENT_LIMITS },
+      ],
     ])('changes only the given %s, normalized', (_name, changes, expected) => {
       const result = useAppStore.getState().updateComponent(chain.id, changes);
 
@@ -187,6 +236,102 @@ describe('components slice', () => {
       }
       expect(result.component).toStrictEqual({ ...chain, ...expected });
       expect(useAppStore.getState().components.byId[chain.id]).toBe(result.component);
+    });
+
+    describe('with the fields the usage and later actions write', () => {
+      const PERIOD: ComponentUsagePeriod = {
+        id: 'period-1',
+        bicycleId: 'bike-1',
+        start: { date: null, odometer: 0 },
+        end: { date: '2026-04-12', odometer: 800 },
+        replacedPeriodId: null,
+      };
+      const CUSTOM_LIMITS = { distance: 4000, stretch: 0.75, lubrication: 250, cleaning: 1000 };
+
+      /**
+       * Replaces stored fields of `chain` and refreshes it.
+       *
+       * @param fields - The fields to store.
+       */
+      function storeOnChain(fields: Partial<BicycleComponent>): void {
+        const stored = { ...chain, ...fields };
+        useAppStore.setState(({ components }) => ({
+          components: { ...components, byId: { ...components.byId, [chain.id]: stored } },
+        }));
+        chain = stored;
+      }
+
+      it('keeps label, initialDistance, limits, usage, and retired, and ignores them in the changes', () => {
+        storeOnChain({
+          label: 'A',
+          initialDistance: 120,
+          limits: CUSTOM_LIMITS,
+          usage: [PERIOD],
+          retired: { date: '2026-04-12', bicycleId: 'bike-1' },
+        });
+        const changes = {
+          model: 'KMC X12',
+          label: 'B',
+          initialDistance: 0,
+          limits: EMPTY_COMPONENT_LIMITS,
+          usage: [],
+          retired: null,
+        };
+
+        const result = useAppStore.getState().updateComponent(chain.id, changes);
+
+        expect(result).toEqual({ ok: true, component: { ...chain, model: 'KMC X12' } });
+      });
+
+      it('rejects a new type once the component has usage periods', () => {
+        storeOnChain({ usage: [PERIOD] });
+        const before = useAppStore.getState();
+
+        expect(before.updateComponent(chain.id, { type: 'cassette' })).toEqual({
+          ok: false,
+          errors: [{ field: 'type', code: 'notAllowed' }],
+        });
+        expect(useAppStore.getState()).toBe(before);
+      });
+
+      it('reports the type conflict with the other errors, in field order', () => {
+        storeOnChain({ usage: [PERIOD] });
+
+        expect(useAppStore.getState().updateComponent(chain.id, { type: 'cassette', model: '' })).toEqual({
+          ok: false,
+          errors: [
+            { field: 'type', code: 'notAllowed' },
+            { field: 'model', code: 'required' },
+          ],
+        });
+      });
+
+      it('allows other changes, and the same type, once the component has usage periods', () => {
+        storeOnChain({ usage: [PERIOD] });
+
+        const result = useAppStore.getState().updateComponent(chain.id, { type: ' chain ', model: 'KMC X12' });
+
+        expect(result).toEqual({ ok: true, component: { ...chain, model: 'KMC X12' } });
+      });
+
+      it('keeps limits the rider changed when the type stays the same', () => {
+        storeOnChain({ limits: CUSTOM_LIMITS });
+
+        const result = useAppStore.getState().updateComponent(chain.id, { model: 'KMC X12' });
+
+        expect(result.ok && result.component.limits).toBe(CUSTOM_LIMITS);
+      });
+
+      it('applies the default limits of a new type', () => {
+        const tire = addOrFail({ type: 'tire', model: 'GP5000' });
+
+        const result = useAppStore.getState().updateComponent(tire.id, { type: 'chain' });
+
+        expect(result).toEqual({
+          ok: true,
+          component: { ...tire, type: 'chain', limits: DEFAULT_COMPONENT_LIMITS.chain },
+        });
+      });
     });
 
     it('keeps the history reference, the place in allIds, and the other components', () => {
@@ -361,6 +506,8 @@ describe('components slice', () => {
             subcomponent: 'rim',
             lubricated: null,
             stretch: null,
+            lubricant: null,
+            cleaned: null,
           };
           const seeded: BicycleComponent = { ...brakes, history: [entry] };
           useAppStore.setState(({ components }) => ({
@@ -448,11 +595,55 @@ describe('components slice', () => {
         subcomponent: null,
         lubricated: null,
         stretch: null,
+        lubricant: null,
+        cleaned: null,
       });
 
       const stored = useAppStore.getState().components.byId[chain.id];
       expect(stored).toStrictEqual({ ...chain, history: [result.entry] });
       expect(stored.history[0]).toBe(result.entry);
+    });
+
+    it('stores a clean with relubrication, trimmed', () => {
+      const result = useAppStore.getState().addComponentHistoryEntry(chain.id, {
+        ...ENTRY_INPUT,
+        lubricated: '2026-04-12',
+        lubricant: ' wax ',
+        cleaned: ' 2026-04-12 ',
+      });
+
+      expect(result).toMatchObject({
+        ok: true,
+        entry: { lubricated: '2026-04-12', lubricant: 'wax', cleaned: '2026-04-12' },
+      });
+    });
+
+    it('stores blank lubricant and cleaned as null', () => {
+      const input = { ...ENTRY_INPUT, lubricated: '2026-04-12', lubricant: ' ', cleaned: '' };
+
+      const result = useAppStore.getState().addComponentHistoryEntry(chain.id, input);
+
+      expect(result).toMatchObject({ ok: true, entry: { lubricated: '2026-04-12', lubricant: null, cleaned: null } });
+    });
+
+    it('accepts a distance of 1 000 000', () => {
+      const result = useAppStore.getState().addComponentHistoryEntry(chain.id, { ...ENTRY_INPUT, distance: 1_000_000 });
+
+      expect(result).toMatchObject({ ok: true, entry: { distance: 1_000_000 } });
+    });
+
+    it('rejects a lubricant on a type without chain care, changing nothing', () => {
+      const before = useAppStore.getState();
+      const input = { ...ENTRY_INPUT, lubricant: 'oil', cleaned: '2026-04-12' };
+
+      expect(before.addComponentHistoryEntry(first.id, input)).toEqual({
+        ok: false,
+        errors: [
+          { field: 'lubricant', code: 'notAllowed' },
+          { field: 'cleaned', code: 'notAllowed' },
+        ],
+      });
+      expect(useAppStore.getState()).toBe(before);
     });
 
     it.each(COMPONENT_TYPES)('adds an entry to a component of type %s', (type) => {
@@ -717,6 +908,56 @@ describe('components slice', () => {
       expect(useAppStore.getState().components.byId[chain.id].history[1]).toBe(result.entry);
     });
 
+    describe('chain care', () => {
+      let care: ComponentHistoryEntry;
+
+      beforeEach(() => {
+        care = addEntryOrFail(chain.id, {
+          ...ENTRY_INPUT,
+          lubricated: '2026-04-12',
+          lubricant: 'wax',
+          cleaned: '2026-04-12',
+        });
+      });
+
+      it('changes the lubricant and clears the cleaning date with blank text', () => {
+        const changes = { lubricant: ' oil ', cleaned: '  ' };
+
+        const result = useAppStore.getState().updateComponentHistoryEntry(chain.id, care.id, changes);
+
+        expect(result).toEqual({ ok: true, entry: { ...care, lubricant: 'oil', cleaned: null } });
+      });
+
+      it('fails, changing nothing, when only lubricated is cleared', () => {
+        const before = useAppStore.getState();
+
+        expect(before.updateComponentHistoryEntry(chain.id, care.id, { lubricated: null })).toEqual({
+          ok: false,
+          errors: [
+            { field: 'lubricated', code: 'required' },
+            { field: 'lubricant', code: 'notAllowed' },
+          ],
+        });
+        expect(useAppStore.getState()).toBe(before);
+      });
+
+      it('removes the lubrication when lubricated, lubricant, and cleaned are cleared in one call', () => {
+        const changes = { lubricated: null, lubricant: '', cleaned: null };
+
+        const result = useAppStore.getState().updateComponentHistoryEntry(chain.id, care.id, changes);
+
+        expect(result).toEqual({ ok: true, entry: { ...care, lubricated: null, lubricant: null, cleaned: null } });
+      });
+
+      it('rejects moving the lubrication to another day than the clean', () => {
+        const changes = { lubricated: '2026-04-13' };
+
+        const result = useAppStore.getState().updateComponentHistoryEntry(chain.id, care.id, changes);
+
+        expect(result).toEqual({ ok: false, errors: [{ field: 'cleaned', code: 'notAllowed' }] });
+      });
+    });
+
     it('changes the position and subcomponent', () => {
       const [stored] = other.history;
 
@@ -979,7 +1220,7 @@ describe('components slice', () => {
 
       expect(updateComponent(chain.id, { type: 'cassette' })).toEqual({
         ok: true,
-        component: { ...chain, type: 'cassette' },
+        component: { ...chain, type: 'cassette', limits: EMPTY_COMPONENT_LIMITS },
       });
     });
 

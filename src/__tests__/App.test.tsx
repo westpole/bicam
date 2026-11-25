@@ -192,6 +192,8 @@ describe('App', () => {
       size: null,
       frameGeometry: null,
       components: [],
+      odometer: 0,
+      odometerDate: null,
     });
     const list = within(screen.getByRole('main')).getByRole('list', { name: 'Bicycles' });
     expect(within(list).getAllByRole('button')[BICYCLES.length]).toHaveAccessibleName('Racer');

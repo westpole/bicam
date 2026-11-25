@@ -1,8 +1,9 @@
+import { storedComponent } from '../__mocks__/storedComponent';
 import type { ComponentCollection } from '../types';
 import { hasComponent } from '../utilities/hasComponent';
 
 const COLLECTION: ComponentCollection = {
-  byId: { 'chain-1': { id: 'chain-1', type: 'chain', model: 'CN-M8100', history: [] } },
+  byId: { 'chain-1': storedComponent('chain-1', 'chain', 'CN-M8100') },
   allIds: ['chain-1'],
 };
 

@@ -1,14 +1,15 @@
 # Components slice
 
-> **Status:** Implemented (batch #15)
+> **Status:** Implemented (batch #15); saved data version 2 (batch #24)
 > **Owner layer:** Zustand, `src/store/components/`
 > **Root key:** `components` (see [README.md](./README.md))
 
 The `components` slice holds the parts the user tracks: chains, wheels, brakes, and so on. Each component has a type,
-a free-text model, and a `history` list that records when it was installed, how far it was ridden, and its care.
+a free-text model, an optional label, wear limits, the periods in which it was in use, and a `history` list that records
+when it was installed, how far it was ridden, and its care.
 
-A bicycle refers to components by id (`Bicycle.components`, see [bicycle.md](./bicycle.md)). Components do not refer
-back to bicycles.
+A bicycle refers to components by id (`Bicycle.components`, see [bicycle.md](./bicycle.md)). A component refers back to
+bicycles only in its usage periods and in `retired` (§2.3), and those may name a bicycle that was removed.
 
 The general rules in [README.md §2](./README.md#2-conventions) apply (plain JSON, ISO dates, `null` for unknown values,
 generated ids, normalized collections, result objects).
@@ -30,6 +31,7 @@ type WheelSubcomponent = 'hub' | 'spokes' | 'rim' | 'valve';
 type BrakesSubcomponent = 'lever' | 'hose' | 'caliper' | 'rotor' | 'brakePads' | 'brakeFluid';
 type ShiftersSubcomponent = 'shifter' | 'hose' | 'cable' | 'derailleur';
 type Subcomponent = WheelSubcomponent | BrakesSubcomponent | ShiftersSubcomponent;
+type Lubricant = 'oil' | 'wax';
 
 interface ComponentHistoryEntry {
   id: HistoryEntryId;
@@ -38,16 +40,43 @@ interface ComponentHistoryEntry {
   distance: number | null;                // km
   position: ComponentPosition | null;     // brakes, shifters, derailleur only
   subcomponent: Subcomponent | null;      // wheel, brakes, shifters only
-  lubricated: IsoDate | null;             // chain only
+  lubricated: IsoDate | null;             // chain only; date of any lubrication
   stretch: number | null;                 // chain only, %
+  lubricant: Lubricant | null;            // chain only; null = unknown
+  cleaned: IsoDate | null;                // chain only
+}
+
+interface OdometerReading { date: IsoDate | null; odometer: number } // null = unknown date
+
+interface ComponentUsagePeriod {
+  id: UsagePeriodId;                      // UUID v4, generated
+  bicycleId: BicycleId;                   // a closed period may name a removed bicycle
+  start: OdometerReading;
+  end: OdometerReading | null;            // null = in use now
+  replacedPeriodId: UsagePeriodId | null; // the period that this start ended, for undo
+}
+
+interface ComponentLimits {
+  distance: number | null;                // replace after, km
+  stretch: number | null;                 // replace at, %; chain only
+  lubrication: number | null;             // top up every, km; chain only
+  cleaning: number | null;                // clean and relubricate every, km; chain only
 }
 
 interface BicycleComponent {
   id: ComponentId;
   type: BicycleComponentType;
   model: string;
+  label: string | null;                   // not unique
+  initialDistance: number;                // km before tracking; 0 for a new part
+  limits: ComponentLimits;
+  usage: ComponentUsagePeriod[];          // start order
+  retired: { date: IsoDate; bicycleId: BicycleId } | null; // the bicycle it was retired from
   history: ComponentHistoryEntry[];       // insertion order
 }
+
+// what the component form edits; the usage actions write `usage` and `retired`
+type ComponentDetails = Omit<BicycleComponent, 'id' | 'history' | 'usage' | 'retired'>;
 
 interface ComponentCollection {
   byId: Record<ComponentId, BicycleComponent>;
@@ -72,6 +101,19 @@ Example:
       "id": "0c8f2f0e-6f0b-4f0e-9a51-5d1b8a4c7a10",
       "type": "chain",
       "model": "Shimano CN-M8100",
+      "label": "A",
+      "initialDistance": 0,
+      "limits": { "distance": null, "stretch": 0.5, "lubrication": 300, "cleaning": 1500 },
+      "usage": [
+        {
+          "id": "5d0c7e1a-3b9f-4c2d-8e6a-1f2b3c4d5e6f",
+          "bicycleId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "start": { "date": "2026-03-01", "odometer": 1088 },
+          "end": null,
+          "replacedPeriodId": null
+        }
+      ],
+      "retired": null,
       "history": [
         {
           "id": "7a1f3c52-2d8e-4b6f-8c1d-9e0f5a6b7c8d",
@@ -81,7 +123,9 @@ Example:
           "position": null,
           "subcomponent": null,
           "lubricated": "2026-04-12",
-          "stretch": 0.25
+          "stretch": 0.25,
+          "lubricant": "wax",
+          "cleaned": "2026-04-12"
         }
       ]
     },
@@ -89,6 +133,11 @@ Example:
       "id": "b5e0d6a4-93c7-4e52-a1f8-2c3d4e5f6071",
       "type": "brakes",
       "model": "Shimano GRX BR-RX820",
+      "label": null,
+      "initialDistance": 0,
+      "limits": { "distance": null, "stretch": null, "lubrication": null, "cleaning": null },
+      "usage": [],
+      "retired": null,
       "history": [
         {
           "id": "e4d3c2b1-a098-4765-b432-10fedcba9876",
@@ -98,7 +147,9 @@ Example:
           "position": "rear",
           "subcomponent": "brakePads",
           "lubricated": null,
-          "stretch": null
+          "stretch": null,
+          "lubricant": null,
+          "cleaned": null
         }
       ]
     }
@@ -117,8 +168,13 @@ Text is trimmed before it is validated and stored. Lengths are counted after tri
 | Field | Type | Required | Limits | Notes |
 | --- | --- | --- | --- | --- |
 | `id` | `string` | Generated | UUID v4 | Assigned by `addComponent`; never changes and cannot be set by the caller. |
-| `type` | `BicycleComponentType` | Yes | One of the 17 types | Can be changed only while every history entry is also valid for the new type (§4). |
+| `type` | `BicycleComponentType` | Yes | One of the 17 types | Can be changed only while the component has no usage periods and every history entry is also valid for the new type (§4). A new type replaces `limits` with that type's defaults. |
 | `model` | `string` | Yes | 1–60 chars; no control characters | Free text, e.g. `'Shimano CN-M8100'`. Not unique: a rider can own two identical chains. |
+| `label` | `string \| null` | Starts as `null` | — | Tells identical components apart (`'A'`, `'red link'`). Not unique. No action writes it yet; `updateComponent` keeps it. |
+| `initialDistance` | `number` | Starts at 0 | — | Kilometres the part had before it was tracked. No action writes it yet; `updateComponent` keeps it. |
+| `limits` | `ComponentLimits` | Type defaults | — | When the part is due for replacement or care (§2.3). `addComponent` stores the defaults of its type. `updateComponent` keeps them, unless the type changes. |
+| `usage` | `ComponentUsagePeriod[]` | Starts as `[]` | — | When the part was in use, and on which bicycle (§2.3). `updateComponent` keeps it. |
+| `retired` | `{ date, bicycleId } \| null` | Starts as `null` | — | When and from which bicycle the part was retired. `updateComponent` keeps it. |
 | `history` | `ComponentHistoryEntry[]` | Starts as `[]` | Up to 500 entries | Written only by the history actions (§4). Insertion order; the store does not sort it. |
 
 ### 2.2 `ComponentHistoryEntry`
@@ -128,19 +184,49 @@ Text is trimmed before it is validated and stored. Lengths are counted after tri
 | `id` | `string` | Generated | UUID v4 | Not in the original request. Needed to edit or remove one entry safely, and used as the React key. |
 | `date` | `IsoDate` | Yes | Real `YYYY-MM-DD` date | Date of this record: when the part was installed, measured, or serviced. Not in the original request; it lets readings be followed over time. Not compared with `installed` or `lubricated`. |
 | `installed` | `IsoDate` | Yes | Real `YYYY-MM-DD` date | Date the part was installed. Later records of the same installation repeat it. |
-| `distance` | `number \| null` | No | 0–500 000, at most 1 decimal | Kilometres ridden on the part since `installed`, as of `date`. `null` when unknown. |
+| `distance` | `number \| null` | No | 0–1 000 000, at most 1 decimal | Kilometres as of `date`. For the whole component, its own distance (§2.3), including `initialDistance`; the limit is twice the odometer's, so the total of a part that stayed on one bicycle always fits. For a subcomponent (brake pads, for example), kilometres since `installed`. `null` when unknown. |
 | `position` | `'front' \| 'rear' \| null` | No | Types in §3 only | `null` when unknown or when the entry covers both ends. |
 | `subcomponent` | `Subcomponent \| null` | No | Values in §3, per type | `null` when the entry is about the whole component. |
 | `lubricated` | `IsoDate \| null` | No | Real `YYYY-MM-DD` date; chain only | Date the chain was waxed or lubricated. May be before `installed`, because chains are often waxed first. |
 | `stretch` | `number \| null` | No | 0–5, at most 2 decimals; chain only | Chain wear in percent, as read from a chain checker (`0.5`, `0.75`). |
+| `lubricant` | `'oil' \| 'wax' \| null` | No | Needs `lubricated`; chain only | What the chain was lubricated with. `null` with a `lubricated` date means unknown. |
+| `cleaned` | `IsoDate \| null` | No | Real `YYYY-MM-DD` date; needs `lubricated` on the same date; chain only | Date the chain was cleaned. A cleaned chain is relubricated, so `lubricated` is then `required`, and a different date is `notAllowed` on `cleaned`. |
+
+A **top-up** sets `lubricated` and `lubricant`. A **clean and relubrication** also sets `cleaned`. Removing a lubrication
+with `updateComponentHistoryEntry` means clearing `lubricated`, `lubricant`, and `cleaned` in one call; clearing only
+`lubricated` fails.
 
 Dates in the future are not rejected, for the same reason as `Bicycle.purchased` ([README.md §6](./README.md#6-open-questions)).
+Only `cleaned` is compared with another date.
+
+### 2.3 Usage and limits
+
+A component is **in use** while it has an open usage period (`end: null`). Its distance is derived from the bicycle's
+odometer, never stored:
+
+`distance = initialDistance + Σ ((period.end?.odometer ?? bicycle.odometer) − period.start.odometer)`
+
+**Rule 1:** a component has at most one open period, and that period's bicycle lists the component. "In use" is never
+stored separately. Loaded data is checked for it ([README.md §4](./README.md#4-persistence)). The actions that start,
+stop, and swap components are not part of the store yet.
+
+`ACTIVE_LIMITS` says how many components of a type can be in use on one bicycle:
+
+| Types | In use per bicycle |
+| --- | --- |
+| `wheel`, `tire`, `brakes`, `shifters`, `derailleur` | 2 |
+| `frontMount` | No limit (`null`) |
+| All others, including `chain` and `cassette` | 1 |
+
+`DEFAULT_COMPONENT_LIMITS` holds the suggested limits per type. Only `chain` has any: stretch 0.5 % (11–13-speed; 0.75 %
+suits 5–10-speed), a top-up every 300 km, and a clean and relubrication every 1500 km, with no distance limit. Other types
+start with `EMPTY_COMPONENT_LIMITS` (every limit `null`). `getDefaultLimits(type)` returns a copy.
 
 ## 3. Type-specific history fields
 
 Every entry has every key. A field that does not apply to the component's type must be `null`.
 
-| Type | `position` | `subcomponent` | `lubricated`, `stretch` |
+| Type | `position` | `subcomponent` | `lubricated`, `stretch`, `lubricant`, `cleaned` |
 | --- | --- | --- | --- |
 | `chain` | — | — | Allowed |
 | `wheel` | — | `hub`, `spokes`, `rim`, `valve` | — |
@@ -156,6 +242,9 @@ const COMPONENT_POSITIONS: readonly ComponentPosition[] = ['front', 'rear'];
 const POSITION_TYPES: readonly BicycleComponentType[] = ['brakes', 'shifters', 'derailleur'];
 const CHAIN_CARE_TYPES: readonly BicycleComponentType[] = ['chain'];
 const SUBCOMPONENTS: Readonly<Partial<Record<BicycleComponentType, readonly Subcomponent[]>>> = { /* table above */ };
+const LUBRICANTS: readonly Lubricant[] = ['oil', 'wax'];
+const ACTIVE_LIMITS: Readonly<Record<BicycleComponentType, number | null>> = { /* §2.3 */ };
+const DEFAULT_COMPONENT_LIMITS: Readonly<Partial<Record<BicycleComponentType, Readonly<ComponentLimits>>>> = { /* §2.3 */ };
 ```
 
 Stored values are codes, not labels. The UI translates them with `t()`.
@@ -177,13 +266,16 @@ interface ComponentHistoryInput {
   subcomponent?: string | null;
   lubricated?: string | null;
   stretch?: number | null;
+  lubricant?: string | null;
+  cleaned?: string | null;
 }
 type ComponentHistoryUpdate = Partial<ComponentHistoryInput>;
 ```
 
 Normalization runs before validation:
 
-1. Pick known fields only (`id`, `history`, and any other extra key are dropped).
+1. Pick known fields only (`id`, `history`, `label`, `initialDistance`, `limits`, `usage`, `retired`, and any other extra
+   key are dropped).
 2. Trim every string.
 3. Optional text that is missing, `null`, or blank becomes `null`. A missing number becomes `null`.
 4. `-0` becomes `0`, because `-0` does not survive a JSON round trip.
@@ -192,8 +284,8 @@ In updates, `null` (or blank text) clears an optional field. An omitted or `unde
 
 | Action | Returns | Behavior |
 | --- | --- | --- |
-| `addComponent(input)` | `ComponentResult` | Validates, generates an `id`, stores the component with `history: []`, and appends the id to `allIds`. |
-| `updateComponent(id, changes)` | `ComponentResult` | Changes `type` and/or `model`. Keeps `id`, `history`, and the place in `allIds`. State is not written when nothing changes. A new `type` is rejected with `{ field: 'type', code: 'notAllowed' }` when any stored entry fails validation for it, whatever that entry's own error code is. |
+| `addComponent(input)` | `ComponentResult` | Validates, generates an `id`, and appends the id to `allIds`. Stores the component with `label: null`, `initialDistance: 0`, the default limits of its type, `usage: []`, `retired: null`, and `history: []`. |
+| `updateComponent(id, changes)` | `ComponentResult` | Changes `type` and/or `model`. Keeps `id`, `label`, `initialDistance`, `usage`, `retired`, `history`, and the place in `allIds`; such keys in `changes` are ignored. Keeps `limits` too, unless the type changes: a new type gets its defaults. State is not written when nothing changes. A new `type` is rejected with `{ field: 'type', code: 'notAllowed' }` once the component has usage periods, or when any stored entry fails validation for it, whatever that entry's own error code is. |
 | `removeComponent(id)` | `boolean` | Removes the component and its history. `false` for an unknown id. The wrapper in `useAppStore.ts` also removes the id from every `Bicycle.components` (see [Links between slices](#links-between-slices)). |
 | `addComponentHistoryEntry(componentId, input)` | `ComponentHistoryResult` | Validates against the component's type, generates an entry `id`, and appends the entry. |
 | `updateComponentHistoryEntry(componentId, entryId, changes)` | `ComponentHistoryResult` | Merges, normalizes, and validates. Keeps the entry's `id` and place. |
@@ -221,7 +313,7 @@ A failed action never changes state and does not call `set`. Lookups by componen
 ## 5. Results and error codes
 
 ```ts
-type ComponentField = 'id' | 'type' | 'model';
+type ComponentField = 'id' | 'type' | 'model' | 'label' | 'initialDistance' | 'limits';
 type ComponentHistoryField = keyof ComponentHistoryEntry | 'componentId' | 'history';
 
 type ComponentErrorCode =
@@ -241,12 +333,12 @@ type ComponentHistoryResult =
 
 | Code | Raised when |
 | --- | --- |
-| `required` | `type`, `model`, `date`, or `installed` is empty after trimming. |
+| `required` | `type`, `model`, `date`, or `installed` is empty after trimming, or `lubricated` is missing while `cleaned` is a valid date. |
 | `tooLong` | `model` is over 60 characters. |
 | `invalidFormat` | `model` has a control character; a date is not a real `YYYY-MM-DD` date; a number is not finite or has too many decimals. |
-| `invalidOption` | `type`, `position`, or `subcomponent` is not one of its allowed values. A subcomponent of another type (`rim` on `brakes`) is also `invalidOption`. |
+| `invalidOption` | `type`, `position`, `subcomponent`, or `lubricant` is not one of its allowed values. A subcomponent of another type (`rim` on `brakes`) is also `invalidOption`. |
 | `outOfRange` | `distance` or `stretch` is negative or above its maximum. |
-| `notAllowed` | A history field is set on a type that does not have it (§3), or a type change conflicts with stored history. |
+| `notAllowed` | A history field is set on a type that does not have it (§3); `lubricant` is set without `lubricated`; `cleaned` is not the same date as `lubricated`; or a type change conflicts with stored history or usage periods. |
 | `tooMany` | The component already has 500 history entries (field `history`). |
 | `notFound` | Unknown component (field `id` for component actions, `componentId` for history actions) or unknown entry (field `id`). |
 
@@ -268,9 +360,12 @@ On success, the returned object is the one held in the store; treat it as read-o
 | A history entry is a log record with its own `date`. Waxing a chain again adds an entry with the same `installed` date. | The request gives each entry one waxed date. One record per event keeps all past values, and `date` says when each distance or stretch was read. |
 | Values are normalized to camelCase codes: `bar tape` → `barTape`, `level` → `lever`, `calliper` → `caliper`, `waxed/lubricated date` → `lubricated`. | Codes are stable keys for translation. `level` is a typo for `lever` (confirmed by the user). |
 | `gear shifter` in the request means the `shifters` type. | It is the only shifter type in the list. |
-| `distance` is kilometres on the part since `installed`, not the bicycle's odometer reading. | Confirmed by the user. It stays correct when a part moves between bicycles. |
+| `distance` is not the bicycle's odometer reading. For a whole component it is the component's own distance (§2.3), including `initialDistance`; for a subcomponent it is kilometres since `installed`. | Confirmed by the user (batch #24). It stays correct when a part moves between bicycles, and it differs from "since installed" for used parts and for a part that came off and went back on. |
+| A component's distance is derived from usage periods and the bicycle's odometer, never stored. | A late swap would otherwise credit the wrong chain. An `isActive` flag next to the periods could disagree with them. |
+| Each lubrication records `oil` or `wax` on the history entry, not on the component. | A chain can change lubricant. |
+| Limits are stored per component, starting from the type's defaults. | Wear limits depend on the drivetrain, so the rider can change them. |
 | `wheel` and `tire` have no `position`. | Confirmed by the user, as in the request. |
 | `derailleur` is both a component type and a subcomponent of `shifters`. | Confirmed by the user, as in the request. The same part can then be logged in two places. |
-| One date, `lubricated`, covers waxing and lubrication. | Confirmed by the user. |
+| One date, `lubricated`, covers waxing, lubrication, and the relubrication after a clean. | Confirmed by the user. |
 | `stretch` is a percentage, 0–5, as on a chain checker. | Confirmed by the user. |
 | A component is on at most one bicycle. `addBicycle` and `updateBicycle` enforce it. | A part is physically on one bicycle at a time (confirmed by the user). The shared validator covers every caller, not only the details screen. To move a part, take it off the first bicycle, then add it to the other. |

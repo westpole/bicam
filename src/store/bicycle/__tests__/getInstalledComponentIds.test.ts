@@ -18,6 +18,8 @@ function createBicycle(id: string, components: string[]): Bicycle {
     size: null,
     frameGeometry: null,
     components,
+    odometer: 0,
+    odometerDate: null,
   };
 }
 

@@ -23,9 +23,12 @@ interface Bicycle {
   size: string | null;
   frameGeometry: string | null;
   components: ComponentId[];
+  odometer: number;            // km, as the rider entered it; starts at 0
+  odometerDate: IsoDate | null; // date of that reading; null when unknown
 }
 
-type BicycleDetails = Omit<Bicycle, 'id'>; // every user-editable field
+// the fields the bicycle form edits; the odometer has its own action
+type BicycleDetails = Omit<Bicycle, 'id' | 'odometer' | 'odometerDate'>;
 
 interface BicycleCollection {
   byId: Record<BicycleId, Bicycle>;
@@ -46,7 +49,9 @@ Example:
       "purchased": "2024-05-17",
       "size": "M",
       "frameGeometry": "Stack 594 mm, reach 393 mm, HTA 71°",
-      "components": []
+      "components": [],
+      "odometer": 1500,
+      "odometerDate": "2026-04-12"
     }
   },
   "allIds": ["3b241101-e2bb-4255-8caf-4136c566a962"]
@@ -67,6 +72,8 @@ All text is trimmed before it is validated and stored. Lengths are counted after
 | `size` | `string \| null` | No | 1–10 chars from `A–Z a–z 0–9`, space, `.`, `/`, `-` | Holds letter sizes (`'ML'`, `'M/L'`, `'XS'`) and numeric sizes (`'51'`, `'56.5'`). Stored as typed: no case change, no unit. `null` when unknown. |
 | `frameGeometry` | `string \| null` | No | 1–500 chars; line breaks allowed, other control characters rejected | Free-text notes (stack, reach, angles, …). `null` when unknown. |
 | `components` | `ComponentId[]` | No (defaults to `[]`) | Up to 100 ids; each 1–64 chars, trimmed, no control characters; no duplicates | Ids of the components installed on this bicycle now. Every id must be a stored component that is on no other bicycle; removing a component also removes its id here (see [components.md §4](./components.md#links-between-slices)). |
+| `odometer` | `number` | Starts at 0 | — | Total kilometres, entered by the rider. The source of every component's distance ([components.md §2.3](./components.md#23-usage-and-limits)). No action writes it yet; `addBicycle` and `updateBicycle` never change it. |
+| `odometerDate` | `IsoDate \| null` | Starts as `null` | — | Date of the `odometer` reading. `null` when unknown. No action writes it yet. |
 
 Limits live in `BICYCLE_LIMITS` (`src/store/bicycle/constants.ts`).
 
@@ -88,7 +95,7 @@ interface BicycleInput {
 
 Normalization (`normalizeBicycleInput`) runs before validation and returns `BicycleDetails`:
 
-1. Pick known fields only (an `id` or any other extra key is dropped).
+1. Pick known fields only (an `id`, the odometer fields, or any other extra key is dropped).
 2. Trim every string, including each component id.
 3. Optional text that is missing, `null`, or empty after trimming becomes `null`.
 4. A missing `components` list becomes `[]`.
@@ -97,8 +104,8 @@ Normalization (`normalizeBicycleInput`) runs before validation and returns `Bicy
 
 | Action | Returns | Behavior |
 | --- | --- | --- |
-| `addBicycle(input: BicycleInput)` | `BicycleResult` | Normalizes and validates `input`, then generates an `id`, stores the bicycle, and appends the id to `allIds`. Fails with `{ field: 'name', code: 'duplicate' }` when another bicycle has the same name (case-insensitive), and on `components` with `notFound` or `alreadyInstalled` (see §5). No id is generated on failure. |
-| `updateBicycle(id: BicycleId, changes: BicycleUpdate)` | `BicycleResult` | `BicycleUpdate` is `Partial<BicycleInput>`. Merges `changes` into the stored bicycle, then normalizes and validates the result. Renaming is allowed: the new name must not match another bicycle's name (changing the case of its own name is fine). The `id` and position in `allIds` are kept. Fails with `{ field: 'id', code: 'notFound' }` for an unknown id, and on `components` with `notFound` or `alreadyInstalled` (see §5); the bicycle's own components never count as installed elsewhere. Passing `null` (or blank text) clears an optional field; omitting a key, or passing `undefined`, leaves it unchanged. An `id` key in `changes` is ignored. |
+| `addBicycle(input: BicycleInput)` | `BicycleResult` | Normalizes and validates `input`, then generates an `id`, stores the bicycle with `odometer: 0` and `odometerDate: null`, and appends the id to `allIds`. Fails with `{ field: 'name', code: 'duplicate' }` when another bicycle has the same name (case-insensitive), and on `components` with `notFound` or `alreadyInstalled` (see §5). No id is generated on failure. |
+| `updateBicycle(id: BicycleId, changes: BicycleUpdate)` | `BicycleResult` | `BicycleUpdate` is `Partial<BicycleInput>`. Merges `changes` into the stored bicycle, then normalizes and validates the result. Renaming is allowed: the new name must not match another bicycle's name (changing the case of its own name is fine). The `id` and position in `allIds` are kept. Fails with `{ field: 'id', code: 'notFound' }` for an unknown id, and on `components` with `notFound` or `alreadyInstalled` (see §5); the bicycle's own components never count as installed elsewhere. Passing `null` (or blank text) clears an optional field; omitting a key, or passing `undefined`, leaves it unchanged. The odometer fields are always kept; `id`, `odometer`, and `odometerDate` keys in `changes` are ignored. |
 | `removeBicycle(id: BicycleId)` | `boolean` | Removes the bicycle from `byId` and `allIds`. Returns `false` (and leaves state unchanged) for an unknown id. When the removed bicycle is the one on the details screen (`selectedBicycleId`), the store's wrapper in `useAppStore.ts` also sets `selectedBicycleId: null` and `activeScreen: 'home'` (see [README.md](./README.md) §5). |
 
 Ids are matched exactly. Name clashes are checked case-insensitively. A failed action never changes state.

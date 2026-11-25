@@ -17,7 +17,7 @@ function toOptionalNumber(value: number | null | undefined): number | null {
  * Picks known fields only and does not mutate `input`.
  *
  * - Trims every string.
- * - A missing, `null`, or blank `position`, `subcomponent`, or `lubricated` becomes `null`.
+ * - A missing, `null`, or blank `position`, `subcomponent`, `lubricated`, `lubricant`, or `cleaned` becomes `null`.
  * - A missing or `null` `distance` or `stretch` becomes `null`; `-0` becomes `0`.
  *
  * @param input - Raw history input.
@@ -25,7 +25,7 @@ function toOptionalNumber(value: number | null | undefined): number | null {
  * @example
  * normalizeComponentHistoryInput({ date: ' 2026-04-12 ', installed: '2026-03-01', position: 'rear' });
  * // { date: '2026-04-12', installed: '2026-03-01', distance: null, position: 'rear', subcomponent: null,
- * //   lubricated: null, stretch: null }
+ * //   lubricated: null, stretch: null, lubricant: null, cleaned: null }
  */
 export function normalizeComponentHistoryInput(input: ComponentHistoryInput): NormalizedComponentHistoryInput {
   return {
@@ -36,5 +36,7 @@ export function normalizeComponentHistoryInput(input: ComponentHistoryInput): No
     subcomponent: toOptionalText(input.subcomponent),
     lubricated: toOptionalText(input.lubricated),
     stretch: toOptionalNumber(input.stretch),
+    lubricant: toOptionalText(input.lubricant),
+    cleaned: toOptionalText(input.cleaned),
   };
 }

@@ -1,7 +1,7 @@
 # [FEATURE] Save the version 2 shape and migrate version 1
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #24)
 > **Sprint:** `24-ui-implement-add-component-screen`
@@ -35,18 +35,18 @@ and upgrade saved version 1 data. The whole shape lands here, so the batch has o
 **So that** I do not enter it again
 
 **Acceptance Criteria:**
-- [ ] Bicycles, components, and history entries get the values in [Migration from version
+- [x] Bicycles, components, and history entries get the values in [Migration from version
       1](./plan.md#migration-from-version-1).
-- [ ] `initialDistance` is taken from the newest whole-component entry that has a distance. Subcomponent entries are
+- [x] `initialDistance` is taken from the newest whole-component entry that has a distance. Subcomponent entries are
       ignored; without such an entry it is 0.
-- [ ] Assigned components start in use at odometer 0 with date `null`, unless their type has more components on the
+- [x] Assigned components start in use at odometer 0 with date `null`, unless their type has more components on the
       bicycle than `ACTIVE_LIMITS` allows; then none of that type starts in use. Spare components have no usage.
-- [ ] Fixtures: empty app, one chain, three chains, two tires, three tires, a spare, and history entries.
-- [ ] Version 1 data with a broken shape, and any other unknown version, still fails, is backed up, and starts empty.
-- [ ] Loaded version 2 data is checked for types, formats, and option codes; that bicycles list stored components; and
+- [x] Fixtures: empty app, one chain, three chains, two tires, three tires, a spare, and history entries.
+- [x] Version 1 data with a broken shape, and any other unknown version, still fails, is backed up, and starts empty.
+- [x] Loaded version 2 data is checked for types, formats, and option codes; that bicycles list stored components; and
       that an open period's bicycle exists and lists its component, with at most one open period per component ([rule
       1](./plan.md#rules)).
-- [ ] Not checked: `replacedPeriodId` (a string or `null`, never looked up), the bicycle of a closed period or of
+- [x] Not checked: `replacedPeriodId` (a string or `null`, never looked up), the bicycle of a closed period or of
       `retired`, field limits, `ACTIVE_LIMITS`, overlaps, and chain-only limits. Tests load data with an unknown
       `replacedPeriodId` and with a removed bicycle in a closed period.
 
@@ -60,11 +60,11 @@ and upgrade saved version 1 data. The whole shape lands here, so the batch has o
 **So that** an edit never erases them
 
 **Acceptance Criteria:**
-- [ ] New bicycles start with `odometer: 0` and `odometerDate: null`. New components start with `label: null`,
+- [x] New bicycles start with `odometer: 0` and `odometerDate: null`. New components start with `label: null`,
       `initialDistance: 0`, `usage: []`, `retired: null`, and the default limits of their type.
-- [ ] `updateBicycle` keeps the odometer fields, and `updateComponent` keeps `label`, `initialDistance`, `limits`,
+- [x] `updateBicycle` keeps the odometer fields, and `updateComponent` keeps `label`, `initialDistance`, `limits`,
       `usage`, and `retired`. Such keys in their input are ignored for now.
-- [ ] `updateComponent` rejects a new type with `{ field: 'type', code: 'notAllowed' }` once the component has usage
+- [x] `updateComponent` rejects a new type with `{ field: 'type', code: 'notAllowed' }` once the component has usage
       periods. Otherwise a type change applies the default limits of the new type.
 
 **Out of scope:** writing `label`, `initialDistance`, and `limits` (#30) and the odometer (#31).
@@ -77,14 +77,14 @@ and upgrade saved version 1 data. The whole shape lands here, so the batch has o
 **So that** the care dialog can use them
 
 **Acceptance Criteria:**
-- [ ] `addComponentHistoryEntry` and `updateComponentHistoryEntry` accept both fields; blank text becomes `null`.
-- [ ] On a type outside `CHAIN_CARE_TYPES`, either field is `notAllowed`.
-- [ ] `lubricant`: any value other than `oil` or `wax` is `invalidOption`; without `lubricated` it is `notAllowed`.
-- [ ] `cleaned`: a date that is not real is `invalidFormat`; without `lubricated`, `lubricated` is `required`; a date
+- [x] `addComponentHistoryEntry` and `updateComponentHistoryEntry` accept both fields; blank text becomes `null`.
+- [x] On a type outside `CHAIN_CARE_TYPES`, either field is `notAllowed`.
+- [x] `lubricant`: any value other than `oil` or `wax` is `invalidOption`; without `lubricated` it is `notAllowed`.
+- [x] `cleaned`: a date that is not real is `invalidFormat`; without `lubricated`, `lubricated` is `required`; a date
       other than `lubricated` is `notAllowed`.
-- [ ] `lubricated` without `lubricant` is accepted (unknown).
-- [ ] Clearing only `lubricated` on an entry with `lubricant` or `cleaned` fails. Clearing all three in one call works.
-- [ ] `distance` is accepted up to 1 000 000.
+- [x] `lubricated` without `lubricant` is accepted (unknown).
+- [x] Clearing only `lubricated` on an entry with `lubricant` or `cleaned` fails. Clearing all three in one call works.
+- [x] `distance` is accepted up to 1 000 000.
 
 **Out of scope:** any UI.
 
@@ -133,12 +133,12 @@ No visual assets (store-only ticket).
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Store tests passing; 90% branch threshold met
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function and type; docs updated
-- [ ] `code-reviewer` subagent run and findings addressed
-- [ ] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 29)`
+- [x] All acceptance criteria met
+- [x] Store tests passing; 90% branch threshold met
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function and type; docs updated
+- [x] `code-reviewer` subagent run and findings addressed
+- [x] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 29)`
 
 ---
 

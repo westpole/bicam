@@ -1,3 +1,4 @@
+import { storedComponent } from '../../components/__mocks__/storedComponent';
 import type { ComponentCollection } from '../../components/types';
 import { INITIAL_APP_STATE } from '../../constants';
 import { useAppStore } from '../../useAppStore';
@@ -29,9 +30,9 @@ const GRAVEL_DETAILS: BicycleDetails = {
 /** Stored components that the bicycles under test may list. */
 const COMPONENTS: ComponentCollection = {
   byId: {
-    'chain-1': { id: 'chain-1', type: 'chain', model: 'CN-M8100', history: [] },
-    'chain-2': { id: 'chain-2', type: 'chain', model: 'X12', history: [] },
-    'cassette-1': { id: 'cassette-1', type: 'cassette', model: 'CS-M8100', history: [] },
+    'chain-1': storedComponent('chain-1', 'chain', 'CN-M8100'),
+    'chain-2': storedComponent('chain-2', 'chain', 'X12'),
+    'cassette-1': storedComponent('cassette-1', 'cassette', 'CS-M8100'),
   },
   allIds: ['chain-1', 'chain-2', 'cassette-1'],
 };
@@ -89,7 +90,7 @@ describe('bicycle slice', () => {
       }
       const { id } = result.bicycle;
       expect(id).toMatch(UUID_PATTERN);
-      expect(result.bicycle).toEqual({ id, ...GRAVEL_DETAILS });
+      expect(result.bicycle).toEqual({ id, ...GRAVEL_DETAILS, odometer: 0, odometerDate: null });
       expect(useAppStore.getState().bicycle).toEqual({ byId: { [id]: result.bicycle }, allIds: [id] });
     });
 
@@ -114,6 +115,8 @@ describe('bicycle slice', () => {
         size: null,
         frameGeometry: null,
         components: [],
+        odometer: 0,
+        odometerDate: null,
       });
     });
 
@@ -270,6 +273,18 @@ describe('bicycle slice', () => {
       expect(result).toEqual({ ok: true, bicycle: expected });
       expect(useAppStore.getState().bicycle.byId[gravel.id]).toEqual(expected);
       expect(useAppStore.getState().bicycle.allIds).toBe(allIdsBefore);
+    });
+
+    it('keeps the stored odometer and ignores odometer keys in the changes', () => {
+      const ridden: Bicycle = { ...gravel, odometer: 1500.5, odometerDate: '2026-04-12' };
+      useAppStore.setState(({ bicycle }) => ({
+        bicycle: { ...bicycle, byId: { ...bicycle.byId, [gravel.id]: ridden } },
+      }));
+      const changes = { model: 'Grizl CF SLX 8', odometer: 0, odometerDate: null };
+
+      const result = useAppStore.getState().updateBicycle(gravel.id, changes);
+
+      expect(result).toEqual({ ok: true, bicycle: { ...ridden, model: 'Grizl CF SLX 8' } });
     });
 
     it('renames a bicycle and keeps its id', () => {

@@ -1,8 +1,9 @@
 import { COMPONENT_TYPES } from '@store/components/constants';
 import type { BicycleComponent, BicycleComponentType, ComponentCollection } from '@store/components/types';
+import { getDefaultLimits } from '@store/components/utilities/getDefaultLimits';
 
 /**
- * Builds a valid component fixture without history.
+ * Builds a valid component fixture without label, usage, or history, with the default limits of its type.
  *
  * @param id - The component id (fixtures use readable ids instead of UUIDs).
  * @param type - The component type.
@@ -10,7 +11,17 @@ import type { BicycleComponent, BicycleComponentType, ComponentCollection } from
  * @returns The component.
  */
 function makeComponent(id: string, type: BicycleComponentType, model: string): BicycleComponent {
-  return { id, type, model, history: [] };
+  return {
+    id,
+    type,
+    model,
+    label: null,
+    initialDistance: 0,
+    limits: getDefaultLimits(type),
+    usage: [],
+    retired: null,
+    history: [],
+  };
 }
 
 /** Three components in display order, for stories and tests. */

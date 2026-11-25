@@ -18,6 +18,8 @@ const DETAILS: ComponentHistoryDetails = {
   subcomponent: null,
   lubricated: null,
   stretch: null,
+  lubricant: null,
+  cleaned: null,
 };
 
 const POSITIONS: ComponentPosition[] = ['front', 'rear'];
@@ -89,7 +91,7 @@ describe('validateComponentHistoryEntry', () => {
     [NaN, 'invalidFormat'],
     [Infinity, 'invalidFormat'],
     [-0.1, 'outOfRange'],
-    [500_000.1, 'outOfRange'],
+    [1_000_000.1, 'outOfRange'],
     [412.55, 'invalidFormat'],
   ])('rejects the distance %s as %s', (distance, code) => {
     expect(validateComponentHistoryEntry('chain', { ...DETAILS, distance })).toEqual(failure('distance', code));
@@ -209,6 +211,92 @@ describe('validateComponentHistoryEntry', () => {
     });
   });
 
+  describe('lubricant', () => {
+    const LUBRICATED = { ...DETAILS, lubricated: '2026-04-12' };
+
+    it.each(['oil', 'wax'] as const)('accepts %s on a lubricated chain', (lubricant) => {
+      const details = { ...LUBRICATED, lubricant };
+
+      expect(validateComponentHistoryEntry('chain', details)).toStrictEqual({ ok: true, details });
+    });
+
+    it('accepts a lubrication without a lubricant, as unknown', () => {
+      expect(validateComponentHistoryEntry('chain', LUBRICATED)).toStrictEqual({ ok: true, details: LUBRICATED });
+    });
+
+    it.each(['grease', 'Oil', 'WAX', ''])('rejects %j as invalidOption', (lubricant) => {
+      expect(validateComponentHistoryEntry('chain', { ...LUBRICATED, lubricant })).toEqual(
+        failure('lubricant', 'invalidOption'),
+      );
+    });
+
+    it('rejects an unknown lubricant as invalidOption also without lubricated', () => {
+      expect(validateComponentHistoryEntry('chain', { ...DETAILS, lubricant: 'grease' })).toEqual(
+        failure('lubricant', 'invalidOption'),
+      );
+    });
+
+    it('rejects a lubricant without lubricated as notAllowed', () => {
+      expect(validateComponentHistoryEntry('chain', { ...DETAILS, lubricant: 'wax' })).toEqual(
+        failure('lubricant', 'notAllowed'),
+      );
+    });
+
+    describe.each(TYPES_WITHOUT_CHAIN_CARE)('on %s', (type) => {
+      it.each(['oil', 'grease'])('rejects %s as notAllowed', (lubricant) => {
+        expect(validateComponentHistoryEntry(type, { ...DETAILS, lubricant })).toEqual(
+          failure('lubricant', 'notAllowed'),
+        );
+      });
+    });
+  });
+
+  describe('cleaned', () => {
+    it('accepts a clean on the day of the lubrication', () => {
+      const details = { ...DETAILS, lubricated: '2026-04-12', lubricant: 'wax' as const, cleaned: '2026-04-12' };
+
+      expect(validateComponentHistoryEntry('chain', details)).toStrictEqual({ ok: true, details });
+    });
+
+    it.each(['2023-02-29', '2026-4-12', 'yesterday'])('rejects %j as invalidFormat', (cleaned) => {
+      expect(validateComponentHistoryEntry('chain', { ...DETAILS, lubricated: '2026-04-12', cleaned })).toEqual(
+        failure('cleaned', 'invalidFormat'),
+      );
+    });
+
+    it('makes lubricated required, because a cleaned chain is relubricated', () => {
+      expect(validateComponentHistoryEntry('chain', { ...DETAILS, cleaned: '2026-04-12' })).toEqual(
+        failure('lubricated', 'required'),
+      );
+    });
+
+    it('rejects a date other than lubricated as notAllowed', () => {
+      expect(
+        validateComponentHistoryEntry('chain', { ...DETAILS, lubricated: '2026-04-12', cleaned: '2026-04-11' }),
+      ).toEqual(failure('cleaned', 'notAllowed'));
+    });
+
+    it('reports only an invalid lubricated, not a mismatch with it', () => {
+      expect(
+        validateComponentHistoryEntry('chain', { ...DETAILS, lubricated: '2026-02-30', cleaned: '2026-04-12' }),
+      ).toEqual(failure('lubricated', 'invalidFormat'));
+    });
+
+    it('does not ask for lubricated when cleaned itself is invalid', () => {
+      expect(validateComponentHistoryEntry('chain', { ...DETAILS, cleaned: 'yesterday' })).toEqual(
+        failure('cleaned', 'invalidFormat'),
+      );
+    });
+
+    describe.each(TYPES_WITHOUT_CHAIN_CARE)('on %s', (type) => {
+      it('rejects a date as notAllowed and does not ask for lubricated', () => {
+        expect(validateComponentHistoryEntry(type, { ...DETAILS, cleaned: '2026-04-12' })).toEqual(
+          failure('cleaned', 'notAllowed'),
+        );
+      });
+    });
+  });
+
   it('covers the 16 types without chain care', () => {
     expect(TYPES_WITHOUT_CHAIN_CARE).toHaveLength(16);
   });
@@ -216,6 +304,8 @@ describe('validateComponentHistoryEntry', () => {
   it('reports one error per failing field, in field order', () => {
     expect(
       validateComponentHistoryEntry('wheel', {
+        cleaned: '2026-04-12',
+        lubricant: 'oil',
         stretch: 0,
         lubricated: '2026-04-12',
         subcomponent: 'rotor',
@@ -234,6 +324,8 @@ describe('validateComponentHistoryEntry', () => {
         { field: 'subcomponent', code: 'invalidOption' },
         { field: 'lubricated', code: 'notAllowed' },
         { field: 'stretch', code: 'notAllowed' },
+        { field: 'lubricant', code: 'notAllowed' },
+        { field: 'cleaned', code: 'notAllowed' },
       ],
     });
   });

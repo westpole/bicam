@@ -1,4 +1,12 @@
-import type { BicycleComponentType, ComponentCollection, ComponentPosition, Subcomponent } from './types';
+import type {
+  BicycleComponentType,
+  ComponentCollection,
+  ComponentLimits,
+  ComponentLimitsByType,
+  ComponentPosition,
+  Lubricant,
+  Subcomponent,
+} from './types';
 
 /**
  * Empty component collection used as the initial `components` slice. Frozen (with its `byId` and `allIds`) because it
@@ -16,7 +24,7 @@ Object.freeze(INITIAL_COMPONENT_COLLECTION);
 export const COMPONENT_LIMITS = {
   modelMaxLength: 60,
   historyMaxCount: 500,
-  distanceMax: 500_000,
+  distanceMax: 1_000_000,
   distanceMaxDecimals: 1,
   stretchMax: 5,
   stretchMaxDecimals: 2,
@@ -63,3 +71,47 @@ export const SUBCOMPONENTS: Readonly<Partial<Record<BicycleComponentType, readon
   brakes: ['lever', 'hose', 'caliper', 'rotor', 'brakePads', 'brakeFluid'],
   shifters: ['shifter', 'hose', 'cable', 'derailleur'],
 };
+
+/** Every lubricant. Lists each {@link Lubricant} exactly once. */
+export const LUBRICANTS: readonly Lubricant[] = ['oil', 'wax'];
+
+/**
+ * How many components of each type can be in use on one bicycle at a time; `null` means no limit. Two wheels or tires
+ * are not told apart by position. Documented in `docs/store/components.md` §2.3.
+ */
+export const ACTIVE_LIMITS: Readonly<Record<BicycleComponentType, number | null>> = {
+  chain: 1,
+  bottomBracket: 1,
+  cassette: 1,
+  frame: 1,
+  fork: 1,
+  seatpost: 1,
+  saddle: 1,
+  pedals: 1,
+  wheel: 2,
+  handlebar: 1,
+  stem: 1,
+  barTape: 1,
+  tire: 2,
+  frontMount: null,
+  brakes: 2,
+  shifters: 2,
+  derailleur: 2,
+};
+
+/** Limits of a type without suggested values: none at all. */
+export const EMPTY_COMPONENT_LIMITS: Readonly<ComponentLimits> = Object.freeze({
+  distance: null,
+  stretch: null,
+  lubrication: null,
+  cleaning: null,
+});
+
+/**
+ * Suggested limits per type, used for new components and after a type change. Types that are not listed start with
+ * {@link EMPTY_COMPONENT_LIMITS}. A chain is replaced at 0.5 % stretch (11–13-speed; 0.75 % suits 5–10-speed), topped
+ * up every 300 km, and cleaned and relubricated every 1500 km. Documented in `docs/store/components.md` §2.3.
+ */
+export const DEFAULT_COMPONENT_LIMITS: Readonly<ComponentLimitsByType> = Object.freeze({
+  chain: Object.freeze({ distance: null, stretch: 0.5, lubrication: 300, cleaning: 1500 }),
+});

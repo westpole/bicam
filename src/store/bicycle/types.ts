@@ -25,10 +25,17 @@ export interface Bicycle {
   frameGeometry: string | null;
   /** Ids of the components currently installed. Stored components only, on no other bicycle, unique, up to 100. */
   components: ComponentId[];
+  /** Total distance in kilometres, as the rider entered it. Starts at 0. */
+  odometer: number;
+  /** Date of the `odometer` reading, or `null` when unknown. */
+  odometerDate: IsoDate | null;
 }
 
-/** Every user-editable bicycle field: a {@link Bicycle} without its generated `id`. */
-export type BicycleDetails = Omit<Bicycle, 'id'>;
+/**
+ * Every bicycle field the bicycle form edits: a {@link Bicycle} without its generated `id` and its odometer, which has
+ * its own action.
+ */
+export type BicycleDetails = Omit<Bicycle, 'id' | 'odometer' | 'odometerDate'>;
 
 /**
  * Raw bicycle data as a form provides it. Normalized by `normalizeBicycleInput` before validation: strings are
@@ -84,16 +91,18 @@ export type BicycleResult = { ok: true; bicycle: Bicycle } | { ok: false; errors
 /** Bicycle actions on `useAppStore`. A failed action never changes state. See `docs/store/bicycle.md` §4. */
 export interface BicycleActions {
   /**
-   * Normalizes and validates `input`, generates a new id, stores the bicycle, and appends the id to `allIds`. Fails
-   * with `duplicate` on `name` when another bicycle has the same name, ignoring case, and on `components` with
-   * `notFound` when a listed component is not stored or `alreadyInstalled` when it is on another bicycle.
+   * Normalizes and validates `input`, generates a new id, stores the bicycle with an odometer of 0 and no odometer
+   * date, and appends the id to `allIds`. Fails with `duplicate` on `name` when another bicycle has the same name,
+   * ignoring case, and on `components` with `notFound` when a listed component is not stored or `alreadyInstalled`
+   * when it is on another bicycle.
    */
   addBicycle: (input: BicycleInput) => BicycleResult;
   /**
    * Merges `changes` into the bicycle stored under `id`, then normalizes and validates it. Renaming is allowed; the
    * new name must not clash with another bicycle's name. `null` clears an optional field; omitted or `undefined`
-   * keys are unchanged. Fails with `notFound` on `id` for an unknown id, and on `components` with `notFound` when a
-   * listed component is not stored or `alreadyInstalled` when it is on another bicycle.
+   * keys are unchanged. The odometer fields are always kept, and such keys in `changes` are ignored. Fails with
+   * `notFound` on `id` for an unknown id, and on `components` with `notFound` when a listed component is not stored
+   * or `alreadyInstalled` when it is on another bicycle.
    */
   updateBicycle: (id: BicycleId, changes: BicycleUpdate) => BicycleResult;
   /** Removes the bicycle stored under `id`. Returns `false`, changing nothing, for an unknown id. */

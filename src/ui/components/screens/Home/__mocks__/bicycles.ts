@@ -17,6 +17,8 @@ function makeBicycle(id: string, name: string): Bicycle {
     size: null,
     frameGeometry: null,
     components: [],
+    odometer: 0,
+    odometerDate: null,
   };
 }
 

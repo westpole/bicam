@@ -28,7 +28,7 @@ export const createBicycleSlice: StateCreator<AppStore, [], [], BicycleActions> 
       return { ok: false, errors };
     }
 
-    const bicycle: Bicycle = { id: createBicycleId(), ...details };
+    const bicycle: Bicycle = { id: createBicycleId(), ...details, odometer: 0, odometerDate: null };
 
     set((state) => ({
       bicycle: {
@@ -47,15 +47,16 @@ export const createBicycleSlice: StateCreator<AppStore, [], [], BicycleActions> 
       return { ok: false, errors: [{ field: 'id', code: 'notFound' }] };
     }
 
-    // normalizeBicycleInput picks known fields only, so an `id` key in `changes` is ignored.
-    const details = normalizeBicycleInput({ ...collection.byId[id], ...definedChanges(changes) });
+    const stored = collection.byId[id];
+    // normalizeBicycleInput picks known fields only, so `id` and odometer keys in `changes` are ignored.
+    const details = normalizeBicycleInput({ ...stored, ...definedChanges(changes) });
     const errors = validateBicycleInCollection(collection, get().components, details, id);
 
     if (errors.length > 0) {
       return { ok: false, errors };
     }
 
-    const bicycle: Bicycle = { id, ...details };
+    const bicycle: Bicycle = { id, ...details, odometer: stored.odometer, odometerDate: stored.odometerDate };
 
     set((state) => ({
       bicycle: { byId: { ...state.bicycle.byId, [id]: bicycle }, allIds: state.bicycle.allIds },

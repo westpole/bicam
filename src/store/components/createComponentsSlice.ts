@@ -13,6 +13,7 @@ import type {
 } from './types';
 import { createComponentId } from './utilities/createComponentId';
 import { createHistoryEntryId } from './utilities/createHistoryEntryId';
+import { getDefaultLimits } from './utilities/getDefaultLimits';
 import { hasComponent } from './utilities/hasComponent';
 import { isBicycleComponentType } from './utilities/isBicycleComponentType';
 import { isHistoryValidForType } from './utilities/isHistoryValidForType';
@@ -39,7 +40,18 @@ export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActi
       return validation;
     }
 
-    const component: BicycleComponent = { id: createComponentId(), ...validation.details, history: [] };
+    const { type, model } = validation.details;
+    const component: BicycleComponent = {
+      id: createComponentId(),
+      type,
+      model,
+      label: null,
+      initialDistance: 0,
+      limits: getDefaultLimits(type),
+      usage: [],
+      retired: null,
+      history: [],
+    };
 
     set((state) => ({
       components: {
@@ -59,13 +71,14 @@ export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActi
     }
 
     const stored = collection.byId[id];
-    // normalizeComponentInput picks known fields only, so `id` and `history` keys in `changes` are ignored.
+    // normalizeComponentInput picks known fields only, so keys of other stored fields in `changes` are ignored.
     const input = normalizeComponentInput({ ...stored, ...definedChanges(changes) });
     const validation = validateComponent(input);
+    // Once the component has been in use, a new type would move its distance to another kind of part.
     const hasTypeConflict =
       input.type !== stored.type &&
       isBicycleComponentType(input.type) &&
-      !isHistoryValidForType(input.type, stored.history);
+      (stored.usage.length > 0 || !isHistoryValidForType(input.type, stored.history));
     const typeErrors: ComponentValidationError[] = hasTypeConflict ? [{ field: 'type', code: 'notAllowed' }] : [];
 
     // A conflicting type is a known one, so `validation` has no other error for `type`.
@@ -84,7 +97,8 @@ export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActi
       return { ok: true, component: stored };
     }
 
-    const component: BicycleComponent = { id, type, model, history: stored.history };
+    const limits = type === stored.type ? stored.limits : getDefaultLimits(type);
+    const component: BicycleComponent = { ...stored, type, model, limits };
 
     set((state) => ({
       components: { byId: { ...state.components.byId, [id]: component }, allIds: state.components.allIds },

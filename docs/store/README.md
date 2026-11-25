@@ -100,7 +100,7 @@ src/store/
 │   └── __tests__/
 └── components/
     ├── types.ts            # BicycleComponent, ComponentHistoryEntry, inputs, ComponentCollection, results, errors
-    ├── constants.ts        # COMPONENT_LIMITS, COMPONENT_TYPES, per-type history rules, INITIAL_COMPONENT_COLLECTION
+    ├── constants.ts        # COMPONENT_LIMITS, COMPONENT_TYPES, per-type history rules, ACTIVE_LIMITS, default limits
     ├── createComponentsSlice.ts
     ├── utilities/          # one function per file
     └── __tests__/
@@ -118,9 +118,26 @@ Electron `file://` build alike. It loads synchronously while the store is create
   saved while they are placeholders; add them to `PersistedAppState`, `partialize`, `isPersistedAppState`,
   `mergePersistedState`, and the unchanged check in `createAppStorage` when they hold data.
 - **Changing an entity shape** needs a higher `APP_STORAGE_VERSION`, a migration in `migratePersistedState`, and updated
-  checks in `persistence/utilities/`. Without the migration, existing users start with an empty app.
-- **Loaded data is untrusted.** `isPersistedAppState` checks types, date formats, option codes, and references (a bicycle
-  lists stored components only). It does not check field limits, so tightening a limit never makes saved data unreadable.
+  checks in `persistence/utilities/`. Without the migration, existing users start with an empty app. Keep the checks of
+  the old version as they are (`*V1` files and the `*V1` types in `persistence/types.ts`), so a later change to today's
+  types cannot change what the migration accepts.
+- **The current version is 2.** Version 1 data is checked with `isPersistedAppStateV1` and upgraded by
+  `migrateFromVersion1`, keeping every bicycle, component, and history entry and their order:
+  - Bicycles get `odometer: 0` and `odometerDate: null`.
+  - Components get `label: null`, `retired: null`, and the default limits of their type (`DEFAULT_COMPONENT_LIMITS`).
+    `initialDistance` is the distance of the newest whole-component history entry that has one (latest `date`, then the
+    last one added); subcomponent entries are ignored; without such an entry it is 0.
+  - Assigned components start in use at odometer 0 with date `null`, unless their bicycle has more components of their
+    type than `ACTIVE_LIMITS` allows; then none of that type starts in use, because a wrong guess would credit the wrong
+    part. Spare components get `usage: []`. A component counts once per bicycle; one listed by two bicycles starts on, and counts for, the first one only.
+  - History entries get `lubricant: null` and `cleaned: null`.
+  - Version 1 data with a broken shape fails like any unreadable data (see below).
+- **Loaded data is untrusted.** `isPersistedAppState` checks types, date formats, option codes, and references: a bicycle
+  lists stored components only, and a component has at most one open usage period, on a stored bicycle that lists it
+  ([components.md §2.3](./components.md#23-usage-and-limits)). It does not check field limits, `ACTIVE_LIMITS`, period
+  counts, overlapping periods, or chain-only limits, so tightening a rule never makes saved data unreadable. It does not
+  look up `replacedPeriodId`, the bicycle of a closed period, or the bicycle in `retired`, because they may name
+  something that was removed.
 - **Data that cannot be loaded** (corrupt, wrong shape, or a version without a migration, such as after a downgrade) is
   copied to `bicam-app-store:backup:<timestamp>`, and the app starts empty. The same text is backed up only once. If the
   copy fails, nothing is saved until the app reloads, so the original stays intact. Backups are never deleted, and

@@ -6,6 +6,49 @@ import type { PersistedAppState } from '../persistence/types';
 
 const BICYCLE_INPUT: BicycleInput = { name: 'Roadie', company: 'Canyon', model: 'Ultimate', purchased: '2024-05-17' };
 
+/** Data as version 1 saved it: one bicycle with a chain and a cassette, a spare chain, and one history entry. */
+const V1_STATE = {
+  bicycle: {
+    byId: {
+      'bike-1': {
+        id: 'bike-1',
+        name: 'Roadie',
+        company: 'Canyon',
+        model: 'Ultimate',
+        purchased: null,
+        size: null,
+        frameGeometry: null,
+        components: ['chain-1', 'cassette-1'],
+      },
+    },
+    allIds: ['bike-1'],
+  },
+  components: {
+    byId: {
+      'chain-1': {
+        id: 'chain-1',
+        type: 'chain',
+        model: 'CN-M8100',
+        history: [
+          {
+            id: 'entry-1',
+            date: '2026-04-12',
+            installed: '2026-03-01',
+            distance: 412.5,
+            position: null,
+            subcomponent: null,
+            lubricated: '2026-04-12',
+            stretch: 0.25,
+          },
+        ],
+      },
+      'cassette-1': { id: 'cassette-1', type: 'cassette', model: 'CS-M8100', history: [] },
+      'chain-2': { id: 'chain-2', type: 'chain', model: 'X12', history: [] },
+    },
+    allIds: ['chain-1', 'cassette-1', 'chain-2'],
+  },
+};
+
 /**
  * Starts the app's store again, as a page load does: a new module instance that loads from `localStorage`.
  *
@@ -38,6 +81,12 @@ function readBackups(): Array<string | null> {
 }
 
 describe('useAppStore persistence', () => {
+  // Transforms the store's modules once, so the first test's `loadStore` does not run into the timeout on a busy machine.
+  beforeAll(async () => {
+    await import('../useAppStore');
+    localStorage.clear();
+  });
+
   beforeEach(() => {
     localStorage.clear();
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -98,6 +147,56 @@ describe('useAppStore persistence', () => {
     });
   });
 
+  it('upgrades version 1 data, keeping everything, and saves it as the current version', async () => {
+    localStorage.setItem(APP_STORAGE_KEY, JSON.stringify({ state: V1_STATE, version: 1 }));
+
+    const store = await loadStore();
+
+    const { bicycle, components } = store.getState();
+    expect(bicycle.allIds).toEqual(['bike-1']);
+    expect(bicycle.byId['bike-1']).toMatchObject({ components: ['chain-1', 'cassette-1'], odometer: 0 });
+    expect(components.allIds).toEqual(['chain-1', 'cassette-1', 'chain-2']);
+    expect(components.byId['chain-1']).toMatchObject({
+      initialDistance: 412.5,
+      usage: [{ bicycleId: 'bike-1', start: { date: null, odometer: 0 }, end: null }],
+      history: [{ id: 'entry-1', stretch: 0.25, lubricant: null, cleaned: null }],
+    });
+    expect(components.byId['cassette-1'].usage).toHaveLength(1);
+    expect(components.byId['chain-2'].usage).toEqual([]);
+    expect(readSaved()).toEqual({ state: { bicycle, components }, version: APP_STORAGE_VERSION });
+    expect(readBackups()).toEqual([]);
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it('loads upgraded version 1 data with more chains on a bicycle than can be in use', async () => {
+    const chains = ['chain-1', 'chain-2', 'chain-3'];
+    const state = {
+      bicycle: { byId: { 'bike-1': { ...V1_STATE.bicycle.byId['bike-1'], components: chains } }, allIds: ['bike-1'] },
+      components: {
+        byId: Object.fromEntries(chains.map((id) => [id, { id, type: 'chain', model: 'X12', history: [] }])),
+        allIds: chains,
+      },
+    };
+    localStorage.setItem(APP_STORAGE_KEY, JSON.stringify({ state, version: 1 }));
+
+    const { bicycle, components } = (await loadStore()).getState();
+
+    expect(bicycle.byId['bike-1'].components).toEqual(chains);
+    expect(chains.map((id) => components.byId[id].usage)).toEqual([[], [], []]);
+    expect(readSaved()?.version).toBe(APP_STORAGE_VERSION);
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it('keeps upgraded data after the next reload', async () => {
+    localStorage.setItem(APP_STORAGE_KEY, JSON.stringify({ state: V1_STATE, version: 1 }));
+    const before = (await loadStore()).getState();
+
+    const after = (await loadStore()).getState();
+
+    expect(after.components).toEqual(before.components);
+    expect(after.bicycle).toEqual(before.bicycle);
+  });
+
   it('starts on the home screen with the menu closed after a reload', async () => {
     const before = await loadStore();
     before.getState().addBicycle(BICYCLE_INPUT);
@@ -150,6 +249,8 @@ describe('useAppStore persistence', () => {
     ['an unexpected shape', `{"state":{"bicycle":5},"version":${APP_STORAGE_VERSION}}`],
     ['a newer version', `{"state":{"bicycle":{}},"version":${APP_STORAGE_VERSION + 1}}`],
     ['an unknown older version', '{"state":{"bicycle":{}},"version":0}'],
+    ['version 1 with a broken shape', '{"state":{"bicycle":{"byId":{},"allIds":[]},"components":5},"version":1}'],
+    ['version 2 data in the version 1 shape', `{"state":${JSON.stringify(V1_STATE)},"version":2}`],
   ])('starts empty and backs up saved data with %s before overwriting it', async (_label, raw) => {
     localStorage.setItem(APP_STORAGE_KEY, raw);
 
