@@ -142,7 +142,8 @@ export const HomeWithBicycles: Story = {
 };
 
 /**
- * Home → details flow: click the second card, see its details placeholder, then leave it through the menu.
+ * Home → details flow: click the second card, see its details placeholder, leave it through the menu, then go back
+ * home with the title link.
  *
  * @param context - The story context.
  */
@@ -160,6 +161,9 @@ async function playHomeToDetails({ canvas, canvasElement, userEvent }: Parameter
   await userEvent.click(await canvas.findByRole('button', { name: 'Add bicycle' }));
   await waitFor(() => expect(canvas.queryByRole('navigation')).not.toBeInTheDocument());
   await expect(within(main).getByRole('heading', { level: 2, name: 'Add bicycle' })).toBeVisible();
+
+  await userEvent.click(canvas.getByRole('link', { name: 'Bicam' }));
+  await expect(within(main).getByRole('list', { name: 'Bicycles' })).toBeVisible();
 }
 
 export const HomeToDetails: Story = {

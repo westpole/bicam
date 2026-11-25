@@ -109,6 +109,7 @@ export async function expectMenuButtonBesideTitle(page: Page): Promise<void> {
  *   options, top to bottom, inside `<main>`'s area below the header.
  * - (b) The ✕ button closes it again.
  * - (c) Choosing "Add bicycle" closes the menu and shows its heading in `<main>`.
+ * - (d) Clicking the app title leaves that screen for the home screen without changing the URL.
  *
  * @param page - Page showing the app shell with the menu closed.
  * @example
@@ -149,7 +150,14 @@ export async function expectMenuFlow(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Open menu' }).click();
   await menu.getByRole('button', { name: 'Add bicycle' }).click();
   await expect(menu).toHaveCount(0);
-  await expect(page.getByRole('main').getByRole('heading', { level: 2, name: 'Add bicycle' })).toBeVisible();
+  const screenHeading = page.getByRole('main').getByRole('heading', { level: 2, name: 'Add bicycle' });
+  await expect(screenHeading).toBeVisible();
+
+  // (d) Back home through the title link.
+  const url = page.url();
+  await page.getByRole('link', { name: 'Bicam' }).click();
+  await expect(screenHeading).toHaveCount(0);
+  expect(page.url()).toBe(url);
 }
 
 /**

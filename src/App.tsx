@@ -17,7 +17,7 @@ import { Home } from '@ui/components/screens/Home/Home';
  * Root application view: the app shell with its header, the app menu in the shell's overlay slot, and the active
  * screen in the main viewport: on `home`, the user's bicycles as cards (empty when there are none); on
  * `bicycleDetails`, the selected bicycle's details placeholder; on `addBicycle`, the new-bicycle form, which returns to
- * `home` when saved or cancelled; otherwise the chosen menu screen.
+ * `home` when saved or cancelled; otherwise the chosen menu screen. The header title links back to `home`.
  *
  * `App` is the only component that reads `useAppStore`; it passes state and actions down as props, so the header,
  * menu, and screens stay presentational. The light/dark mode is owned by MUI's `ThemeProvider` (it applies the scheme
@@ -84,6 +84,7 @@ export function App() {
           menuOpen={isMenuOpen}
           menuId={APP_MENU_ID}
           onMenuClick={toggleMenu}
+          onHomeClick={goHome}
           colorScheme={shownColorScheme}
           onColorSchemeToggle={toggleColorScheme}
         />

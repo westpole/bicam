@@ -88,6 +88,69 @@ export const TruncatedTitle: Story = {
   },
 };
 
+/**
+ * Play function for the title link: it sits inside the `<h1>`, is as tall as the buttons, follows the AppBar text color,
+ * comes right after the menu button in tab order with a visible focus ring, and calls the handler.
+ */
+const playTitleLink = async ({ args, canvas, userEvent }: Parameters<NonNullable<Story['play']>>[0]) => {
+  const banner = canvas.getByRole('banner');
+  const heading = canvas.getByRole('heading', { level: 1, name: 'Bicam' });
+  const link = canvas.getByRole('link', { name: 'Bicam' });
+
+  await expect(heading).toContainElement(link);
+  await expect(link).toBeVisible();
+  await expect(getComputedStyle(link).color).toBe(getComputedStyle(banner).color);
+  await expect(link.getBoundingClientRect().height).toBeGreaterThanOrEqual(48);
+
+  await userEvent.tab();
+  await expect(canvas.getByRole('button', { name: 'Open menu' })).toHaveFocus();
+  await userEvent.tab();
+  await expect(link).toHaveFocus();
+  await expect(getComputedStyle(link).outlineStyle).not.toBe('none');
+  await expect(getComputedStyle(heading).overflow).toBe('visible');
+
+  await userEvent.click(link);
+  await expect(args.onHomeClick).toHaveBeenCalledTimes(1);
+  await expect(args.onMenuClick).not.toHaveBeenCalled();
+};
+
+/** With a home handler, the title is a link to the home screen. */
+export const TitleLink: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  args: { onHomeClick: fn() },
+  play: playTitleLink,
+};
+
+export const TitleLinkMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  args: { onHomeClick: fn() },
+  play: playTitleLink,
+};
+
+export const TitleLinkDark: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false }, colorScheme: 'dark' },
+  args: { onHomeClick: fn() },
+  play: async (context) => {
+    // The preview decorator applies the mode in an effect, so wait for the switch.
+    await waitFor(() => expect(context.canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
+    await playTitleLink(context);
+  },
+};
+
+/** Edge case: the linked title truncates like the plain one (see `TruncatedTitle`). */
+export const TruncatedTitleLink: Story = {
+  ...TruncatedTitle,
+  args: { onHomeClick: fn() },
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'Open menu' });
+    const link = canvas.getByRole('link', { name: 'Bicam' });
+
+    await expect(link.scrollWidth).toBeGreaterThan(link.clientWidth);
+    await expect(getComputedStyle(link).textOverflow).toBe('ellipsis');
+    await expect(button.getBoundingClientRect().width).toBeGreaterThanOrEqual(48);
+  },
+};
+
 export const Dark: Story = {
   globals: { viewport: { value: 'desktop', isRotated: false }, colorScheme: 'dark' },
   play: async (context) => {

@@ -253,8 +253,8 @@ Selecting the whole `bicycle` slice and mapping it in `useMemo` follows the stor
 - Adding, editing, or deleting bicycles from the UI. Adding came later, in batch #17: see
   [add-bicycle.md](./add-bicycle.md).
 - Real bicycle photos, sorting, filtering, search, or a max content width on desktop.
-- A back button or any way back to `home` from details other than the existing menu flow (still an open item from
-  [app-menu.md](./app-menu.md) §6).
+- A back button or any way back to `home` from details other than the existing menu flow (an open item from
+  [app-menu.md](./app-menu.md) §6). (Since implemented: the header title links to `home`.)
 - URL routing, deep links, and persisting the selected bicycle.
 - Swipe actions, long-press menus, or secondary actions on a card.
 
@@ -264,7 +264,7 @@ Selecting the whole `bicycle` slice and mapping it in `useMemo` follows the stor
 | --- | --- | --- |
 | Which event kinds get icons, and which events show on a card (upcoming, due, most recent)? | The `events` slice is a placeholder, so there is no data or type to map from. | Deferred to the batch that implements the `events` slice (§8.1). |
 | Should `home` show an empty-state message when there are no bicycles? | Today `home` is blank; a message would change the e2e visual baselines. | Not in this batch: render nothing. Add an empty state with a call to action when "Add bicycle" becomes a real form. |
-| How does the user get back to `home` from details? | Without it, details is a dead end apart from reloading. | Out of scope here; decide when the menu gets a "Home"/"Bicycles" item or the header gets a back button. |
+| How does the user get back to `home` from details? | Without it, details is a dead end apart from reloading. | Out of scope here; decide when the menu gets a "Home"/"Bicycles" item or the header gets a back button. Since resolved: the header title links to `home`. |
 
 ### 8.1 Deferred: event icons on row 2
 

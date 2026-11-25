@@ -235,7 +235,8 @@ props down:
 - Real forms or data for the four screens (placeholders only). "Add bicycle" became a real form in batch #17, see
   [add-bicycle.md](./add-bicycle.md).
 - A way back to `home` other than reloading (the first real screen will define that). "Add bicycle" returns there
-  on Save and Cancel; the other screens still have no way back.
+  on Save and Cancel. (Since implemented for every screen: the header title is a link to `home`, see
+  [app-shell-and-theme.md](./app-shell-and-theme.md) §3.)
 - URL routing, deep links, and browser back-button support.
 - Persisting the active screen or the menu state.
 - A drawer from the side, swipe-to-close, or closing by clicking outside (the menu fills row 2, so there is no outside).

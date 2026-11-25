@@ -31,7 +31,8 @@ Limits are in [bicycle.md §2](../store/bicycle.md#2-fields-and-limits).
   bicycle is the last card. On failure the form stays open, every invalid field shows its message, and the first one
   gets focus. Editing a field clears its message. An error for a field the form does not have (for example
   `components`) shows as a general alert above the buttons, until the next edit.
-- **Cancel** returns to `home` and drops the draft, without asking. Leaving through the menu also drops it.
+- **Cancel** returns to `home` and drops the draft, without asking. Leaving through the menu or the header
+  title link also drops it.
 - The store owns all validation; the form only translates error codes and adds no rules. Native validation is off
   (`noValidate`).
 - A half-typed date reads as `''` in browsers, which would be saved as "unknown". The form detects it
