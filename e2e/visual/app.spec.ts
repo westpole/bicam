@@ -2,11 +2,33 @@ import type { Page } from '@playwright/test';
 
 import en from '../../src/i18n/locales/en/translation.json' with { type: 'json' };
 import type { AppStoreState } from '../../src/store/types';
+import {
+  COMPONENTS,
+  SPARE_COMPONENTS,
+  toComponentCollection,
+} from '../../src/ui/components/ComponentList/__mocks__/components';
 import { BICYCLES, toBicycleCollection } from '../../src/ui/components/screens/Home/__mocks__/bicycles';
 import { expect, test } from '../fixtures/electron';
 
 /** Color schemes every scene is captured in. */
 const COLOR_SCHEMES = ['light', 'dark'] as const;
+
+/** The first bicycle fixture with every field filled in and the component fixtures installed. */
+const DETAILED_BICYCLE = {
+  ...BICYCLES[0],
+  purchased: '2024-05-17',
+  size: 'M/L',
+  frameGeometry: 'Stack 594 mm, reach 393 mm\nHead tube angle 71°',
+  components: COMPONENTS.map(({ id }) => id),
+};
+
+/** Store fields that show {@link DETAILED_BICYCLE} on the details screen, with spare components to include. */
+const DETAILS_SEED: Partial<AppStoreState> = {
+  activeScreen: 'bicycleDetails',
+  selectedBicycleId: DETAILED_BICYCLE.id,
+  bicycle: toBicycleCollection([DETAILED_BICYCLE]),
+  components: toComponentCollection([...COMPONENTS, ...SPARE_COMPONENTS]),
+};
 
 /**
  * Seeds the store through the E2E-only hook (`src/e2eHooks.ts`).
@@ -96,6 +118,28 @@ test.describe('main window visuals', () => {
         await name.blur();
 
         await expect(mainWindow).toHaveScreenshot(`add-bicycle-errors-${colorScheme}.png`);
+      });
+
+      test('bicycle details', async ({ mainWindow }) => {
+        await seedStore(mainWindow, DETAILS_SEED);
+        await expect(mainWindow.getByRole('heading', { level: 2, name: DETAILED_BICYCLE.name })).toBeVisible();
+        const list = mainWindow.getByRole('list', { name: en.screens.bicycleDetails.components.title });
+        await expect(list.getByRole('listitem')).toHaveCount(COMPONENTS.length);
+
+        await expect(mainWindow).toHaveScreenshot(`bicycle-details-${colorScheme}.png`);
+      });
+
+      test('include component dialog', async ({ mainWindow }) => {
+        await seedStore(mainWindow, DETAILS_SEED);
+        const { components, includeComponent } = en.screens.bicycleDetails;
+        // Opened without the pointer or keyboard, so no hover state, focus ring, or button ripple is captured.
+        await mainWindow.getByRole('button', { name: components.include }).dispatchEvent('click');
+        const dialog = mainWindow.getByRole('dialog', { name: includeComponent.title });
+        for (const { label } of Object.values(includeComponent.fields)) {
+          await expect(dialog.getByLabel(label)).toBeVisible();
+        }
+
+        await expect(mainWindow).toHaveScreenshot(`include-component-${colorScheme}.png`);
       });
     });
   }
