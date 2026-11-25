@@ -2,18 +2,16 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import Box from '@mui/material/Box';
 import { expect, waitFor } from 'storybook/test';
 
-import type { MenuScreen } from '@store/types';
-
 import { SCREEN_COMPONENTS } from './constants';
+import type { PropLessScreen } from './types';
 
 /** Story args: which placeholder screen to show. */
 interface PlaceholderStoryArgs {
-  screen: MenuScreen;
+  screen: PropLessScreen;
 }
 
 /** Expected `<h2>` text per screen (English). */
-const TITLES: Record<MenuScreen, string> = {
-  addBicycle: 'Add bicycle',
+const TITLES: Record<PropLessScreen, string> = {
   addComponent: 'Add component',
   addClothesSet: 'Add clothes set',
   beforeRideCheckIn: 'Before ride check-in',
@@ -46,7 +44,7 @@ const meta = {
   argTypes: {
     screen: { control: 'select', options: Object.keys(SCREEN_COMPONENTS) },
   },
-  args: { screen: 'addBicycle' },
+  args: { screen: 'addComponent' },
   play: async ({ args, canvas, canvasElement }) => {
     const heading = canvas.getByRole('heading', { level: 2, name: TITLES[args.screen] });
     await expect(heading).toBeVisible();
@@ -61,16 +59,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-export const AddBicycleDesktop: Story = {
-  globals: { viewport: { value: 'desktop', isRotated: false } },
-  args: { screen: 'addBicycle' },
-};
-
-export const AddBicycleMobile: Story = {
-  globals: { viewport: { value: 'mobile1', isRotated: false } },
-  args: { screen: 'addBicycle' },
-};
 
 export const AddComponentDesktop: Story = {
   globals: { viewport: { value: 'desktop', isRotated: false } },

@@ -1,19 +1,16 @@
 import type { ComponentType } from 'react';
 
-import type { MenuScreen } from '@store/types';
-
-import { AddBicycle } from './AddBicycle/AddBicycle';
 import { AddClothesSet } from './AddClothesSet/AddClothesSet';
 import { AddComponent } from './AddComponent/AddComponent';
 import { BeforeRideCheckIn } from './BeforeRideCheckIn/BeforeRideCheckIn';
+import type { PropLessScreen } from './types';
 
 /**
- * The component rendered in `<main>` for each screen reachable from the app menu. `home` and `bicycleDetails` have
- * no entry on purpose: `App` renders `Home` and `BicycleDetails` itself because they need props (the user's bicycles,
- * the selected bicycle).
+ * The component rendered in `<main>` for each menu screen that needs no props. `home`, `bicycleDetails`, and
+ * `addBicycle` have no entry on purpose: `App` renders `Home`, `BicycleDetails`, and `AddBicycle` itself because they
+ * need props (the user's bicycles, the selected bicycle, the form callbacks).
  */
-export const SCREEN_COMPONENTS: Readonly<Record<MenuScreen, ComponentType>> = {
-  addBicycle: AddBicycle,
+export const SCREEN_COMPONENTS: Readonly<Record<PropLessScreen, ComponentType>> = {
   addComponent: AddComponent,
   addClothesSet: AddClothesSet,
   beforeRideCheckIn: BeforeRideCheckIn,

@@ -108,7 +108,7 @@ export async function expectMenuButtonBesideTitle(page: Page): Promise<void> {
  * - (a) The menu button opens the menu: the button reads "Close menu" (✕) and the "Main menu" navigation lists the four
  *   options, top to bottom, inside `<main>`'s area below the header.
  * - (b) The ✕ button closes it again.
- * - (c) Choosing "Add bicycle" closes the menu and shows its placeholder heading in `<main>`.
+ * - (c) Choosing "Add bicycle" closes the menu and shows its heading in `<main>`.
  *
  * @param page - Page showing the app shell with the menu closed.
  * @example
@@ -150,4 +150,36 @@ export async function expectMenuFlow(page: Page): Promise<void> {
   await menu.getByRole('button', { name: 'Add bicycle' }).click();
   await expect(menu).toHaveCount(0);
   await expect(page.getByRole('main').getByRole('heading', { level: 2, name: 'Add bicycle' })).toBeVisible();
+}
+
+/**
+ * The add bicycle flow (design doc `docs/design/add-bicycle.md`):
+ *
+ * - (a) Saving with a half-typed purchase date and no model is rejected; both fields are marked invalid.
+ * - (b) The corrected form is saved and the new bicycle is listed on the home screen.
+ *
+ * @param page - Page showing the app shell with the menu closed and no bicycles.
+ * @example
+ * await expectAddBicycleFlow(page);
+ */
+export async function expectAddBicycleFlow(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  await page.getByRole('navigation', { name: 'Main menu' }).getByRole('button', { name: 'Add bicycle' }).click();
+
+  // (a) Rejected: the browser reports a half-typed date as an empty value, which must not be saved as "unknown".
+  const date = page.getByLabel('Purchase date');
+  await page.getByRole('textbox', { name: 'Name' }).fill('Gravel Grinder');
+  await page.getByRole('textbox', { name: 'Company' }).fill('Canyon');
+  await date.focus();
+  await date.pressSequentially('05');
+  await page.getByRole('button', { name: 'Save bicycle' }).click();
+  await expect(date).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByRole('textbox', { name: 'Model' })).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByRole('textbox', { name: 'Model' })).toBeFocused();
+
+  // (b) Saved.
+  await page.getByRole('textbox', { name: 'Model' }).fill('Grizl');
+  await date.fill('2024-05-17');
+  await page.getByRole('button', { name: 'Save bicycle' }).click();
+  await expect(page.getByRole('list', { name: 'Bicycles' }).getByRole('button')).toHaveText([/Gravel Grinder/]);
 }

@@ -9,13 +9,12 @@ import { expect, test } from '../fixtures/electron';
 const COLOR_SCHEMES = ['light', 'dark'] as const;
 
 /**
- * Seeds the store with the shared bicycle fixtures through the E2E-only hook (`src/main.tsx`).
+ * Seeds the store through the E2E-only hook (`src/e2eHooks.ts`).
  *
  * @param page - The main window.
+ * @param seed - Store fields to set. Typed here, because the payload passes through `page.evaluate` unchecked.
  */
-async function seedBicycles(page: Page): Promise<void> {
-  // Typed against the store here, because the payload passes through `page.evaluate` unchecked.
-  const seed: Pick<AppStoreState, 'bicycle'> = { bicycle: toBicycleCollection(BICYCLES) };
+async function seedStore(page: Page, seed: Partial<AppStoreState>): Promise<void> {
   await page.evaluate((state) => {
     if (!window.__BICAM_E2E_STORE__) {
       throw new Error('The E2E store hook is missing; build the renderer with `npm run build:web:e2e`');
@@ -67,12 +66,36 @@ test.describe('main window visuals', () => {
       });
 
       test('home with bicycles', async ({ mainWindow }) => {
-        await seedBicycles(mainWindow);
+        await seedStore(mainWindow, { bicycle: toBicycleCollection(BICYCLES) });
         const list = mainWindow.getByRole('list', { name: 'Bicycles' });
         await expect(list.getByRole('button')).toHaveCount(BICYCLES.length);
         await expect(list.getByText(en.home.bicycleList.eventsPlaceholder)).toHaveCount(BICYCLES.length);
 
         await expect(mainWindow).toHaveScreenshot(`home-bicycles-${colorScheme}.png`);
+      });
+
+      test('add bicycle form', async ({ mainWindow }) => {
+        await seedStore(mainWindow, { activeScreen: 'addBicycle' });
+        await expect(
+          mainWindow.getByRole('heading', { level: 2, name: en.screens.addBicycle.title }),
+        ).toBeVisible();
+
+        await expect(mainWindow).toHaveScreenshot(`add-bicycle-${colorScheme}.png`);
+      });
+
+      test('add bicycle form with errors', async ({ mainWindow }) => {
+        await seedStore(mainWindow, { activeScreen: 'addBicycle' });
+        const { fields, errors } = en.screens.addBicycle;
+        const name = mainWindow.getByRole('textbox', { name: fields.name.label });
+        await mainWindow.getByRole('textbox', { name: fields.size.label }).fill('M*L');
+        // Submit with the keyboard, so no hover state or button ripple is captured.
+        await name.press('Enter');
+        await expect(mainWindow.getByText(errors.required)).toHaveCount(3);
+        await expect(mainWindow.getByText(errors.invalidFormat.size)).toBeVisible();
+        // The rejected save focuses the first field; whether it looks focused depends on the OS window focus.
+        await name.blur();
+
+        await expect(mainWindow).toHaveScreenshot(`add-bicycle-errors-${colorScheme}.png`);
       });
     });
   }

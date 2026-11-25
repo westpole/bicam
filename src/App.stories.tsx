@@ -174,6 +174,39 @@ export const HomeToDetailsMobile: Story = {
   play: playHomeToDetails,
 };
 
+/**
+ * Add bicycle flow: a rejected save shows the errors, the corrected one lands on the home list.
+ *
+ * @param context - The story context.
+ */
+async function playAddBicycle({ canvas, canvasElement, userEvent }: Parameters<NonNullable<Story['play']>>[0]) {
+  const main = canvasElement.querySelector('main') as HTMLElement;
+  await expect(await within(main).findByRole('heading', { level: 2, name: 'Add bicycle' })).toBeVisible();
+
+  await userEvent.type(canvas.getByRole('textbox', { name: 'Name' }), 'Roadie');
+  await userEvent.type(canvas.getByRole('textbox', { name: 'Company' }), 'Trek');
+  await userEvent.type(canvas.getByRole('textbox', { name: 'Model' }), 'Madone');
+  await userEvent.click(canvas.getByRole('button', { name: 'Save bicycle' }));
+  await expect(canvas.getByText('Another bicycle already has this name.')).toBeVisible();
+
+  await userEvent.type(canvas.getByRole('textbox', { name: 'Name' }), ' 2');
+  await userEvent.click(canvas.getByRole('button', { name: 'Save bicycle' }));
+  const list = await within(main).findByRole('list', { name: 'Bicycles' });
+  await expect(within(list).getByRole('button', { name: 'Roadie 2' })).toBeVisible();
+}
+
+export const AddBicycleFlow: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  args: { initialState: { activeScreen: 'addBicycle', bicycle: toBicycleCollection(BICYCLES) } },
+  play: playAddBicycle,
+};
+
+export const AddBicycleFlowMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  args: { initialState: { activeScreen: 'addBicycle', bicycle: toBicycleCollection(BICYCLES) } },
+  play: playAddBicycle,
+};
+
 /** More cards than fit: `<main>` scrolls while the header stays put. */
 export const HomeScrollsMobile: Story = {
   globals: { viewport: { value: 'mobile1', isRotated: false } },
