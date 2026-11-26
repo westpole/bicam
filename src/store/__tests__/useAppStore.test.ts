@@ -186,7 +186,7 @@ describe('useAppStore', () => {
       expect(useAppStore.getState().components.byId[removed]).toBeUndefined();
     });
 
-    it('never shows subscribers a bicycle that lists a missing component', () => {
+    it('removes a component in one update that lists no missing component', () => {
       const removed = addComponent('Removed');
       addBicycleWith('Roadie', [removed]);
       const missing: string[][] = [];
@@ -195,7 +195,7 @@ describe('useAppStore', () => {
       useAppStore.getState().removeComponent(removed);
       unsubscribe();
 
-      expect(missing).toEqual([[], []]);
+      expect(missing).toEqual([[]]);
     });
 
     it.each(['unknown-id', 'toString', '__proto__'])(
@@ -234,7 +234,7 @@ describe('useAppStore', () => {
       expect(bicycle.byId[otherId]).toBe(other);
     });
 
-    it('never shows subscribers a missing component while a new one is added to a bicycle', () => {
+    it('adds a new component to a bicycle in one update that lists no missing component', () => {
       const bicycleId = addBicycleWith('Gravel', []);
       const missing: string[][] = [];
       const unsubscribe = useAppStore.subscribe((state) => missing.push(findMissingComponents(state)));
@@ -242,7 +242,7 @@ describe('useAppStore', () => {
       useAppStore.getState().addComponentToBicycle(bicycleId, { type: 'saddle', model: 'Argo' });
       unsubscribe();
 
-      expect(missing).toEqual([[], []]);
+      expect(missing).toEqual([[]]);
     });
 
     it('rejects an invalid new component for a bicycle without changing state', () => {
@@ -365,6 +365,20 @@ describe('useAppStore', () => {
 
       expect(useAppStore.getState()).toMatchObject({ activeScreen: 'home', selectedBicycleId: null });
       expect(useAppStore.getState().bicycle.allIds).toEqual([other]);
+    });
+
+    it('removes the shown bicycle and returns to home in one update', () => {
+      const id = addBicycle('Roadie');
+      useAppStore.getState().openBicycleDetails(id);
+      const states: Array<Pick<AppStoreState, 'activeScreen' | 'selectedBicycleId'> & { stored: boolean }> = [];
+      const unsubscribe = useAppStore.subscribe(({ activeScreen, selectedBicycleId, bicycle }) =>
+        states.push({ activeScreen, selectedBicycleId, stored: bicycle.allIds.includes(id) }),
+      );
+
+      useAppStore.getState().removeBicycle(id);
+      unsubscribe();
+
+      expect(states).toEqual([{ activeScreen: 'home', selectedBicycleId: null, stored: false }]);
     });
 
     it('keeps the selection when a different bicycle is removed', () => {

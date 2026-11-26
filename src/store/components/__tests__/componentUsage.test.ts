@@ -631,4 +631,164 @@ describe('component usage', () => {
       );
     });
   });
+
+  describe('components and bicycles that are removed (rule 8)', () => {
+    /**
+     * Records, for every update, whether the state could be saved and loaded again.
+     *
+     * @returns The recorded checks and a function that stops recording.
+     */
+    function watchPersistable(): { checks: boolean[]; stop: () => void } {
+      const checks: boolean[] = [];
+      const stop = useAppStore.subscribe((state) => checks.push(isPersistedAppState(state)));
+
+      return { checks, stop };
+    }
+
+    describe('updateBicycle', () => {
+      it('closes the open period of a component it no longer lists at the odometer and its date, in one update', () => {
+        seed(500, [{ id: 'chain-a', usage: [period('p-a', 100, null)] }, { id: 'tire-a', type: 'tire' }]);
+        expect(useAppStore.getState().setBicycleOdometer(BIKE, { odometer: 900, date: '2026-05-01' }).ok).toBe(true);
+        const before = useAppStore.getState().components;
+        const { checks, stop } = watchPersistable();
+
+        const result = useAppStore.getState().updateBicycle(BIKE, { components: ['tire-a'] });
+        stop();
+
+        expect(result).toMatchObject({ ok: true, bicycle: { components: ['tire-a'] } });
+        expect(checks).toEqual([true]);
+        const { components } = useAppStore.getState();
+        expect(components.byId['chain-a'].usage).toEqual([
+          { ...period('p-a', 100, null), end: { date: '2026-05-01', odometer: 900 } },
+        ]);
+        expect(components.byId['tire-a']).toBe(before.byId['tire-a']);
+        expect(components.allIds).toBe(before.allIds);
+        expect(distance('chain-a')).toBe(800);
+      });
+
+      it('drops a period of zero length', () => {
+        seed(500, [{ id: 'chain-a', usage: [period('p-old', 0, 200), period('p-a', 500, null)] }]);
+
+        expect(useAppStore.getState().updateBicycle(BIKE, { components: [] }).ok).toBe(true);
+
+        expect(readings('chain-a')).toEqual([[0, 200, null]]);
+      });
+
+      it('keeps the components when the list does not drop one in use', () => {
+        seed(500, [{ id: 'chain-a', usage: [period('p-a', 100, null)] }, { id: 'tire-a', type: 'tire' }]);
+        const before = useAppStore.getState().components;
+
+        expect(useAppStore.getState().updateBicycle(BIKE, { components: ['chain-a'], model: 'Ultimate' }).ok).toBe(
+          true,
+        );
+
+        expect(useAppStore.getState().components).toBe(before);
+      });
+
+      it('gives no period to a component that it adds, nor does addBicycle', () => {
+        seed(500, [{ id: 'chain-a' }, { id: 'tire-a', type: 'tire' }]);
+        useAppStore.setState((state) => ({
+          bicycle: { ...state.bicycle, byId: { ...state.bicycle.byId, [BIKE]: bicycle(BIKE, [], 500) } },
+        }));
+        const before = useAppStore.getState().components;
+
+        expect(useAppStore.getState().updateBicycle(BIKE, { components: ['chain-a'] }).ok).toBe(true);
+        const added = useAppStore
+          .getState()
+          .addBicycle({ name: 'Third', company: 'Canyon', model: 'Grizl', components: ['tire-a'] });
+
+        expect(added.ok).toBe(true);
+        expect(useAppStore.getState().components).toBe(before);
+      });
+
+      it('changes nothing and notifies no one when it is rejected', () => {
+        seed(500, [{ id: 'chain-a', usage: [period('p-a', 100, null)] }]);
+        const before = useAppStore.getState();
+        const listener = vi.fn();
+        const unsubscribe = useAppStore.subscribe(listener);
+
+        const result = useAppStore.getState().updateBicycle(BIKE, { name: OTHER_BIKE, components: [] });
+        unsubscribe();
+
+        expect(result).toEqual({ ok: false, errors: [{ field: 'name', code: 'duplicate' }] });
+        expect(listener).not.toHaveBeenCalled();
+        expect(useAppStore.getState()).toBe(before);
+      });
+    });
+
+    describe('removeBicycle', () => {
+      it('closes every open period on it in one update; the closed periods keep its id', () => {
+        seed(800, [
+          { id: 'chain-a', usage: [period('p-a', 300, null)] },
+          { id: 'tire-a', type: 'tire', usage: [period('p-t', 0, null)] },
+          { id: 'tire-b', type: 'tire', usage: [period('p-tb', 800, null)] },
+          { id: 'chain-b', usage: [period('p-b', 0, 300)] },
+        ]);
+        const before = useAppStore.getState().components;
+        const { checks, stop } = watchPersistable();
+
+        expect(useAppStore.getState().removeBicycle(BIKE)).toBe(true);
+        stop();
+
+        expect(checks).toEqual([true]);
+        const { components, bicycle: bicycles } = useAppStore.getState();
+        expect(bicycles.allIds).toEqual([OTHER_BIKE]);
+        expect(components.byId['chain-a'].usage).toEqual([
+          { ...period('p-a', 300, null), end: { date: null, odometer: 800 } },
+        ]);
+        expect(components.byId['tire-a'].usage).toEqual([
+          { ...period('p-t', 0, null), end: { date: null, odometer: 800 } },
+        ]);
+        expect(components.byId['tire-b'].usage).toEqual([]);
+        expect(components.byId['chain-b']).toBe(before.byId['chain-b']);
+        expect(components.allIds).toBe(before.allIds);
+      });
+
+      it('keeps the components when none is in use on it', () => {
+        seed(800, [{ id: 'chain-a' }]);
+        const before = useAppStore.getState().components;
+
+        expect(useAppStore.getState().removeBicycle(BIKE)).toBe(true);
+
+        expect(useAppStore.getState().components).toBe(before);
+      });
+
+      it.each(['missing-id', 'toString'])('returns false and changes nothing for the unknown id %j', (id) => {
+        seed(800, [{ id: 'chain-a', usage: [period('p-a', 300, null)] }]);
+        const before = useAppStore.getState();
+
+        expect(useAppStore.getState().removeBicycle(id)).toBe(false);
+        expect(useAppStore.getState()).toBe(before);
+      });
+    });
+
+    describe('removeComponent', () => {
+      it('removes a component in use and unlinks it in one update that can be saved', () => {
+        seed(800, [{ id: 'chain-a', usage: [period('p-a', 300, null)] }, { id: 'tire-a', type: 'tire' }]);
+        const { checks, stop } = watchPersistable();
+
+        expect(useAppStore.getState().removeComponent('chain-a')).toBe(true);
+        stop();
+
+        expect(checks).toEqual([true]);
+        expect(useAppStore.getState().bicycle.byId[BIKE].components).toEqual(['tire-a']);
+        expect(useAppStore.getState().components.allIds).toEqual(['tire-a']);
+      });
+    });
+
+    describe('addComponentToBicycle', () => {
+      it('stores and links the component in one update that can be saved', () => {
+        seed(800, []);
+        const { checks, stop } = watchPersistable();
+
+        const result = useAppStore.getState().addComponentToBicycle(BIKE, { type: 'chain', model: 'CN-M8100' });
+        stop();
+
+        if (!result.ok) throw new Error('the component was rejected');
+        expect(checks).toEqual([true]);
+        expect(result.component.usage).toEqual([]);
+        expect(useAppStore.getState().bicycle.byId[BIKE].components).toEqual([result.component.id]);
+      });
+    });
+  });
 });

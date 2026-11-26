@@ -1,6 +1,5 @@
 import type { StateCreator } from 'zustand';
 
-import { definedChanges } from '../common/utilities/definedChanges';
 import { toOptionalText } from '../common/utilities/toOptionalText';
 import { getMinimumOdometer } from '../components/utilities/getMinimumOdometer';
 import type { AppStore } from '../types';
@@ -8,8 +7,10 @@ import type { Bicycle, BicycleActions, BicycleResult } from './types';
 import { createBicycleId } from './utilities/createBicycleId';
 import { hasBicycle } from './utilities/hasBicycle';
 import { normalizeBicycleInput } from './utilities/normalizeBicycleInput';
+import { planBicycleUpdate } from './utilities/planBicycleUpdate';
 import { validateBicycleInCollection } from './utilities/validateBicycleInCollection';
 import { validateOdometerReading } from './utilities/validateOdometerReading';
+import { withoutBicycle } from './utilities/withoutBicycle';
 
 /**
  * Creates the bicycle actions for {@link useAppStore}. Data lives in `state.bicycle`; every successful write replaces
@@ -44,28 +45,15 @@ export const createBicycleSlice: StateCreator<AppStore, [], [], BicycleActions> 
   },
 
   updateBicycle: (id, changes): BicycleResult => {
-    const collection = get().bicycle;
+    const plan = planBicycleUpdate(get().bicycle, get().components, id, changes);
 
-    if (!hasBicycle(collection, id)) {
-      return { ok: false, errors: [{ field: 'id', code: 'notFound' }] };
+    if (!plan.ok) {
+      return plan;
     }
 
-    const stored = collection.byId[id];
-    // normalizeBicycleInput picks known fields only, so `id` and odometer keys in `changes` are ignored.
-    const details = normalizeBicycleInput({ ...stored, ...definedChanges(changes) });
-    const errors = validateBicycleInCollection(collection, get().components, details, id);
+    set({ bicycle: plan.collection });
 
-    if (errors.length > 0) {
-      return { ok: false, errors };
-    }
-
-    const bicycle: Bicycle = { id, ...details, odometer: stored.odometer, odometerDate: stored.odometerDate };
-
-    set((state) => ({
-      bicycle: { byId: { ...state.bicycle.byId, [id]: bicycle }, allIds: state.bicycle.allIds },
-    }));
-
-    return { ok: true, bicycle };
+    return { ok: true, bicycle: plan.bicycle };
   },
 
   removeBicycle: (id) => {
@@ -73,12 +61,7 @@ export const createBicycleSlice: StateCreator<AppStore, [], [], BicycleActions> 
       return false;
     }
 
-    set((state) => ({
-      bicycle: {
-        byId: Object.fromEntries(Object.entries(state.bicycle.byId).filter(([storedId]) => storedId !== id)),
-        allIds: state.bicycle.allIds.filter((storedId) => storedId !== id),
-      },
-    }));
+    set((state) => ({ bicycle: withoutBicycle(state.bicycle, id) }));
 
     return true;
   },

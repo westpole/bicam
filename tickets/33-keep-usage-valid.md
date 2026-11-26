@@ -1,7 +1,7 @@
 # [FEATURE] Keep usage valid when components or bicycles are removed
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #24)
 > **Sprint:** `24-ui-implement-add-component-screen`
@@ -34,11 +34,11 @@ Close open usage periods when a component leaves its bicycle or the bicycle is r
 **So that** I can use it again later
 
 **Acceptance Criteria:**
-- [ ] `updateBicycle` without a listed component closes that component's open period at the bicycle's odometer and
+- [x] `updateBicycle` without a listed component closes that component's open period at the bicycle's odometer and
       odometer date.
-- [ ] `removeBicycle` does the same for every component in use on it. Closed periods keep the removed bicycle's id.
-- [ ] Both store actions drop a zero-length period.
-- [ ] Ids added with `addBicycle` or `updateBicycle` get no period.
+- [x] `removeBicycle` does the same for every component in use on it. Closed periods keep the removed bicycle's id.
+- [x] Both store actions drop a zero-length period.
+- [x] Ids added with `addBicycle` or `updateBicycle` get no period.
 
 **Out of scope:** UI for taking a component off a bicycle.
 
@@ -50,10 +50,10 @@ Close open usage periods when a component leaves its bicycle or the bicycle is r
 **So that** saved data can always be loaded
 
 **Acceptance Criteria:**
-- [ ] `updateBicycle`, `removeBicycle`, `removeComponent`, and `addComponentToBicycle` notify subscribers once per call.
-- [ ] A rejected `updateBicycle` (duplicate name, for example) leaves usage unchanged and keeps the same references.
-- [ ] A subscriber that checks `isPersistedAppState` on every update never sees `false`.
-- [ ] Removing the selected bicycle still returns to `home`, in the same update.
+- [x] `updateBicycle`, `removeBicycle`, `removeComponent`, and `addComponentToBicycle` notify subscribers once per call.
+- [x] A rejected `updateBicycle` (duplicate name, for example) leaves usage unchanged and keeps the same references.
+- [x] A subscriber that checks `isPersistedAppState` on every update never sees `false`.
+- [x] Removing the selected bicycle still returns to `home`, in the same update.
 
 **Out of scope:** —
 
@@ -93,12 +93,12 @@ No visual assets (store-only ticket).
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Store tests passing; 90% branch threshold met
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function and type; docs updated
-- [ ] `code-reviewer` subagent run and findings addressed
-- [ ] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 33)`
+- [x] All acceptance criteria met
+- [x] Store tests passing; 90% branch threshold met
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function and type; docs updated
+- [x] `code-reviewer` subagent run and findings addressed
+- [x] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 33)`
 
 ---
 

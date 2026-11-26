@@ -366,6 +366,14 @@ export type ComponentUsagePlan =
   | { ok: true; component: BicycleComponent; changed: readonly BicycleComponent[] }
   | { ok: false; errors: ComponentUsageValidationError[] };
 
+/**
+ * A validated `addComponent` that is not written yet: the new component and the collection that holds it. Writing
+ * `collection` applies it, so the store can write other keys in the same `set`.
+ */
+export type ComponentAddPlan =
+  | { ok: true; component: BicycleComponent; collection: ComponentCollection }
+  | { ok: false; errors: ComponentValidationError[] };
+
 /** A usage period reduced to its readings, half-open: `[start, end)`; `end: null` means it is still open. */
 export interface UsageInterval {
   /** The odometer reading where it starts. */

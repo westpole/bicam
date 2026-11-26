@@ -97,6 +97,14 @@ export interface BicycleValidationError {
  */
 export type BicycleResult = { ok: true; bicycle: Bicycle } | { ok: false; errors: BicycleValidationError[] };
 
+/**
+ * A validated `updateBicycle` that is not written yet: the updated bicycle and the collection that holds it. Writing
+ * `collection` applies it, so the store can write other keys in the same `set`.
+ */
+export type BicycleUpdatePlan =
+  | { ok: true; bicycle: Bicycle; collection: BicycleCollection }
+  | { ok: false; errors: BicycleValidationError[] };
+
 /** Bicycle actions on `useAppStore`. A failed action never changes state. See `docs/store/bicycle.md` §4. */
 export interface BicycleActions {
   /**
@@ -111,10 +119,16 @@ export interface BicycleActions {
    * new name must not clash with another bicycle's name. `null` clears an optional field; omitted or `undefined`
    * keys are unchanged. The odometer fields are always kept, and such keys in `changes` are ignored. Fails with
    * `notFound` on `id` for an unknown id, and on `components` with `notFound` when a listed component is not stored
-   * or `alreadyInstalled` when it is on another bicycle.
+   * or `alreadyInstalled` when it is on another bicycle. New ids get no period. The `useAppStore` wrapper also closes
+   * the open period of each component that is no longer listed at the bicycle's odometer and odometer date, in the
+   * same `set` (rule 8); the slice action alone writes only `bicycle` and must not be called outside that wrapper.
    */
   updateBicycle: (id: BicycleId, changes: BicycleUpdate) => BicycleResult;
-  /** Removes the bicycle stored under `id`. Returns `false`, changing nothing, for an unknown id. */
+  /**
+   * Removes the bicycle stored under `id`. Returns `false`, changing nothing, for an unknown id. The `useAppStore`
+   * wrapper also closes the open period of every component on it at its odometer and odometer date, in the same `set`
+   * (rule 8); the slice action alone writes only `bicycle` and must not be called outside that wrapper.
+   */
   removeBicycle: (id: BicycleId) => boolean;
   /**
    * Stores a new odometer reading and its date on the bicycle stored under `id`. The reading may be lower than the

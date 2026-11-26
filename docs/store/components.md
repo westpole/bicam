@@ -248,6 +248,14 @@ starting the component again at the same reading.
 "The component's last period" is the last one in `usage`, which must name this bicycle; an earlier period on this
 bicycle is never reopened after one on another bicycle.
 
+**Rule 8:** taking a component off a bicycle (`updateBicycle` without it) or removing the bicycle closes its open
+period at the bicycle's odometer and `odometerDate` (`null` when unknown). The closed period keeps the bicycle's id, also
+when the bicycle is removed, and the component keeps its distance. A zero-length period is dropped (rule 7). Ids that
+`addBicycle` or `updateBicycle` adds get no period: the component rests (`closeUsageOnBicycle`).
+
+**Rule 11:** every action that writes both slices validates first, then writes them in one `set`. A failed action
+changes nothing, and no state that a subscriber sees, or that `persist` saves, breaks rule 1.
+
 `DEFAULT_COMPONENT_LIMITS` holds the suggested limits per type. Only `chain` has any: stretch 0.5 % (11–13-speed; 0.75 %
 suits 5–10-speed), a top-up every 300 km, and a clean and relubrication every 1500 km, with no distance limit. Other types
 start with `EMPTY_COMPONENT_LIMITS` (every limit `null`). `getDefaultLimits(type)` returns a copy.
@@ -331,7 +339,7 @@ In updates, `null` (or blank text) clears an optional field. An omitted or `unde
 | --- | --- | --- |
 | `addComponent(input)` | `ComponentResult` | Validates, generates an `id`, and appends the id to `allIds`. Stores the component with `usage: []`, `retired: null`, and `history: []`. A missing `initialDistance` is 0, and missing limits take the type's defaults. |
 | `updateComponent(id, changes)` | `ComponentResult` | Changes `type`, `model`, `label`, `initialDistance`, and single limits. Keeps `id`, `usage`, `retired`, `history`, and the place in `allIds`; such keys in `changes` are ignored. Omitted limits keep their stored values, unless the type changes: then they start from the new type's defaults. State is not written when nothing changes. A new `type` is rejected with `{ field: 'type', code: 'notAllowed' }` once the component has usage periods, or when any stored entry fails validation for it, whatever that entry's own error code is. A new `initialDistance` is rejected with `{ field: 'initialDistance', code: 'notAllowed' }` once a whole-component history entry has a distance; the unchanged value is accepted. |
-| `removeComponent(id)` | `boolean` | Removes the component and its history. `false` for an unknown id. The wrapper in `useAppStore.ts` also removes the id from every `Bicycle.components` (see [Links between slices](#links-between-slices)). |
+| `removeComponent(id)` | `boolean` | Removes the component, its history, and its usage. `false` for an unknown id. The wrapper in `useAppStore.ts` also removes the id from every `Bicycle.components` in the same `set` (see [Links between slices](#links-between-slices)). |
 | `addComponentHistoryEntry(componentId, input)` | `ComponentHistoryResult` | Validates against the component's type, generates an entry `id`, and appends the entry. |
 | `updateComponentHistoryEntry(componentId, entryId, changes)` | `ComponentHistoryResult` | Merges, normalizes, and validates. Keeps the entry's `id` and place. |
 | `removeComponentHistoryEntry(componentId, entryId)` | `boolean` | Removes one entry. `false` for an unknown component or entry. |
@@ -350,16 +358,25 @@ A failed action never changes state and does not call `set`. Lookups by componen
 - `addBicycle` and `updateBicycle` reject a component id that is not stored, with
   `{ field: 'components', code: 'notFound' }`, and one that is on another bicycle with
   `{ field: 'components', code: 'alreadyInstalled' }`. The bicycle slice may read `components`; it never writes it.
-- `removeComponent` is wrapped in `useAppStore.ts`. The wrapper returns `false` for an unknown id; otherwise it removes
-  the id from the bicycles that list it, then calls the slice action. In this order no subscriber sees a bicycle that
-  points at a missing component. The slices still write only their own key.
-- `addComponentToBicycle(bicycleId, input)` lives in `useAppStore.ts`. It stores a new component, then appends its id to
+- `updateBicycle`, `removeBicycle`, `removeComponent`, and `addComponentToBicycle` are written by wrappers in
+  `useAppStore.ts` (rule 11). Each builds the next collections with pure helpers that the slice actions share
+  (`planBicycleUpdate`, `withoutBicycle`, `planComponentAdd`, `withoutComponent`, `unlinkComponent`, `linkComponent`,
+  and `closeUsageOnBicycle`), then writes `bicycle` and `components` in one `set`, so subscribers are notified once and
+  never see a bicycle that points at a missing component or an open period on a bicycle that does not list it. The
+  slice actions still write only their own key.
+- `updateBicycle` compares the old and new `components` lists and closes the open periods of the ids that left
+  (rule 8). A rejected update writes nothing and keeps every reference.
+- `removeBicycle` closes the open periods of every component on it (rule 8) and, when it was the selected bicycle,
+  returns to `home` in the same `set`.
+- `removeComponent` returns `false` for an unknown id; otherwise it removes the component and its id from the bicycles
+  that list it.
+- `addComponentToBicycle(bicycleId, input)` lives in `useAppStore.ts`. It stores a new component and appends its id to
   the bicycle. It returns `BicycleComponentResult` (`src/store/types.ts`): `ComponentResult` plus two errors that are
   checked before the input and returned alone, `{ field: 'bicycleId', code: 'notFound' }` and
   `{ field: 'components', code: 'tooMany' }`. Nothing is stored on failure. A component that is already stored is added
   with `updateBicycle`.
 - `getInstalledComponents` lists a bicycle's components; `getSpareComponents` lists the components on no bicycle.
-- `removeBicycle` does not remove components: a rider keeps the parts when a bicycle goes.
+- `removeBicycle` does not remove components: a rider keeps the parts, and their distance, when a bicycle goes.
 
 ## 5. Results and error codes
 

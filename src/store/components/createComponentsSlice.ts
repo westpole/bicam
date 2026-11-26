@@ -12,7 +12,6 @@ import type {
   ComponentUsagePlan,
   ComponentUsageResult,
 } from './types';
-import { createComponentId } from './utilities/createComponentId';
 import { createHistoryEntryId } from './utilities/createHistoryEntryId';
 import { findUpdateConflicts } from './utilities/findUpdateConflicts';
 import { getDefaultLimits } from './utilities/getDefaultLimits';
@@ -21,10 +20,12 @@ import { hasSameDetails } from './utilities/hasSameDetails';
 import { mergeComponentErrors } from './utilities/mergeComponentErrors';
 import { normalizeComponentHistoryInput } from './utilities/normalizeComponentHistoryInput';
 import { normalizeComponentInput } from './utilities/normalizeComponentInput';
+import { planComponentAdd } from './utilities/planComponentAdd';
 import { planComponentStart } from './utilities/planComponentStart';
 import { planComponentStop } from './utilities/planComponentStop';
 import { validateComponent } from './utilities/validateComponent';
 import { validateComponentHistoryEntry } from './utilities/validateComponentHistoryEntry';
+import { withoutComponent } from './utilities/withoutComponent';
 
 /**
  * Creates the component actions for {@link useAppStore}. Data lives in `state.components`; every successful write
@@ -38,29 +39,15 @@ import { validateComponentHistoryEntry } from './utilities/validateComponentHist
  */
 export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActions> = (set, get) => ({
   addComponent: (input): ComponentResult => {
-    const base = { initialDistance: 0, limits: getDefaultLimits(input.type.trim()) };
-    const validation = validateComponent(normalizeComponentInput(input, base));
+    const plan = planComponentAdd(get().components, input);
 
-    if (!validation.ok) {
-      return validation;
+    if (!plan.ok) {
+      return plan;
     }
 
-    const component: BicycleComponent = {
-      id: createComponentId(),
-      ...validation.details,
-      usage: [],
-      retired: null,
-      history: [],
-    };
+    set({ components: plan.collection });
 
-    set((state) => ({
-      components: {
-        byId: { ...state.components.byId, [component.id]: component },
-        allIds: [...state.components.allIds, component.id],
-      },
-    }));
-
-    return { ok: true, component };
+    return { ok: true, component: plan.component };
   },
 
   updateComponent: (id, changes): ComponentResult => {
@@ -106,12 +93,7 @@ export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActi
       return false;
     }
 
-    set((state) => ({
-      components: {
-        byId: Object.fromEntries(Object.entries(state.components.byId).filter(([storedId]) => storedId !== id)),
-        allIds: state.components.allIds.filter((storedId) => storedId !== id),
-      },
-    }));
+    set((state) => ({ components: withoutComponent(state.components, id) }));
 
     return true;
   },
