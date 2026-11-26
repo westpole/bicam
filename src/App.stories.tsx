@@ -229,7 +229,7 @@ async function playIncludeComponent({ canvas, canvasElement, userEvent }: Parame
   await waitFor(() => expect(page.queryByRole('dialog')).not.toBeInTheDocument());
 
   await userEvent.click(canvas.getByRole('button', { name: 'Include component' }));
-  await userEvent.selectOptions(await page.findByRole('combobox', { name: 'Component' }), 'Chain: KMC X12');
+  await userEvent.selectOptions(await page.findByRole('combobox', { name: 'Component' }), 'Chain: KMC X12, 0 km');
   await userEvent.click(page.getByRole('button', { name: 'Include' }));
   await waitFor(() => expect(page.queryByRole('dialog')).not.toBeInTheDocument());
 

@@ -2,10 +2,15 @@ import { useEffect, useMemo } from 'react';
 import { useColorScheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
-import type { BicycleInput } from '@store/bicycle/types';
+import type { Bicycle, BicycleInput } from '@store/bicycle/types';
+import type { BicycleComponentType, ComponentInput, ComponentStartInput } from '@store/components/types';
+import { getComponentUsage } from '@store/components/utilities/getComponentUsage';
 import { getInstalledComponents } from '@store/components/utilities/getInstalledComponents';
 import { getMinimumOdometer } from '@store/components/utilities/getMinimumOdometer';
 import { getSpareComponents } from '@store/components/utilities/getSpareComponents';
+import { hasComponent } from '@store/components/utilities/hasComponent';
+import { hasRoomForType } from '@store/components/utilities/hasRoomForType';
+import { isBicycleComponentType } from '@store/components/utilities/isBicycleComponentType';
 import { useAppStore } from '@store/useAppStore';
 import { AppHeader } from '@ui/components/AppHeader/AppHeader';
 import { AppMenu } from '@ui/components/AppMenu/AppMenu';
@@ -13,16 +18,19 @@ import { APP_MENU_ID } from '@ui/components/AppMenu/constants';
 import { AppShell } from '@ui/components/AppShell/AppShell';
 import { AddBicycle } from '@ui/components/screens/AddBicycle/AddBicycle';
 import { AddComponent } from '@ui/components/screens/AddComponent/AddComponent';
+import type { AddComponentPlacement } from '@ui/components/screens/AddComponent/types';
 import { BicycleDetails } from '@ui/components/screens/BicycleDetails/BicycleDetails';
 import { SCREEN_COMPONENTS } from '@ui/components/screens/constants';
 import { Home } from '@ui/components/screens/Home/Home';
+import { getCurrentUse } from '@ui/components/screens/utilities/getCurrentUse';
 
 /**
  * Root application view: the app shell with its header, the app menu in the shell's overlay slot, and the active
  * screen in the main viewport: on `home`, the user's bicycles as cards (empty when there are none); on
  * `bicycleDetails`, the selected bicycle's details, distance, and components; on `addBicycle`, the new-bicycle form,
- * which returns to `home` when saved or cancelled; on `addComponent`, the spare-component form, which stays open after
- * a save so several parts can be added in a row; otherwise the chosen menu screen. The header title links back to `home`.
+ * which returns to `home` when saved or cancelled; on `addComponent`, the component form, which opens the chosen
+ * bicycle's details after a save, or stays open after saving a spare so several parts can be added in a row; otherwise
+ * the chosen menu screen. The header title links back to `home`.
  *
  * `App` is the only component that reads `useAppStore`; it passes state and actions down as props, so the header,
  * menu, and screens stay presentational. The light/dark mode is owned by MUI's `ThemeProvider` (it applies the scheme
@@ -44,9 +52,9 @@ export function App() {
   const navigateTo = useAppStore((state) => state.navigateTo);
   const addBicycle = useAppStore((state) => state.addBicycle);
   const addComponent = useAppStore((state) => state.addComponent);
-  const updateBicycle = useAppStore((state) => state.updateBicycle);
   const setBicycleOdometer = useAppStore((state) => state.setBicycleOdometer);
   const addComponentToBicycle = useAppStore((state) => state.addComponentToBicycle);
+  const assignComponent = useAppStore((state) => state.assignComponent);
   const openBicycleDetails = useAppStore((state) => state.openBicycleDetails);
   // `colorScheme` is the resolved scheme (`system` already applied). It is defined from the first render because
   // `main.tsx` (and the Storybook preview) pass `noSsr`; the light fallback only covers rendering without such a
@@ -60,6 +68,22 @@ export function App() {
   const bicycles = useMemo(
     () => bicycleCollection.allIds.map((id) => bicycleCollection.byId[id]),
     [bicycleCollection],
+  );
+
+  // Each bicycle with its components, for the component form's bicycle choice and its "has room" default.
+  const componentBicycles = useMemo(
+    () => bicycles.map((bicycle) => ({ bicycle, components: getInstalledComponents(componentCollection, bicycle) })),
+    [bicycles, componentCollection],
+  );
+
+  // `getComponentUsage` returns a new object on each call, so the spares and their distances are memoized here.
+  const spareComponents = useMemo(
+    () =>
+      getSpareComponents(componentCollection, bicycleCollection).map((component) => ({
+        component,
+        distance: getComponentUsage(component, bicycleCollection.byId).distance,
+      })),
+    [componentCollection, bicycleCollection],
   );
 
   // The selection may briefly point at a removed bicycle, so the details screen is only rendered when it resolves.
@@ -80,6 +104,35 @@ export function App() {
     }
 
     return result;
+  };
+
+  // A spare stays on the form, so several parts can be added in a row; one put on a bicycle opens its details.
+  const submitComponent = (input: ComponentInput, placement: AddComponentPlacement | null) => {
+    if (placement === null) {
+      return addComponent(input);
+    }
+
+    const result = addComponentToBicycle(placement.bicycleId, input, placement.use);
+
+    if (result.ok) {
+      openBicycleDetails(placement.bicycleId);
+    }
+
+    return result;
+  };
+
+  // The include dialog's quick path (rule 2): a component starts today, at the odometer, when its type has room.
+  // An unknown type gets no start; the store then rejects the input or the id.
+  const getDefaultUse = (bicycle: Bicycle, type: BicycleComponentType | null): ComponentStartInput | undefined =>
+    type !== null && hasRoomForType(getInstalledComponents(componentCollection, bicycle), type)
+      ? getCurrentUse(bicycle)
+      : undefined;
+
+  // The form's raw type, trimmed as the store trims it; `null` when it is not a known type.
+  const toKnownType = (type: string): BicycleComponentType | null => {
+    const trimmed = type.trim();
+
+    return isBicycleComponentType(trimmed) ? trimmed : null;
   };
 
   // `home`, `bicycleDetails`, `addBicycle`, and `addComponent` are rendered below with props.
@@ -108,17 +161,28 @@ export function App() {
       {ActiveScreen && <ActiveScreen />}
       {activeScreen === 'home' && <Home bicycles={bicycles} onBicycleClick={openBicycleDetails} />}
       {activeScreen === 'addBicycle' && <AddBicycle onSubmit={submitBicycle} onCancel={goHome} />}
-      {activeScreen === 'addComponent' && <AddComponent onSubmit={addComponent} onCancel={goHome} />}
+      {activeScreen === 'addComponent' && (
+        <AddComponent bicycles={componentBicycles} onSubmit={submitComponent} onCancel={goHome} />
+      )}
       {activeScreen === 'bicycleDetails' && selectedBicycle && (
         <BicycleDetails
           bicycle={selectedBicycle}
           components={getInstalledComponents(componentCollection, selectedBicycle)}
-          spareComponents={getSpareComponents(componentCollection, bicycleCollection)}
+          spareComponents={spareComponents}
           minimumOdometer={getMinimumOdometer(componentCollection, selectedBicycle.id)}
           onSetOdometer={(input) => setBicycleOdometer(selectedBicycle.id, input)}
-          onCreateComponent={(input) => addComponentToBicycle(selectedBicycle.id, input)}
+          onCreateComponent={(input) =>
+            addComponentToBicycle(selectedBicycle.id, input, getDefaultUse(selectedBicycle, toKnownType(input.type)))
+          }
           onIncludeComponent={(id) =>
-            updateBicycle(selectedBicycle.id, { components: [...selectedBicycle.components, id] })
+            assignComponent(
+              selectedBicycle.id,
+              id,
+              getDefaultUse(
+                selectedBicycle,
+                hasComponent(componentCollection, id) ? componentCollection.byId[id].type : null,
+              ),
+            )
           }
         />
       )}

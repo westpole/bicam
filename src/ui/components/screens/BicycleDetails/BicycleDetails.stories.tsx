@@ -12,6 +12,7 @@ import {
 } from '@ui/components/ComponentList/__mocks__/components';
 
 import { BICYCLES, LONG_NAME_BICYCLE } from '../Home/__mocks__/bicycles';
+import { IDENTICAL_CHAIN_SPARES, SPARES } from './__mocks__/spareComponents';
 import { BicycleDetails } from './BicycleDetails';
 
 /**
@@ -26,7 +27,7 @@ const acceptNew = (): BicycleComponentResult => ({ ok: true, component: COMPONEN
  *
  * @returns A successful result.
  */
-const acceptSpare = (): BicycleResult => ({ ok: true, bicycle: BICYCLES[0] });
+const acceptSpare = (): BicycleComponentResult => ({ ok: true, component: SPARE_COMPONENTS[0] });
 
 /**
  * Stands in for a store that accepts every odometer reading.
@@ -104,7 +105,7 @@ const meta = {
       odometerDate: '2026-04-12',
     },
     components: COMPONENTS,
-    spareComponents: SPARE_COMPONENTS,
+    spareComponents: SPARES,
     minimumOdometer: 1500,
     onSetOdometer: fn(acceptOdometer),
     onCreateComponent: fn(acceptNew),
@@ -218,18 +219,46 @@ export const IncludeDialog: Story = {
 /** A spare component with a long model is chosen, on the narrowest phone. */
 export const IncludeDialogSpareMobile: Story = {
   globals: { viewport: { value: 'mobile1', isRotated: false } },
-  args: { spareComponents: [LONG_MODEL_COMPONENT] },
+  args: { spareComponents: [{ component: { ...LONG_MODEL_COMPONENT, label: 'L'.repeat(20) }, distance: 123456.7 }] },
   play: async (context) => {
     const dialog = await openDialog(context);
-    await context.userEvent.selectOptions(
-      dialog.getByRole('combobox', { name: 'Component' }),
-      LONG_MODEL_COMPONENT.id,
-    );
+    await context.userEvent.selectOptions(dialog.getByRole('combobox', { name: 'Component' }), LONG_MODEL_COMPONENT.id);
     await expect(dialog.queryByRole('textbox')).not.toBeInTheDocument();
     const content = dialog.getByRole('combobox').closest('.MuiDialogContent-root') as HTMLElement;
     await expect(content.scrollWidth).toBeLessThanOrEqual(content.clientWidth);
     await expectNoOverflow(context.canvasElement);
   },
+};
+
+/**
+ * Opens the dialog with three identical chains and checks that their options tell them apart.
+ *
+ * @param context - The story context.
+ */
+async function playIdenticalSpares(context: Parameters<typeof openDialog>[0]) {
+  const dialog = await openDialog(context);
+  const options = within(dialog.getByRole('combobox', { name: 'Component' })).getAllByRole('option');
+
+  await expect(options.map((option) => option.textContent)).toEqual([
+    'New component',
+    'Chain: KMC X12 (A), 1,500 km',
+    'Chain: KMC X12 (B), 1,600 km',
+    'Chain: KMC X12 (C), 0 km',
+  ]);
+  await expectNoOverflow(context.canvasElement);
+}
+
+/** Three identical chains, told apart by label and distance. */
+export const IncludeDialogIdenticalSparesDesktop: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  args: { spareComponents: IDENTICAL_CHAIN_SPARES },
+  play: playIdenticalSpares,
+};
+
+export const IncludeDialogIdenticalSparesMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  args: { spareComponents: IDENTICAL_CHAIN_SPARES },
+  play: playIdenticalSpares,
 };
 
 /** Without spare components only a new one can be created. */

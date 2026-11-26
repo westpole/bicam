@@ -1,6 +1,6 @@
 import type { SxProps, Theme } from '@mui/material/styles';
 
-import type { AddComponentFieldDefinition, AddComponentValues } from './types';
+import type { AddComponentFieldDefinition, AddComponentPlacementDraft, AddComponentValues } from './types';
 
 /** The fields above the limits, top to bottom. Same order as the store's validation errors. */
 export const DETAIL_FIELDS: readonly AddComponentFieldDefinition[] = [
@@ -29,6 +29,9 @@ export const EMPTY_ADD_COMPONENT_VALUES: Readonly<AddComponentValues> = {
   'limits.lubrication': '',
   'limits.cleaning': '',
 };
+
+/** Placement of an untouched form: no bicycle (a spare), and "In use now" following its default. */
+export const EMPTY_PLACEMENT: Readonly<AddComponentPlacementDraft> = { bicycleId: '', inUse: null, replaces: '' };
 
 /** Keeps the form readable on wide screens; on phones it fills the width. */
 export const FORM_SX: SxProps<Theme> = { maxWidth: 'sm' };

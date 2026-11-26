@@ -1,11 +1,14 @@
+import type { Bicycle, BicycleId } from '@store/bicycle/types';
 import type {
   BicycleComponent,
   ComponentErrorCode,
   ComponentField,
+  ComponentId,
   ComponentInput,
   ComponentLimits,
-  ComponentResult,
+  ComponentStartInput,
 } from '@store/components/types';
+import type { BicycleComponentResult } from '@store/types';
 
 /** A component field the form edits: every validated field except the generated `id`. */
 export type AddComponentField = Exclude<ComponentField, 'id'>;
@@ -60,13 +63,55 @@ export type AddComponentNotice =
       kind: 'error';
     };
 
+/** A bicycle the new component can be put on, with the components it lists (`getInstalledComponents`). */
+export interface AddComponentBicycle {
+  /** The bicycle; its odometer is where use starts. */
+  bicycle: Bicycle;
+  /** Its components, which tell whether the type has room and which one a start can replace. */
+  components: readonly BicycleComponent[];
+}
+
+/** Where the new component goes: a bicycle, and whether it starts there. */
+export interface AddComponentPlacement {
+  /** The chosen bicycle. */
+  bicycleId: BicycleId;
+  /** When it starts: today, at the bicycle's odometer, and what it replaces. Left out when it rests. */
+  use?: ComponentStartInput;
+}
+
+/** The placement fields as chosen, before the defaults apply. */
+export interface AddComponentPlacementDraft {
+  /** The chosen bicycle's id, or `''` for none (a spare). */
+  bicycleId: string;
+  /** "In use now" as the rider set it, or `null` while it follows the default (on when the type has room). */
+  inUse: boolean | null;
+  /** The chosen component to replace, or `''` for none yet. */
+  replaces: string;
+}
+
+/** The placement fields as shown, with the defaults applied (`resolvePlacement`). */
+export interface ResolvedPlacement {
+  /** The chosen bicycle, or `undefined` for none. */
+  chosen: AddComponentBicycle | undefined;
+  /** Whether "In use now" is on. */
+  inUse: boolean;
+  /** Components of the type in use on the chosen bicycle, which a start can replace. */
+  candidates: readonly BicycleComponent[];
+  /** Whether the form asks which component to replace: in use now, and the type is full. */
+  needsReplace: boolean;
+  /** The component to replace, or `''`; preselected when there is one candidate. */
+  replaces: ComponentId | '';
+}
+
 /** Props for {@link AddComponent}. */
 export interface AddComponentProps {
+  /** Bicycles to choose from, in display order. Without any, the bicycle field is hidden and components are spare. */
+  bicycles: readonly AddComponentBicycle[];
   /**
-   * Called with the form's input on submit. Validates and stores a spare component, and returns the store's result, so
-   * the form can show the errors or name the stored component.
+   * Called on submit with the form's input and where the component goes (`null` for a spare). Validates and stores it,
+   * and returns the store's result, so the form can show the errors or name the stored component.
    */
-  onSubmit: (input: ComponentInput) => ComponentResult;
+  onSubmit: (input: ComponentInput, placement: AddComponentPlacement | null) => BicycleComponentResult;
   /** Called when the user leaves the form without saving. */
   onCancel: () => void;
 }

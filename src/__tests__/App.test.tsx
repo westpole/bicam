@@ -134,7 +134,9 @@ describe('App', () => {
 
     const names = ['Gravel Grinder', 'Roadie', 'Commuter'];
 
-    expect(within(list).getAllByRole('button')).toEqual(names.map((name) => within(list).getByRole('button', { name })));
+    expect(within(list).getAllByRole('button')).toEqual(
+      names.map((name) => within(list).getByRole('button', { name })),
+    );
   });
 
   it('updates the list when bicycles are added, renamed, or removed through the store', () => {
@@ -254,6 +256,76 @@ describe('App', () => {
     );
   });
 
+  it('puts a component from the form on a bicycle, in use, and opens that bicycle', async () => {
+    const [gravel, roadie] = BICYCLES;
+    useAppStore.setState({
+      activeScreen: 'addComponent',
+      bicycle: toBicycleCollection([gravel, { ...roadie, odometer: 2500 }]),
+    });
+    render(<App />);
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Type' }), 'chain');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Model' }), 'KMC X12');
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Bicycle' }), 'Roadie');
+    expect(screen.getByRole('switch', { name: 'In use now' })).toBeChecked();
+    await userEvent.click(screen.getByRole('button', { name: 'Save component' }));
+
+    const { activeScreen, selectedBicycleId, bicycle, components } = useAppStore.getState();
+    const [id] = components.allIds;
+    expect({ activeScreen, selectedBicycleId }).toEqual({
+      activeScreen: 'bicycleDetails',
+      selectedBicycleId: roadie.id,
+    });
+    expect(bicycle.byId[roadie.id].components).toEqual([id]);
+    expect(components.byId[id].usage).toEqual([
+      expect.objectContaining({ bicycleId: roadie.id, start: expect.objectContaining({ odometer: 2500 }), end: null }),
+    ]);
+    expect(screen.getByRole('heading', { level: 2, name: 'Roadie' })).toBeInTheDocument();
+  });
+
+  it('replaces the chain in use when the form adds a second one in use', async () => {
+    const [gravel] = BICYCLES;
+    useAppStore.setState({
+      activeScreen: 'addComponent',
+      bicycle: toBicycleCollection([{ ...gravel, odometer: 1500 }]),
+    });
+    render(<App />);
+
+    for (const label of ['A', 'B']) {
+      act(() => {
+        // Chain A rides 300 km before B replaces it; a swap at the same reading would drop A's period (rule 7).
+        if (label === 'B') {
+          useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 1800, date: null });
+        }
+
+        useAppStore.setState({ activeScreen: 'addComponent', selectedBicycleId: null });
+      });
+      await screen.findByRole('heading', { level: 2, name: 'Add component' });
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Type' }), 'chain');
+      await userEvent.type(screen.getByRole('textbox', { name: 'Model' }), 'KMC X12');
+      await userEvent.type(screen.getByRole('textbox', { name: 'Label' }), label);
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Bicycle' }), 'Gravel Grinder');
+
+      if (label === 'B') {
+        expect(screen.getByRole('switch', { name: 'In use now' })).not.toBeChecked();
+        await userEvent.click(screen.getByRole('switch', { name: 'In use now' }));
+        expect(screen.getByRole('combobox', { name: /Replaces/ })).toHaveDisplayValue('KMC X12 (A)');
+      }
+
+      await userEvent.click(screen.getByRole('button', { name: 'Save component' }));
+    }
+
+    const { components } = useAppStore.getState();
+    const [chainA, chainB] = components.allIds.map((id) => components.byId[id]);
+    expect(chainA.usage).toEqual([
+      expect.objectContaining({
+        start: expect.objectContaining({ odometer: 1500 }),
+        end: expect.objectContaining({ odometer: 1800 }),
+      }),
+    ]);
+    expect(chainB.usage).toEqual([expect.objectContaining({ end: null, replacedPeriodId: chainA.usage[0].id })]);
+  });
+
   it('keeps the "Add component" form open and explains the errors when the store rejects the component', async () => {
     useAppStore.setState({ activeScreen: 'addComponent' });
     render(<App />);
@@ -317,7 +389,13 @@ describe('App', () => {
 
   it('keeps the distance dialog open and names the lowest reading when the total is below a usage boundary', async () => {
     const usage = [
-      { id: 'p-1', bicycleId: BICYCLES[0].id, start: { date: null, odometer: 1500 }, end: null, replacedPeriodId: null },
+      {
+        id: 'p-1',
+        bicycleId: BICYCLES[0].id,
+        start: { date: null, odometer: 1500 },
+        end: null,
+        replacedPeriodId: null,
+      },
     ];
     useAppStore.setState({
       bicycle: toBicycleCollection([{ ...BICYCLES[0], odometer: 2000, components: [COMPONENTS[0].id] }]),
@@ -373,12 +451,12 @@ describe('App', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Include component' }));
     const choice = screen.getByRole('combobox', { name: 'Component' });
-    expect(within(choice).getAllByRole('option').map((option) => option.textContent)).toEqual([
-      'New component',
-      'Chain: KMC X12',
-      'Saddle: Fizik Argo',
-    ]);
-    await userEvent.selectOptions(choice, 'Saddle: Fizik Argo');
+    expect(
+      within(choice)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['New component', 'Chain: KMC X12, 0 km', 'Saddle: Fizik Argo, 0 km']);
+    await userEvent.selectOptions(choice, 'Saddle: Fizik Argo, 0 km');
     await userEvent.click(screen.getByRole('button', { name: 'Include' }));
 
     expect(useAppStore.getState().bicycle.byId[gravel.id].components).toEqual([
@@ -391,6 +469,57 @@ describe('App', () => {
       'Bar tapeSupacaz Super Sticky Kush',
       'SaddleFizik Argo',
     ]);
+  });
+
+  describe('starting included components (rule 2)', () => {
+    const [gravel] = BICYCLES;
+    const [spareChain, spareSaddle] = SPARE_COMPONENTS;
+    const chainInUse = {
+      ...COMPONENTS[0],
+      initialDistance: 100,
+      usage: [
+        { id: 'period-1', bicycleId: gravel.id, start: { date: null, odometer: 0 }, end: null, replacedPeriodId: null },
+      ],
+    };
+    const startedAt800 = [expect.objectContaining({ start: expect.objectContaining({ odometer: 800 }), end: null })];
+
+    beforeEach(() => {
+      useAppStore.setState({
+        activeScreen: 'bicycleDetails',
+        selectedBicycleId: gravel.id,
+        bicycle: toBicycleCollection([{ ...gravel, odometer: 800, components: [chainInUse.id] }]),
+        components: toComponentCollection([chainInUse, spareChain, spareSaddle]),
+      });
+    });
+
+    it('starts a spare whose type has room, and rests one whose type is full', async () => {
+      render(<App />);
+
+      for (const option of ['Chain: KMC X12, 0 km', 'Saddle: Fizik Argo, 0 km']) {
+        await userEvent.click(screen.getByRole('button', { name: 'Include component' }));
+        await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Component' }), option);
+        await userEvent.click(screen.getByRole('button', { name: 'Include' }));
+      }
+
+      const { bicycle, components } = useAppStore.getState();
+      expect(bicycle.byId[gravel.id].components).toEqual([chainInUse.id, spareChain.id, spareSaddle.id]);
+      expect(components.byId[spareChain.id].usage).toEqual([]);
+      expect(components.byId[spareSaddle.id].usage).toEqual(startedAt800);
+    });
+
+    it('starts a new component whose type has room', async () => {
+      render(<App />);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Include component' }));
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Type' }), 'Cassette');
+      await userEvent.type(screen.getByRole('textbox', { name: 'Model' }), 'CS');
+      await userEvent.click(screen.getByRole('button', { name: 'Include' }));
+
+      const { bicycle, components } = useAppStore.getState();
+      const cassetteId = components.allIds[3];
+      expect(bicycle.byId[gravel.id].components).toEqual([chainInUse.id, cassetteId]);
+      expect(components.byId[cassetteId].usage).toEqual(startedAt800);
+    });
   });
 
   it('keeps the dialog open and explains the errors when the store rejects the component', async () => {

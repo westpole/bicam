@@ -4,18 +4,19 @@ import { persist } from 'zustand/middleware';
 import { BICYCLE_LIMITS } from './bicycle/constants';
 import { createBicycleSlice } from './bicycle/createBicycleSlice';
 import { hasBicycle } from './bicycle/utilities/hasBicycle';
-import { linkComponent } from './bicycle/utilities/linkComponent';
 import { planBicycleUpdate } from './bicycle/utilities/planBicycleUpdate';
 import { unlinkComponent } from './bicycle/utilities/unlinkComponent';
 import { withoutBicycle } from './bicycle/utilities/withoutBicycle';
 import { createComponentsSlice } from './components/createComponentsSlice';
+import type { ComponentAssignPlan } from './components/types';
 import { closeUsageOnBicycle } from './components/utilities/closeUsageOnBicycle';
 import { hasComponent } from './components/utilities/hasComponent';
 import { planComponentAdd } from './components/utilities/planComponentAdd';
+import { planComponentAssign } from './components/utilities/planComponentAssign';
 import { withoutComponent } from './components/utilities/withoutComponent';
 import { INITIAL_APP_STATE } from './constants';
 import { createPersistOptions } from './persistence/createPersistOptions';
-import type { AppStore } from './types';
+import type { AppStore, BicycleComponentResult } from './types';
 
 /**
  * The app's single global store: shared UI state (menu visibility, active screen, selected bicycle) that the header,
@@ -24,9 +25,9 @@ import type { AppStore } from './types';
  * not, so the app always starts on `home` with the menu closed. See `docs/store/README.md`.
  *
  * Slices own their domain keys only. Navigation and cross-slice side effects of domain actions are added here (see
- * `updateBicycle`, `removeBicycle`, `removeComponent`, and `addComponentToBicycle`), so a slice never writes UI state
- * or another slice's key. These wrappers build the next collections with the same pure helpers as the slice actions
- * and write every changed key in one `set`, so `persist` never saves a state that breaks rule 1.
+ * `updateBicycle`, `removeBicycle`, `removeComponent`, `addComponentToBicycle`, and `assignComponent`), so a slice
+ * never writes UI state or another slice's key. These wrappers build the next collections with the same pure helpers
+ * as the slice actions and write every changed key in one `set`, so `persist` never saves a state that breaks rule 1.
  *
  * Read it with atomic selectors so components only re-render for the fields they use.
  *
@@ -38,6 +39,23 @@ export const useAppStore = create<AppStore>()(
   persist((set, get, api) => {
     const bicycleSlice = createBicycleSlice(set, get, api);
     const componentsSlice = createComponentsSlice(set, get, api);
+
+    /**
+     * Writes a validated assign plan: both collections in one `set`, so no subscriber sees a bicycle that points at a
+     * missing component, or a link without its start. A failed plan is returned as it is, without calling `set`.
+     *
+     * @param plan - From `planComponentAssign`.
+     * @returns The action's result.
+     */
+    const applyAssignPlan = (plan: ComponentAssignPlan): BicycleComponentResult => {
+      if (!plan.ok) {
+        return plan;
+      }
+
+      set({ bicycle: plan.bicycles, components: plan.components });
+
+      return { ok: true, component: plan.component };
+    };
 
     return {
       ...INITIAL_APP_STATE,
@@ -90,28 +108,31 @@ export const useAppStore = create<AppStore>()(
 
         return true;
       },
-      addComponentToBicycle: (bicycleId, input) => {
+      addComponentToBicycle: (bicycleId, input, use) => {
         const { bicycle, components } = get();
 
         if (!hasBicycle(bicycle, bicycleId)) {
           return { ok: false, errors: [{ field: 'bicycleId', code: 'notFound' }] };
         }
 
-        // Checked first, so a full bicycle never leaves a stored component behind.
+        // Checked before the input, so a full bicycle is reported alone and never leaves a stored component behind.
+        // `planComponentAssign` checks it again, which then always passes.
         if (bicycle.byId[bicycleId].components.length >= BICYCLE_LIMITS.componentsMaxCount) {
           return { ok: false, errors: [{ field: 'components', code: 'tooMany' }] };
         }
 
-        const plan = planComponentAdd(components, input);
+        const added = planComponentAdd(components, input);
 
-        if (!plan.ok) {
-          return plan;
+        if (!added.ok) {
+          return added;
         }
 
-        // One write, so no subscriber sees a bicycle that points at a missing component.
-        set({ bicycle: linkComponent(bicycle, bicycleId, plan.component.id), components: plan.collection });
+        return applyAssignPlan(planComponentAssign(bicycle, added.collection, bicycleId, added.component.id, use));
+      },
+      assignComponent: (bicycleId, componentId, use) => {
+        const { bicycle, components } = get();
 
-        return { ok: true, component: plan.component };
+        return applyAssignPlan(planComponentAssign(bicycle, components, bicycleId, componentId, use));
       },
       openMenu: () => set({ isMenuOpen: true }),
       closeMenu: () => set({ isMenuOpen: false }),

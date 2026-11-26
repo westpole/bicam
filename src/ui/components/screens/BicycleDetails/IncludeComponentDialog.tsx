@@ -15,12 +15,7 @@ import type { ComponentInput } from '@store/components/types';
 
 import { NATIVE_SELECT_SLOT_PROPS } from '../utilities/constants';
 import { getComponentErrorMessage } from '../utilities/getComponentErrorMessage';
-import {
-  DIALOG_FIELDS_SX,
-  EMPTY_COMPONENT_VALUES,
-  NEW_COMPONENT,
-  NEW_COMPONENT_FIELDS,
-} from './constants';
+import { DIALOG_FIELDS_SX, EMPTY_COMPONENT_VALUES, NEW_COMPONENT, NEW_COMPONENT_FIELDS } from './constants';
 import type {
   IncludeComponentAlert,
   IncludeComponentDialogProps,
@@ -32,6 +27,8 @@ import { toFormErrors } from './utilities/toFormErrors';
 
 /**
  * Dialog that puts a component on the shown bicycle: a new one (type and model), or a spare one when there are any.
+ * Each spare shows its type, model, label, and distance, so identical parts can be told apart. Whether it starts in use
+ * is the caller's choice (when its type has room).
  * Mount it to open it and unmount it to close it, so every opening starts with an empty draft and a second submit
  * cannot land while it closes.
  *
@@ -58,7 +55,7 @@ export function IncludeComponentDialog({
   const [alert, setAlert] = useState<IncludeComponentAlert | null>(null);
 
   // A chosen component that is no longer spare falls back to a new one, so the submit always matches what is shown.
-  const choice = spareComponents.some(({ id }) => id === chosenId) ? chosenId : NEW_COMPONENT;
+  const choice = spareComponents.some(({ component }) => component.id === chosenId) ? chosenId : NEW_COMPONENT;
 
   const handleChoiceChange = (value: string) => {
     setChosenId(value);
@@ -141,14 +138,17 @@ export function IncludeComponentDialog({
               slotProps={NATIVE_SELECT_SLOT_PROPS}
             >
               <option value={NEW_COMPONENT}>{t('screens.bicycleDetails.includeComponent.newComponent')}</option>
-              {spareComponents.map(({ id, type, model }) => (
-                <option key={id} value={id}>
-                  {t('screens.bicycleDetails.includeComponent.spareComponent', {
-                    type: t(`components.types.${type}`),
-                    model,
-                  })}
-                </option>
-              ))}
+              {spareComponents.map(({ component: { id, type, model, label }, distance }) => {
+                const options = { type: t(`components.types.${type}`), model, label, distance };
+
+                return (
+                  <option key={id} value={id}>
+                    {label === null
+                      ? t('screens.bicycleDetails.includeComponent.spareComponent', options)
+                      : t('screens.bicycleDetails.includeComponent.spareComponentWithLabel', options)}
+                  </option>
+                );
+              })}
             </TextField>
           )}
           {choice === NEW_COMPONENT &&
@@ -174,9 +174,7 @@ export function IncludeComponentDialog({
                   onChange={(event) => handleChange(field, event.target.value)}
                   slotProps={isType ? NATIVE_SELECT_SLOT_PROPS : undefined}
                 >
-                  {isType && (
-                    <option value="">{t('screens.bicycleDetails.includeComponent.chooseType')}</option>
-                  )}
+                  {isType && <option value="">{t('screens.bicycleDetails.includeComponent.chooseType')}</option>}
                   {isType &&
                     COMPONENT_TYPES.map((type) => (
                       <option key={type} value={type}>

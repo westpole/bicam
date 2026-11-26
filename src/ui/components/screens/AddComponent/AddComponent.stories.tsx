@@ -5,6 +5,7 @@ import { expect, fn, waitFor } from 'storybook/test';
 import type { ComponentResult } from '@store/components/types';
 
 import { COMPONENTS } from '../../ComponentList/__mocks__/components';
+import { FORM_BICYCLES } from './__mocks__/bicycles';
 import { AddComponent } from './AddComponent';
 
 /**
@@ -77,7 +78,7 @@ const meta = {
       </Box>
     ),
   ],
-  args: { onSubmit: fn(accept), onCancel: fn() },
+  args: { bicycles: [], onSubmit: fn(accept), onCancel: fn() },
   play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getByRole('heading', { level: 2, name: 'Add component' })).toBeVisible();
     await expect(canvas.getByRole('combobox', { name: 'Type' })).toBeVisible();
@@ -237,4 +238,51 @@ export const FormErrorMobile: Story = {
   globals: { viewport: { value: 'mobile1', isRotated: false } },
   args: { onSubmit: fn(rejectOther) },
   play: playFormError,
+};
+
+/**
+ * Chooses a chain for a bicycle whose chain is in use, turns "In use now" on, and checks that the one chain to
+ * replace is preselected.
+ *
+ * @param context - The story context.
+ */
+async function playOnBicycle({ args, canvas, canvasElement, userEvent }: PlayContext) {
+  await userEvent.selectOptions(canvas.getByRole('combobox', { name: 'Type' }), 'chain');
+  await userEvent.type(canvas.getByRole('textbox', { name: 'Model' }), 'KMC X12');
+  await userEvent.selectOptions(canvas.getByRole('combobox', { name: 'Bicycle' }), 'Gravel Grinder');
+
+  const inUse = canvas.getByRole('switch', { name: 'In use now' });
+  await expect(inUse).not.toBeChecked();
+  await userEvent.click(inUse);
+  await expect(inUse).toBeChecked();
+  await expect(canvas.getByRole('combobox', { name: /Replaces/ })).toHaveDisplayValue('KMC X12 (A)');
+  await userEvent.click(canvas.getByRole('button', { name: 'Save component' }));
+
+  await expect(args.onSubmit).toHaveBeenCalledWith(
+    expect.objectContaining({ type: 'chain' }),
+    expect.objectContaining({ use: expect.objectContaining({ odometer: 1500, replaces: 'component-gravel-chain' }) }),
+  );
+  await expectNoOverflow(canvasElement);
+}
+
+/** With bicycles: the bicycle, "In use now", and the component to replace. */
+export const OnBicycleDesktop: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  args: { bicycles: FORM_BICYCLES },
+  play: playOnBicycle,
+};
+
+export const OnBicycleMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  args: { bicycles: FORM_BICYCLES },
+  play: playOnBicycle,
+};
+
+export const OnBicycleDark: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false }, colorScheme: 'dark' },
+  args: { bicycles: FORM_BICYCLES },
+  play: async (context) => {
+    await waitForDark(context.canvasElement);
+    await playOnBicycle(context);
+  },
 };

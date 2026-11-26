@@ -2,22 +2,20 @@ import { ThemeProvider } from '@mui/material/styles';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { BicycleResult } from '@store/bicycle/types';
 import { COMPONENT_TYPES } from '@store/components/constants';
-import type { BicycleComponent } from '@store/components/types';
 import type { BicycleComponentResult, BicycleComponentValidationError } from '@store/types';
 import { COMPONENTS, SPARE_COMPONENTS } from '@ui/components/ComponentList/__mocks__/components';
 import { theme } from '@ui/theme';
 
-import { BICYCLES } from '../Home/__mocks__/bicycles';
+import { IDENTICAL_CHAIN_SPARES, SPARES } from './__mocks__/spareComponents';
 import { IncludeComponentDialog } from './IncludeComponentDialog';
-import type { IncludeComponentDialogProps } from './types';
+import type { IncludeComponentDialogProps, SpareComponent } from './types';
 
 /** What the mocked store returns, and the spare components to offer. */
 interface DialogSetup {
-  spareComponents?: readonly BicycleComponent[];
+  spareComponents?: readonly SpareComponent[];
   createResult?: BicycleComponentResult;
-  includeResult?: BicycleResult;
+  includeResult?: BicycleComponentResult;
 }
 
 /**
@@ -29,7 +27,7 @@ interface DialogSetup {
 function renderDialog({
   spareComponents = [],
   createResult = { ok: true, component: COMPONENTS[0] },
-  includeResult = { ok: true, bicycle: BICYCLES[0] },
+  includeResult = { ok: true, component: SPARE_COMPONENTS[1] },
 }: DialogSetup = {}) {
   const onCreateComponent = vi.fn<IncludeComponentDialogProps['onCreateComponent']>(() => createResult);
   const onIncludeComponent = vi.fn<IncludeComponentDialogProps['onIncludeComponent']>(() => includeResult);
@@ -41,7 +39,7 @@ function renderDialog({
    * @param spares - The spare components to offer.
    * @returns The dialog inside the app theme.
    */
-  const dialogWith = (spares: readonly BicycleComponent[]) => (
+  const dialogWith = (spares: readonly SpareComponent[]) => (
     <ThemeProvider theme={theme}>
       <IncludeComponentDialog
         spareComponents={spares}
@@ -53,7 +51,7 @@ function renderDialog({
   );
 
   const { rerender } = render(dialogWith(spareComponents));
-  const rerenderWith = (spares: readonly BicycleComponent[]) => rerender(dialogWith(spares));
+  const rerenderWith = (spares: readonly SpareComponent[]) => rerender(dialogWith(spares));
 
   return { onCreateComponent, onIncludeComponent, onClose, rerenderWith };
 }
@@ -97,7 +95,7 @@ describe('IncludeComponentDialog', () => {
   });
 
   it('submits a new component as typed and closes', async () => {
-    const { onCreateComponent, onIncludeComponent, onClose } = renderDialog({ spareComponents: SPARE_COMPONENTS });
+    const { onCreateComponent, onIncludeComponent, onClose } = renderDialog({ spareComponents: SPARES });
 
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Type' }), 'Bar tape');
     await userEvent.type(screen.getByRole('textbox', { name: 'Model' }), ' Supacaz ');
@@ -108,10 +106,22 @@ describe('IncludeComponentDialog', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('includes the chosen spare component, without the new component fields, and closes', async () => {
-    const { onCreateComponent, onIncludeComponent, onClose } = renderDialog({ spareComponents: SPARE_COMPONENTS });
+  it('tells identical spares apart by label and distance', () => {
+    renderDialog({ spareComponents: IDENTICAL_CHAIN_SPARES });
 
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Component' }), 'Saddle: Fizik Argo');
+    const options = within(screen.getByRole('combobox', { name: 'Component' })).getAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual([
+      'New component',
+      'Chain: KMC X12 (A), 1,500 km',
+      'Chain: KMC X12 (B), 1,600 km',
+      'Chain: KMC X12 (C), 0 km',
+    ]);
+  });
+
+  it('includes the chosen spare component, without the new component fields, and closes', async () => {
+    const { onCreateComponent, onIncludeComponent, onClose } = renderDialog({ spareComponents: SPARES });
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Component' }), 'Saddle: Fizik Argo, 0 km');
     expect(screen.queryByRole('combobox', { name: 'Type' })).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     await submit();
@@ -122,9 +132,9 @@ describe('IncludeComponentDialog', () => {
   });
 
   it('falls back to a new component when the chosen one is no longer spare', async () => {
-    const { onCreateComponent, onIncludeComponent, rerenderWith } = renderDialog({ spareComponents: SPARE_COMPONENTS });
-    const [chain, saddle] = SPARE_COMPONENTS;
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Component' }), saddle.id);
+    const { onCreateComponent, onIncludeComponent, rerenderWith } = renderDialog({ spareComponents: SPARES });
+    const [chain, saddle] = SPARES;
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Component' }), saddle.component.id);
 
     rerenderWith([chain]);
 
@@ -137,9 +147,9 @@ describe('IncludeComponentDialog', () => {
 
   it('drops the alert of a rejected spare component once a new one has field errors', async () => {
     const { rerenderWith } = renderDialog({
-      spareComponents: SPARE_COMPONENTS,
+      spareComponents: SPARES,
       createResult: { ok: false, errors: [{ field: 'type', code: 'required' }] },
-      includeResult: { ok: false, errors: [{ field: 'components', code: 'alreadyInstalled' }] },
+      includeResult: { ok: false, errors: [{ field: 'componentId', code: 'notAllowed' }] },
     });
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Component' }), SPARE_COMPONENTS[0].id);
     await submit();
@@ -201,26 +211,30 @@ describe('IncludeComponentDialog', () => {
   });
 
   it.each([
-    ['tooMany', 'This bicycle already has the maximum of 100 components.'],
-    ['notFound', 'The component could not be included.'],
-    ['alreadyInstalled', 'The component could not be included.'],
-  ] as const)('shows an alert until another choice when a spare component is rejected with %s', async (code, message) => {
-    const { onClose } = renderDialog({
-      spareComponents: SPARE_COMPONENTS,
-      includeResult: { ok: false, errors: [{ field: 'components', code }] },
-    });
-    const choice = screen.getByRole('combobox', { name: 'Component' });
+    ['components', 'tooMany', 'This bicycle already has the maximum of 100 components.'],
+    ['componentId', 'notFound', 'The component could not be included.'],
+    ['componentId', 'notAllowed', 'The component could not be included.'],
+    ['replaces', 'required', 'The component could not be included.'],
+  ] as const)(
+    'shows an alert until another choice when a spare is rejected on %s with %s',
+    async (field, code, message) => {
+      const { onClose } = renderDialog({
+        spareComponents: SPARES,
+        includeResult: { ok: false, errors: [{ field, code }] },
+      });
+      const choice = screen.getByRole('combobox', { name: 'Component' });
 
-    await userEvent.selectOptions(choice, 'Chain: KMC X12');
-    await submit();
+      await userEvent.selectOptions(choice, 'Chain: KMC X12, 412.5 km');
+      await submit();
 
-    expect(screen.getByRole('alert')).toHaveTextContent(message);
-    expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByRole('alert')).toHaveTextContent(message);
+      expect(onClose).not.toHaveBeenCalled();
 
-    await userEvent.selectOptions(choice, 'New component');
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Model' })).toBeInTheDocument();
-  });
+      await userEvent.selectOptions(choice, 'New component');
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: 'Model' })).toBeInTheDocument();
+    },
+  );
 
   it.each([
     ['Cancel', () => userEvent.click(screen.getByRole('button', { name: 'Cancel' }))],

@@ -5,12 +5,23 @@ import type { BicycleComponentResult } from '@store/types';
 /** A bicycle field shown in the details; also its translation key under `screens.addBicycle.fields`. */
 export type BicycleDetailsField = 'company' | 'model' | 'purchased' | 'size' | 'frameGeometry';
 
-/** Callbacks that put a component on the shown bicycle. Both return the store's result, so errors can be shown. */
+/**
+ * Callbacks that put a component on the shown bicycle, in use when its type has room there (the caller decides). Both
+ * return the store's result, so errors can be shown.
+ */
 interface IncludeComponentHandlers {
   /** Stores a new component and adds it to the bicycle. Called with the raw form values. */
   onCreateComponent: (input: ComponentInput) => BicycleComponentResult;
   /** Adds a stored component to the bicycle. */
-  onIncludeComponent: (id: ComponentId) => BicycleResult;
+  onIncludeComponent: (id: ComponentId) => BicycleComponentResult;
+}
+
+/** A stored component on no bicycle, with its distance (`getComponentUsage`), so identical spares can be told apart. */
+export interface SpareComponent {
+  /** The spare component. */
+  component: BicycleComponent;
+  /** Its own distance in kilometres. */
+  distance: number;
 }
 
 /** Props for {@link BicycleDetails}. */
@@ -19,8 +30,8 @@ export interface BicycleDetailsProps extends IncludeComponentHandlers {
   bicycle: Bicycle;
   /** The bicycle's components, in its own order. */
   components: readonly BicycleComponent[];
-  /** Stored components that are on no bicycle, in display order. */
-  spareComponents: readonly BicycleComponent[];
+  /** Stored components that are on no bicycle, with their distance, in display order. */
+  spareComponents: readonly SpareComponent[];
   /** The lowest odometer reading the bicycle may be set to (`getMinimumOdometer`), named when a total is too low. */
   minimumOdometer: number;
   /** Stores a new odometer reading. Returns the store's result, so errors can be shown. */
@@ -29,8 +40,8 @@ export interface BicycleDetailsProps extends IncludeComponentHandlers {
 
 /** Props for {@link IncludeComponentDialog}. */
 export interface IncludeComponentDialogProps extends IncludeComponentHandlers {
-  /** Stored components to choose from; without any, only a new component can be created. */
-  spareComponents: readonly BicycleComponent[];
+  /** Stored components to choose from, with their distance; without any, only a new component can be created. */
+  spareComponents: readonly SpareComponent[];
   /** Called after a component was included, and when the user leaves the dialog without including one. */
   onClose: () => void;
 }

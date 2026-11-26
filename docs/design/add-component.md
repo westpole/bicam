@@ -8,8 +8,9 @@
 
 ## 1. Goal
 
-Replace the "Add component" placeholder with a form that stores a spare component (on no bicycle), so a rider can add
-several identical parts, for example three chains labelled A, B, and C, without leaving the screen.
+Replace the "Add component" placeholder with a form that stores a component, either as a spare (on no bicycle), so a
+rider can add several identical parts, for example three chains labelled A, B, and C, without leaving the screen, or
+on a bicycle, in use when its type has room (#35).
 
 ## 2. Form
 
@@ -26,6 +27,9 @@ One column, at most `sm` wide. Fields, top to bottom:
 | Replace at stretch | No | Decimal text, `%` | Chain only; the hint gives 0.5 % (11–13-speed) and 0.75 % (5–10-speed) |
 | Top up lubricant every | No | Decimal text, `km` | Chain only |
 | Clean and relubricate every | No | Decimal text, `km` | Chain only |
+| Bicycle | No | Native select | Only when there are bicycles: "None" (default), then the bicycles by name |
+| In use now | | Switch | Only with a bicycle; the hint names the bicycle's odometer |
+| Replaces | Yes, when shown | Native select | Only when "In use now" is on and the type is full on that bicycle |
 
 Limits are in [components.md §2](../store/components.md#2-fields-and-limits).
 
@@ -45,13 +49,27 @@ Limits are in [components.md §2](../store/components.md#2-fields-and-limits).
   chain gets the suggestions again.
 - **On failure** every invalid field shows its message and the first one gets focus. Editing a field clears its message.
   An error for a field the form does not show appears as an alert above the buttons, until the next edit.
+- **Bicycle and use** (rule 2 in [components.md §2.3](../store/components.md#23-usage-and-limits)): "In use now"
+  starts on when the type has room on the chosen bicycle (`hasRoomForType`), and off otherwise; without a type yet it
+  is on. The rider can change it. Choosing another type or bicycle restores the default and drops the replaced
+  component. When it is on and the type is full, **Replaces** lists the components of that type in use there
+  (`getComponentsInUse`), by model and label; with one candidate it is preselected, otherwise "Choose a component"
+  comes first. `resolvePlacement` applies these defaults.
+- **Use** starts today at the bicycle's current odometer (`getCurrentUse`, shared with the include dialog). A late start is a swap with an earlier reading
+  (#36).
+- **Saved with a bicycle**, `App` opens that bicycle's details. **Saved as a spare**, the form clears as described
+  above. The form clears in both cases, so it is empty if it stays on screen.
+- A `replaces` error shows under **Replaces** and focuses it; other start errors (`odometer`, `date`, `components`)
+  show the general alert.
 - **Cancel** returns to `home` and drops the draft, without asking. Leaving through the menu or the header title link
   also drops it.
 - The store owns all validation; the form only translates error codes. Native validation is off (`noValidate`).
 
 ## 4. Wiring
 
-- `App` passes `onSubmit` (the store's `addComponent`; the screen stays open) and `onCancel` (`navigateTo('home')`).
+- `App` passes `bicycles` (each bicycle with `getInstalledComponents`, memoized), `onSubmit`, and `onCancel`
+  (`navigateTo('home')`). `onSubmit(input, placement)` calls `addComponent` for a spare (`placement: null`; the screen
+  stays open), or `addComponentToBicycle(bicycleId, input, use)` and then `openBicycleDetails`.
 - `addComponent` left `SCREEN_COMPONENTS` and `PropLessScreen`, as `addBicycle` did.
 - Component error texts live under `components.errors` in the translations, and `getComponentErrorMessage`
   (`src/ui/components/screens/utilities/`) translates them for this form and the include dialog on the bicycle details
@@ -59,5 +77,5 @@ Limits are in [components.md §2](../store/components.md#2-fields-and-limits).
 
 ## 5. Out of scope
 
-- Choosing a bicycle while adding (#35) and an edit screen.
+- An edit screen, and a start at an earlier reading.
 - A list of spare components.

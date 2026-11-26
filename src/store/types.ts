@@ -2,10 +2,13 @@ import type { BicycleActions, BicycleCollection, BicycleId } from './bicycle/typ
 import type {
   BicycleComponent,
   ComponentActions,
+  ComponentAssignField,
   ComponentCollection,
   ComponentErrorCode,
   ComponentField,
+  ComponentId,
   ComponentInput,
+  ComponentStartInput,
 } from './components/types';
 
 /**
@@ -50,15 +53,24 @@ export interface AppStoreState {
   history: ReservedSlice;
 }
 
-/** One failing field of {@link AppStoreActions.addComponentToBicycle}. At most one error per field. */
+/**
+ * One failing field of {@link AppStoreActions.addComponentToBicycle} or {@link AppStoreActions.assignComponent}. At
+ * most one error per field.
+ */
 export interface BicycleComponentValidationError {
-  /** A field of the component, `bicycleId` for an unknown bicycle, or `components` for a full one. */
-  field: ComponentField | 'bicycleId' | 'components';
+  /**
+   * A field of the component input; `bicycleId` or `componentId` for an unknown or unassignable id; `components` for a
+   * full bicycle; or a field of the start (`replaces`, `odometer`, `date`, `usage`).
+   */
+  field: ComponentField | ComponentAssignField;
   /** Why it failed. */
   code: ComponentErrorCode;
 }
 
-/** Result of {@link AppStoreActions.addComponentToBicycle}. `component` is the stored object; treat it as read-only. */
+/**
+ * Result of {@link AppStoreActions.addComponentToBicycle} and {@link AppStoreActions.assignComponent}. `component` is
+ * the stored object; treat it as read-only.
+ */
 export type BicycleComponentResult =
   | { ok: true; component: BicycleComponent }
   | { ok: false; errors: BicycleComponentValidationError[] };
@@ -80,11 +92,29 @@ export interface AppStoreActions extends BicycleActions, ComponentActions {
   openBicycleDetails: (id: BicycleId) => boolean;
   /**
    * Stores a new component (see {@link ComponentActions.addComponent}) and appends its id to the bicycle's
-   * `components`. Nothing is stored on failure. Before the input is checked, fails with only `notFound` on `bicycleId`
-   * for an unknown bicycle, or only `tooMany` on `components` when the bicycle is full. Use `updateBicycle` to add a
-   * component that is already stored.
+   * `components`; with `use`, also starts it there (see {@link ComponentActions.startComponentUse}). Everything is
+   * written in one `set`, and nothing is stored on failure. Before the input is checked, fails with only `notFound` on
+   * `bicycleId` for an unknown bicycle, or only `tooMany` on `components` when the bicycle is full. Input errors come
+   * next; the start's errors (`replaces`, `odometer`, `date`) only when the input is valid. Use
+   * {@link assignComponent} to add a component that is already stored.
    */
-  addComponentToBicycle: (bicycleId: BicycleId, input: ComponentInput) => BicycleComponentResult;
+  addComponentToBicycle: (
+    bicycleId: BicycleId,
+    input: ComponentInput,
+    use?: ComponentStartInput,
+  ) => BicycleComponentResult;
+  /**
+   * Appends a stored component's id to the bicycle's `components`; with `use`, also starts it there. Both change in
+   * one `set`, and nothing changes on failure. Fails with only `notFound` on `bicycleId` or `componentId` for an
+   * unknown id; only `notAllowed` on `componentId` when the component is retired or already on a bicycle; only
+   * `tooMany` on `components` when the bicycle is full; otherwise with the start's errors. Returns the stored
+   * component.
+   */
+  assignComponent: (
+    bicycleId: BicycleId,
+    componentId: ComponentId,
+    use?: ComponentStartInput,
+  ) => BicycleComponentResult;
   /**
    * Restores the initial state, including all domain data. Also overwrites the saved data with empty collections,
    * without a backup.

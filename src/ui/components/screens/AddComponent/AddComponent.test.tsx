@@ -4,21 +4,34 @@ import userEvent from '@testing-library/user-event';
 
 import { COMPONENT_TYPES } from '@store/components/constants';
 import type { ComponentResult, ComponentValidationError } from '@store/components/types';
+import type { BicycleComponentResult } from '@store/types';
 import { theme } from '@ui/theme';
 
 import { COMPONENTS } from '../../ComponentList/__mocks__/components';
+import { FORM_BICYCLES, GRAVEL_CHAIN, GRAVEL_WHEELS } from './__mocks__/bicycles';
 import { AddComponent } from './AddComponent';
-import type { AddComponentProps } from './types';
+import type { AddComponentBicycle, AddComponentProps } from './types';
 
 const CHAIN = COMPONENTS[0];
 
 /**
- * Renders the form inside the app theme.
+ * Renders the form inside the app theme, with no bicycles to choose from.
  *
  * @param results - What `onSubmit` returns, one per call; the last one repeats.
  * @returns The handlers passed to the form.
  */
 function renderForm(...results: ComponentResult[]) {
+  return renderFormWith([], ...results);
+}
+
+/**
+ * Renders the form inside the app theme.
+ *
+ * @param bicycles - The bicycles to choose from.
+ * @param results - What `onSubmit` returns, one per call; the last one repeats.
+ * @returns The handlers passed to the form.
+ */
+function renderFormWith(bicycles: readonly AddComponentBicycle[], ...results: BicycleComponentResult[]) {
   const queue = results.length > 0 ? results : [{ ok: true, component: CHAIN } as const];
   let call = 0;
   const onSubmit = vi.fn<AddComponentProps['onSubmit']>(() => queue[Math.min(call++, queue.length - 1)]);
@@ -26,7 +39,7 @@ function renderForm(...results: ComponentResult[]) {
 
   render(
     <ThemeProvider theme={theme}>
-      <AddComponent onSubmit={onSubmit} onCancel={onCancel} />
+      <AddComponent bicycles={bicycles} onSubmit={onSubmit} onCancel={onCancel} />
     </ThemeProvider>,
   );
 
@@ -116,13 +129,16 @@ describe('AddComponent', () => {
 
     await save();
 
-    expect(onSubmit).toHaveBeenCalledExactlyOnceWith({
-      type: 'chain',
-      model: 'KMC X12',
-      label: 'A',
-      initialDistance: 412.5,
-      limits: { distance: null, stretch: 0.5, lubrication: 300, cleaning: null },
-    });
+    expect(onSubmit).toHaveBeenCalledExactlyOnceWith(
+      {
+        type: 'chain',
+        model: 'KMC X12',
+        label: 'A',
+        initialDistance: 412.5,
+        limits: { distance: null, stretch: 0.5, lubrication: 300, cleaning: null },
+      },
+      null,
+    );
   });
 
   it('leaves out an empty starting distance and drops chain-only limits for other types, also edited ones', async () => {
@@ -135,12 +151,10 @@ describe('AddComponent', () => {
 
     await save();
 
-    expect(onSubmit).toHaveBeenCalledExactlyOnceWith({
-      type: 'saddle',
-      model: 'Argo',
-      label: '',
-      limits: { distance: null },
-    });
+    expect(onSubmit).toHaveBeenCalledExactlyOnceWith(
+      { type: 'saddle', model: 'Argo', label: '', limits: { distance: null } },
+      null,
+    );
   });
 
   it.each([
@@ -288,5 +302,189 @@ describe('AddComponent', () => {
 
     expect(onCancel).toHaveBeenCalledOnce();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  describe('bicycle and use', () => {
+    const TODAY = '2026-11-25';
+    const [gravel, road] = FORM_BICYCLES;
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 10, 25, 12) });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /** The bicycle select. */
+    const bicycleSelect = () => screen.getByRole('combobox', { name: 'Bicycle' });
+    /** The "In use now" switch. */
+    const inUseSwitch = () => screen.getByRole('switch', { name: 'In use now' });
+    /** The replaced component select, if shown. */
+    const replacesSelect = () => screen.queryByRole('combobox', { name: /Replaces/ });
+
+    /**
+     * Fills the type and model.
+     *
+     * @param type - The type value.
+     */
+    async function fillComponent(type: string) {
+      await userEvent.selectOptions(typeSelect(), type);
+      await userEvent.type(field('Model'), 'Model');
+    }
+
+    it('hides the bicycle field without bicycles', () => {
+      renderForm();
+
+      expect(screen.queryByRole('combobox', { name: 'Bicycle' })).not.toBeInTheDocument();
+    });
+
+    it('offers None and every bicycle, with None chosen and no use switch', () => {
+      renderFormWith(FORM_BICYCLES);
+
+      const options = within(bicycleSelect()).getAllByRole('option');
+      expect(options.map((option) => option.textContent)).toEqual(['None', 'Gravel Grinder', 'Roadie']);
+      expect(bicycleSelect()).toHaveDisplayValue('None');
+      expect(bicycleSelect()).toHaveAccessibleDescription('Optional. Leave None to keep it as a spare.');
+      expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    });
+
+    it('submits a spare with no placement when None is chosen', async () => {
+      const { onSubmit } = renderFormWith(FORM_BICYCLES);
+      await fillComponent('saddle');
+
+      await save();
+
+      expect(onSubmit.mock.calls[0][1]).toBeNull();
+    });
+
+    it('starts in use today at the odometer when the type has room', async () => {
+      const { onSubmit } = renderFormWith(FORM_BICYCLES);
+      await fillComponent('saddle');
+      await userEvent.selectOptions(bicycleSelect(), 'Gravel Grinder');
+
+      expect(inUseSwitch()).toBeChecked();
+      expect(inUseSwitch()).toHaveAccessibleDescription("Starts counting distance today, at the bicycle's 1,500 km.");
+      expect(replacesSelect()).not.toBeInTheDocument();
+      await save();
+
+      expect(onSubmit.mock.calls[0][1]).toEqual({
+        bicycleId: gravel.bicycle.id,
+        use: { date: TODAY, odometer: 1500, replaces: null },
+      });
+    });
+
+    it('rests when the type is full, and asks nothing until use is turned on', async () => {
+      const { onSubmit } = renderFormWith(FORM_BICYCLES);
+      await userEvent.selectOptions(bicycleSelect(), 'Gravel Grinder');
+      await fillComponent('chain');
+
+      expect(inUseSwitch()).not.toBeChecked();
+      expect(replacesSelect()).not.toBeInTheDocument();
+      await save();
+
+      expect(onSubmit.mock.calls[0][1]).toEqual({ bicycleId: gravel.bicycle.id });
+    });
+
+    it('preselects the only component to replace', async () => {
+      const { onSubmit } = renderFormWith(FORM_BICYCLES);
+      await userEvent.selectOptions(bicycleSelect(), 'Gravel Grinder');
+      await fillComponent('chain');
+      await userEvent.click(inUseSwitch());
+
+      expect(replacesSelect()).toBeRequired();
+      expect(replacesSelect()).toHaveDisplayValue('KMC X12 (A)');
+      await save();
+
+      expect(onSubmit.mock.calls[0][1]).toEqual({
+        bicycleId: gravel.bicycle.id,
+        use: { date: TODAY, odometer: 1500, replaces: GRAVEL_CHAIN.id },
+      });
+    });
+
+    it('asks which one to replace when there are several, and shows the store error there', async () => {
+      const { onSubmit } = renderFormWith(FORM_BICYCLES, {
+        ok: false,
+        errors: [{ field: 'replaces', code: 'required' }],
+      });
+      await userEvent.selectOptions(bicycleSelect(), 'Gravel Grinder');
+      await fillComponent('wheel');
+      await userEvent.click(inUseSwitch());
+
+      const select = replacesSelect() as HTMLElement;
+      const options = within(select).getAllByRole('option');
+      expect(options.map((option) => option.textContent)).toEqual([
+        'Choose a component',
+        'DT Swiss G 1800 (front)',
+        'DT Swiss G 1800 (rear)',
+      ]);
+      await save();
+
+      expect(onSubmit.mock.calls[0][1]?.use?.replaces).toBeNull();
+      expect(select).toHaveFocus();
+      expect(select).toHaveAccessibleDescription('This field is required.');
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+      await userEvent.selectOptions(select, GRAVEL_WHEELS[1].id);
+      expect(select).toHaveAccessibleDescription(
+        'This bicycle has no room for another one of this type. The replaced one rests.',
+      );
+    });
+
+    it('shows other errors on the replaced component as rejected', async () => {
+      renderFormWith(FORM_BICYCLES, { ok: false, errors: [{ field: 'replaces', code: 'notAllowed' }] });
+      await userEvent.selectOptions(bicycleSelect(), 'Gravel Grinder');
+      await fillComponent('chain');
+      await userEvent.click(inUseSwitch());
+      await save();
+
+      expect(replacesSelect()).toHaveAccessibleDescription('This value cannot be used.');
+    });
+
+    it('restores the default when the type or the bicycle changes', async () => {
+      renderFormWith(FORM_BICYCLES);
+      await userEvent.selectOptions(bicycleSelect(), 'Gravel Grinder');
+      await fillComponent('chain');
+      await userEvent.click(inUseSwitch());
+      expect(inUseSwitch()).toBeChecked();
+
+      await userEvent.selectOptions(bicycleSelect(), 'Roadie');
+      expect(inUseSwitch()).toBeChecked();
+      await userEvent.click(inUseSwitch());
+      expect(inUseSwitch()).not.toBeChecked();
+
+      await userEvent.selectOptions(typeSelect(), 'saddle');
+      expect(inUseSwitch()).toBeChecked();
+      expect(inUseSwitch()).toHaveAccessibleDescription("Starts counting distance today, at the bicycle's 300 km.");
+    });
+
+    it('lets the rider turn use off on a bicycle with room', async () => {
+      const { onSubmit } = renderFormWith(FORM_BICYCLES);
+      await userEvent.selectOptions(bicycleSelect(), 'Roadie');
+      await fillComponent('chain');
+      await userEvent.click(inUseSwitch());
+      await save();
+
+      expect(onSubmit.mock.calls[0][1]).toEqual({ bicycleId: road.bicycle.id });
+    });
+
+    it('clears the bicycle and use after a save', async () => {
+      renderFormWith(FORM_BICYCLES, { ok: true, component: CHAIN });
+      await userEvent.selectOptions(bicycleSelect(), 'Roadie');
+      await fillComponent('chain');
+      await save();
+
+      expect(bicycleSelect()).toHaveDisplayValue('None');
+      expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    });
+
+    it('shows an alert for a start error the form does not show', async () => {
+      renderFormWith(FORM_BICYCLES, { ok: false, errors: [{ field: 'odometer', code: 'outOfRange' }] });
+      await userEvent.selectOptions(bicycleSelect(), 'Roadie');
+      await fillComponent('chain');
+      await save();
+
+      expect(screen.getByRole('alert')).toHaveTextContent('The component could not be saved.');
+    });
   });
 });

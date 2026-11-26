@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 
 import { COMPONENT_LIMITS } from '@store/components/constants';
-import type { ComponentErrorCode, ComponentField } from '@store/components/types';
+import type { ComponentAssignField, ComponentErrorCode, ComponentField } from '@store/components/types';
 
 import { NUMBER_EXAMPLES } from './constants';
 
@@ -17,7 +17,11 @@ import { NUMBER_EXAMPLES } from './constants';
  * getComponentErrorMessage(t, 'label', 'tooLong');           // 'Use 20 characters or fewer.'
  * getComponentErrorMessage(t, 'limits.cleaning', 'outOfRange'); // 'Enter a number above 0 and up to 500,000.'
  */
-export function getComponentErrorMessage(t: TFunction, field: ComponentField, code: ComponentErrorCode): string {
+export function getComponentErrorMessage(
+  t: TFunction,
+  field: ComponentField | ComponentAssignField,
+  code: ComponentErrorCode,
+): string {
   switch (code) {
     case 'required':
       return t('components.errors.required');

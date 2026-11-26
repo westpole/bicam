@@ -1,9 +1,9 @@
 import type { SxProps, Theme } from '@mui/material/styles';
 
-import type { ComponentField } from '@store/components/types';
+import type { ComponentAssignField, ComponentField } from '@store/components/types';
 
 /** A valid value per number field, shown when the text typed there is not a number. Text fields have none. */
-export const NUMBER_EXAMPLES: Readonly<Partial<Record<ComponentField, string>>> = {
+export const NUMBER_EXAMPLES: Readonly<Partial<Record<ComponentField | ComponentAssignField, string>>> = {
   initialDistance: '412.5',
   'limits.distance': '4000',
   'limits.stretch': '0.75',

@@ -29,15 +29,17 @@ One column, at most `sm` wide:
 
 | Field | Shown | Input |
 | --- | --- | --- |
-| Component | Only when there are spare components | Select: "New component" (default) or a spare one |
+| Component | Only when there are spare components | Select: "New component" (default) or a spare one, shown as "Chain: KMC X12 (A), 1,500 km" (type, model, label if any, distance) |
 | Type | For a new component | Select of the 17 types |
 | Model | For a new component | Text |
 
 - A component is **spare** when it is on no bicycle. Components on another bicycle are not offered, because a part is
-  physically on one bicycle at a time. The store enforces this too (`alreadyInstalled`).
+  physically on one bicycle at a time. The store enforces this too (`notAllowed` on `componentId`).
+- Each spare shows its distance (`getComponentUsage`), so three identical chains can be told apart.
 - If the chosen spare component stops being spare while the dialog is open, the choice falls back to "New component".
-- **Include** stores a new component and adds it to the bicycle in one action, or adds the chosen spare one. On success
-  the dialog closes and the component is the last row.
+- **Include** stores a new component and adds it to the bicycle in one action, or adds the chosen spare one. Either
+  starts in use today, at the bicycle's odometer, when its type has room there (`hasRoomForType`, rule 2), and rests
+  otherwise; the dialog never replaces a component. On success the dialog closes and the component is the last row.
 - On failure the dialog stays open. Invalid fields show their message and the first one gets focus; a failure that
   belongs to no field (a full bicycle, for example) shows as an alert until the next edit.
 - **Cancel**, Escape, and a click outside drop the draft, without asking. Closing returns focus to the button.
@@ -67,8 +69,9 @@ One column, at most `sm` wide:
 
 ## 5. Wiring
 
-- `App` passes the bicycle, `getInstalledComponents(...)`, and `getSpareComponents(...)`, and wires the callbacks to
-  `addComponentToBicycle` (new) and `updateBicycle` (spare). It passes `getMinimumOdometer(...)` and wires
+- `App` passes the bicycle, `getInstalledComponents(...)`, and the spares with their distances (memoized, because
+  `getComponentUsage` returns a new object), and wires the callbacks to `addComponentToBicycle` (new) and
+  `assignComponent` (spare), each with a start when the type has room. It passes `getMinimumOdometer(...)` and wires
   `onSetOdometer` to `setBicycleOdometer`.
 - Which dialog is open, its draft, and its errors are local state. The store owns all validation.
 

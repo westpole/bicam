@@ -388,7 +388,7 @@ A failed action never changes state and does not call `set`. Lookups by componen
 - `addBicycle` and `updateBicycle` reject a component id that is not stored, with
   `{ field: 'components', code: 'notFound' }`, and one that is on another bicycle with
   `{ field: 'components', code: 'alreadyInstalled' }`. The bicycle slice may read `components`; it never writes it.
-- `updateBicycle`, `removeBicycle`, `removeComponent`, and `addComponentToBicycle` are written by wrappers in
+- `updateBicycle`, `removeBicycle`, `removeComponent`, `addComponentToBicycle`, and `assignComponent` are written by wrappers in
   `useAppStore.ts` (rule 11). Each builds the next collections with pure helpers that the slice actions share
   (`planBicycleUpdate`, `withoutBicycle`, `planComponentAdd`, `withoutComponent`, `unlinkComponent`, `linkComponent`,
   and `closeUsageOnBicycle`), then writes `bicycle` and `components` in one `set`, so subscribers are notified once and
@@ -400,11 +400,20 @@ A failed action never changes state and does not call `set`. Lookups by componen
   returns to `home` in the same `set`.
 - `removeComponent` returns `false` for an unknown id; otherwise it removes the component and its id from the bicycles
   that list it.
-- `addComponentToBicycle(bicycleId, input)` lives in `useAppStore.ts`. It stores a new component and appends its id to
-  the bicycle. It returns `BicycleComponentResult` (`src/store/types.ts`): `ComponentResult` plus two errors that are
-  checked before the input and returned alone, `{ field: 'bicycleId', code: 'notFound' }` and
-  `{ field: 'components', code: 'tooMany' }`. Nothing is stored on failure. A component that is already stored is added
-  with `updateBicycle`.
+- `addComponentToBicycle(bicycleId, input, use?)` lives in `useAppStore.ts`. It stores a new component and appends its
+  id to the bicycle; with `use` (`ComponentStartInput`: `{ date, odometer, replaces? }`), it also starts it there, as
+  `startComponentUse` would. It returns `BicycleComponentResult` (`src/store/types.ts`): `ComponentResult` plus two
+  errors that are checked before the input and returned alone, `{ field: 'bicycleId', code: 'notFound' }` and
+  `{ field: 'components', code: 'tooMany' }`. The start's errors keep their fields (`replaces`, `odometer`, `date`) and
+  are checked only when the input is valid. Nothing is stored on failure.
+- `assignComponent(bicycleId, componentId, use?)` puts a stored component on a bicycle, and with `use` starts it, in one
+  `set` (`planComponentAssign`). Each of these is returned alone, in order: `notFound` on `bicycleId`, then on
+  `componentId`; `notAllowed` on `componentId` when the component is retired or already listed on a bicycle (this one
+  included); `tooMany` on `components` when the bicycle is full. Then come the start's errors. Returns the stored
+  component. `updateBicycle` still adds ids that rest.
+- Rule 2: the UI decides whether a new or included component starts, with `hasRoomForType(installed, type)`: fewer than
+  `ACTIVE_LIMITS[type]` of that type in use on the bicycle. It is exact for a start at the current odometer, because no
+  period starts above it. `getComponentsInUse(installed, type)` lists the components a start can replace.
 - `getInstalledComponents` lists a bicycle's components; `getSpareComponents` lists the components on no bicycle.
   `getComponentUsage` reads `state.bicycle.byId` to derive a component's distance (§2.4).
 - `removeBicycle` does not remove components: a rider keeps the parts, and their distance, when a bicycle goes.

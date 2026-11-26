@@ -125,7 +125,8 @@
         "cancel": "Cancel",
         "newComponent": "New component",
         "chooseType": "Choose a type",
-        "spareComponent": "{{type}}: {{model}}",
+        "spareComponent": "{{type}}: {{model}}, {{distance, number}} km",
+        "spareComponentWithLabel": "{{type}}: {{model}} ({{label}}), {{distance, number}} km",
         "fields": {
           "component": {
             "label": "Component",
@@ -184,6 +185,10 @@
       "save": "Save component",
       "cancel": "Cancel",
       "chooseType": "Choose a type",
+      "noBicycle": "None",
+      "chooseReplaced": "Choose a component",
+      "replacedComponent": "{{model}}",
+      "replacedComponentWithLabel": "{{model}} ({{label}})",
       "limitsTitle": "Limits",
       "limitsHint": "When the part is due for replacement or care. Leave a field empty for no limit.",
       "saved": "{{type}} {{model}} was added.",
@@ -224,6 +229,18 @@
         "limitCleaning": {
           "label": "Clean and relubricate every",
           "hint": "Distance between full cleans."
+        },
+        "bicycle": {
+          "label": "Bicycle",
+          "hint": "Optional. Leave None to keep it as a spare."
+        },
+        "inUse": {
+          "label": "In use now",
+          "hint": "Starts counting distance today, at the bicycle's {{odometer, number}} km."
+        },
+        "replaces": {
+          "label": "Replaces",
+          "hint": "This bicycle has no room for another one of this type. The replaced one rests."
         }
       },
       "errors": {

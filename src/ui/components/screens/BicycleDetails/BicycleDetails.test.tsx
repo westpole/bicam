@@ -6,6 +6,7 @@ import { COMPONENTS, SPARE_COMPONENTS } from '@ui/components/ComponentList/__moc
 import { theme } from '@ui/theme';
 
 import { BICYCLES } from '../Home/__mocks__/bicycles';
+import { SPARES } from './__mocks__/spareComponents';
 import { BicycleDetails } from './BicycleDetails';
 import type { BicycleDetailsProps } from './types';
 
@@ -22,7 +23,7 @@ function renderDetails(props: Partial<BicycleDetailsProps> = {}) {
   }));
   const onIncludeComponent = vi.fn<BicycleDetailsProps['onIncludeComponent']>(() => ({
     ok: true,
-    bicycle: BICYCLES[0],
+    component: SPARE_COMPONENTS[0],
   }));
   const onSetOdometer = vi.fn<BicycleDetailsProps['onSetOdometer']>(() => ({ ok: true, bicycle: BICYCLES[0] }));
 
@@ -50,9 +51,7 @@ function renderDetails(props: Partial<BicycleDetailsProps> = {}) {
  * @returns The pairs, top to bottom.
  */
 function readDetails(): Array<[string | null, string | null]> {
-  return screen
-    .getAllByRole('term')
-    .map((term) => [term.textContent, term.nextElementSibling?.textContent ?? null]);
+  return screen.getAllByRole('term').map((term) => [term.textContent, term.nextElementSibling?.textContent ?? null]);
 }
 
 describe('BicycleDetails', () => {
@@ -159,7 +158,7 @@ describe('BicycleDetails', () => {
   });
 
   it('closes the dialog after a component was included and starts the next one empty', async () => {
-    const { onCreateComponent } = renderDetails({ spareComponents: SPARE_COMPONENTS });
+    const { onCreateComponent } = renderDetails({ spareComponents: SPARES });
 
     await userEvent.click(screen.getByRole('button', { name: 'Include component' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Model' }), 'CN-M8100{Enter}');

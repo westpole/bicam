@@ -1,4 +1,4 @@
-import type { BicycleId } from '../bicycle/types';
+import type { BicycleCollection, BicycleId } from '../bicycle/types';
 import type { IsoDate, TextErrorCode } from '../common/types';
 
 /** Generated component identifier (UUID v4). Assigned by `addComponent` and never changed. */
@@ -365,6 +365,25 @@ export type ComponentUsageResult =
 export type ComponentUsagePlan =
   | { ok: true; component: BicycleComponent; changed: readonly BicycleComponent[] }
   | { ok: false; errors: ComponentUsageValidationError[] };
+
+/** A field that an assign error can point at: a usage field, or `components` for a full bicycle. */
+export type ComponentAssignField = ComponentUsageField | 'components';
+
+/** One failing assign field. At most one error per field. */
+export interface ComponentAssignValidationError {
+  /** The failing field. */
+  field: ComponentAssignField;
+  /** Why it failed. */
+  code: ComponentErrorCode;
+}
+
+/**
+ * A validated assign (link, and optionally start) that is not written yet: the assigned component as it will be
+ * stored, and both next collections. Writing them in one `set` applies it (rule 11).
+ */
+export type ComponentAssignPlan =
+  | { ok: true; component: BicycleComponent; bicycles: BicycleCollection; components: ComponentCollection }
+  | { ok: false; errors: ComponentAssignValidationError[] };
 
 /**
  * A validated `addComponent` that is not written yet: the new component and the collection that holds it. Writing
