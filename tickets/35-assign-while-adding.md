@@ -1,7 +1,7 @@
 # [FEATURE] Assign a component while adding it
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #24)
 > **Sprint:** `24-ui-implement-add-component-screen`
@@ -32,10 +32,10 @@ the include dialog.
 **So that** nothing is half done
 
 **Acceptance Criteria:**
-- [ ] `addComponentToBicycle(bicycleId, input, use?)` and a new `assignComponent(bicycleId, componentId, use?)` link the
+- [x] `addComponentToBicycle(bicycleId, input, use?)` and a new `assignComponent(bicycleId, componentId, use?)` link the
       component and, with `use`, start it. `use` is `{ date, odometer, replaces? }`.
-- [ ] Nothing is stored when any part fails, and errors keep their field names.
-- [ ] `assignComponent` rejects an unknown bicycle or component, a full bicycle, and a component on another bicycle.
+- [x] Nothing is stored when any part fails, and errors keep their field names.
+- [x] `assignComponent` rejects an unknown bicycle or component, a full bicycle, and a component on another bicycle.
 
 **Out of scope:** taking a component off a bicycle.
 
@@ -47,12 +47,12 @@ the include dialog.
 **So that** I do it in one step
 
 **Acceptance Criteria:**
-- [ ] The form has "Bicycle" ("None" by default) and, with a bicycle, "In use now".
-- [ ] "In use now" starts on when the type has room on that bicycle, and off otherwise. The rider can change it.
-- [ ] When it is on and the type is full, the form asks which component to replace. With one candidate it is
+- [x] The form has "Bicycle" ("None" by default) and, with a bicycle, "In use now".
+- [x] "In use now" starts on when the type has room on that bicycle, and off otherwise. The rider can change it.
+- [x] When it is on and the type is full, the form asks which component to replace. With one candidate it is
       preselected.
-- [ ] Use starts at the bicycle's current odometer, today.
-- [ ] Saved with a bicycle: its details open. Saved without: as in #30.
+- [x] Use starts at the bicycle's current odometer, today.
+- [x] Saved with a bicycle: its details open. Saved without: as in #30.
 
 **Out of scope:** a late start; the rider can swap with an earlier reading in #36.
 
@@ -64,8 +64,8 @@ the include dialog.
 **So that** the quick path stays quick
 
 **Acceptance Criteria:**
-- [ ] The dialog keeps its fields. New and spare components start in use when the type has room, and rest otherwise.
-- [ ] Each spare option shows type, model, label (if any), and distance, so three identical chains can be told apart. A
+- [x] The dialog keeps its fields. New and spare components start in use when the type has room, and rest otherwise.
+- [x] Each spare option shows type, model, label (if any), and distance, so three identical chains can be told apart. A
       story shows this.
 
 ---
@@ -102,14 +102,14 @@ No mockups; follow the existing screens and the MUI theme.
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Store tests passing; 90% branch threshold met
-- [ ] React tests passing; desktop and mobile stories added or updated, with the a11y check passing
-- [ ] All new text goes through `t()`, with keys in the English file
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function and type; docs updated
-- [ ] `code-reviewer` subagent run and findings addressed
-- [ ] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 35)`
+- [x] All acceptance criteria met
+- [x] Store tests passing; 90% branch threshold met
+- [x] React tests passing; desktop and mobile stories added or updated, with the a11y check passing
+- [x] All new text goes through `t()`, with keys in the English file
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function and type; docs updated
+- [x] `code-reviewer` subagent run and findings addressed
+- [x] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 35)`
 
 ---
 

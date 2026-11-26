@@ -1,7 +1,7 @@
 # [FEATURE] Derive component distance and wear
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #24)
 > **Sprint:** `24-ui-implement-add-component-screen`
@@ -32,12 +32,12 @@ and its chain care state. It is the contract for the later events manager.
 **So that** I can replace it in time, whatever the bicycle's total is
 
 **Acceptance Criteria:**
-- [ ] `distance` and `distanceSinceInstalled` match the first three steps of the usage table, including 1400 km and 4500
+- [x] `distance` and `distanceSinceInstalled` match the first three steps of the usage table, including 1400 km and 4500
       km since installed for chain A and the cassette.
-- [ ] Includes `initialDistance`, a move between bicycles, and closed periods on a removed bicycle. Results have at most
+- [x] Includes `initialDistance`, a move between bicycles, and closed periods on a removed bicycle. Results have at most
       1 decimal (0.1 + 0.2 gives 0.3).
-- [ ] A component that was never used has its `initialDistance` and `null` since installed.
-- [ ] A limit counts as reached at or above its value; the function itself does not decide that.
+- [x] A component that was never used has its `initialDistance` and `null` since installed.
+- [x] A limit counts as reached at or above its value; the function itself does not decide that.
 
 **Out of scope:** indoor distance.
 
@@ -49,10 +49,10 @@ and its chain care state. It is the contract for the later events manager.
 **So that** I can care for the chain in time
 
 **Acceptance Criteria:**
-- [ ] The care table passes. A top-up does not change `distanceSinceCleaning`; a clean restarts both.
-- [ ] The newest entry wins by date, also when entries were added out of order; on equal dates, the last one added.
-- [ ] A newest entry without a distance gives `null`; a distance above the current one gives 0.
-- [ ] Entries about a subcomponent are ignored. Other types give `null` for all care values.
+- [x] The care table passes. A top-up does not change `distanceSinceCleaning`; a clean restarts both.
+- [x] The newest entry wins by date, also when entries were added out of order; on equal dates, the last one added.
+- [x] A newest entry without a distance gives `null`; a distance above the current one gives 0.
+- [x] Entries about a subcomponent are ignored. Other types give `null` for all care values.
 
 **Out of scope:** deciding that something is due.
 
@@ -88,12 +88,12 @@ No visual assets (store-only ticket).
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Store tests passing; 90% branch threshold met
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function and type; docs updated
-- [ ] `code-reviewer` subagent run and findings addressed
-- [ ] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 34)`
+- [x] All acceptance criteria met
+- [x] Store tests passing; 90% branch threshold met
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function and type; docs updated
+- [x] `code-reviewer` subagent run and findings addressed
+- [x] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 34)`
 
 ---
 
