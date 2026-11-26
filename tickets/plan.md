@@ -449,7 +449,7 @@ Confirmed by the user on 2026-11-25, except where a row says "assumed":
 | [#29](./29-save-version-2-shape.md) | Save the version 2 shape and migrate version 1 | Feature | P1 | M | Done | — |
 | [#30](./30-add-spare-component.md) | Add a spare component from the menu | Feature | P1 | M | Done | #29 |
 | [#31](./31-record-bicycle-distance.md) | Record a bicycle's distance | Feature | P1 | M | Done | #29 |
-| [#32](./32-start-stop-swap-components.md) | Start, stop, and swap components in the store | Feature | P1 | M | Ready for Dev | #29 |
+| [#32](./32-start-stop-swap-components.md) | Start, stop, and swap components in the store | Feature | P1 | M | Done | #29 |
 | [#33](./33-keep-usage-valid.md) | Keep usage valid when components or bicycles are removed | Feature | P1 | S | Ready for Dev | #32 |
 | [#34](./34-derive-component-usage.md) | Derive component distance and wear | Feature | P1 | S | Ready for Dev | #31, #33 |
 | [#35](./35-assign-while-adding.md) | Assign a component while adding it | Feature | P1 | M | Ready for Dev | #30, #34 |

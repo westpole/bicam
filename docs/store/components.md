@@ -1,6 +1,6 @@
 # Components slice
 
-> **Status:** Implemented (batch #15); saved data version 2 (batch #24)
+> **Status:** Implemented (batch #15); saved data version 2, start, stop, and swap (batch #24)
 > **Owner layer:** Zustand, `src/store/components/`
 > **Root key:** `components` (see [README.md](./README.md))
 
@@ -173,7 +173,7 @@ Text is trimmed before it is validated and stored. Lengths are counted after tri
 | `label` | `string \| null` | No | 1–20 chars; no control characters; blank becomes `null` | Tells identical components apart (`'A'`, `'red link'`). Not unique. |
 | `initialDistance` | `number` | No (defaults to 0) | 0–500 000, at most 1 decimal | Kilometres the part had before it was tracked. Cannot change once a whole-component history entry has a distance (§4), because that distance already includes it. |
 | `limits` | `ComponentLimits` | No (type defaults) | `distance`, `lubrication`, `cleaning`: above 0, up to 500 000, at most 1 decimal. `stretch`: above 0, up to 5, at most 2 decimals. `null` means no limit | When the part is due for replacement or care (§2.3). `stretch`, `lubrication`, and `cleaning` are for the types in `CHAIN_CARE_TYPES` only; on another type they are `notAllowed`. A limit of 0 is `outOfRange`, because it would be due at once. |
-| `usage` | `ComponentUsagePeriod[]` | Starts as `[]` | — | When the part was in use, and on which bicycle (§2.3). `updateComponent` keeps it. |
+| `usage` | `ComponentUsagePeriod[]` | Starts as `[]` | Up to 500 periods | When the part was in use, and on which bicycle (§2.3). Written only by `startComponentUse` and `stopComponentUse`; `updateComponent` keeps it. |
 | `retired` | `{ date, bicycleId } \| null` | Starts as `null` | — | When and from which bicycle the part was retired. `updateComponent` keeps it. |
 | `history` | `ComponentHistoryEntry[]` | Starts as `[]` | Up to 500 entries | Written only by the history actions (§4). Insertion order; the store does not sort it. |
 
@@ -207,8 +207,7 @@ odometer, never stored:
 `distance = initialDistance + Σ ((period.end?.odometer ?? bicycle.odometer) − period.start.odometer)`
 
 **Rule 1:** a component has at most one open period, and that period's bicycle lists the component. "In use" is never
-stored separately. Loaded data is checked for it ([README.md §4](./README.md#4-persistence)). The actions that start,
-stop, and swap components are not part of the store yet.
+stored separately. Loaded data is checked for it ([README.md §4](./README.md#4-persistence)).
 
 `ACTIVE_LIMITS` says how many components of a type can be in use on one bicycle:
 
@@ -217,6 +216,37 @@ stop, and swap components are not part of the store yet.
 | `wheel`, `tire`, `brakes`, `shifters`, `derailleur` | 2 |
 | `frontMount` | No limit (`null`) |
 | All others, including `chain` and `cassette` | 1 |
+
+A **boundary** is the `start` or `end` reading of a period. Periods are half-open, `[start, end)`: one ending at 1500
+and one starting at 1500 do not overlap. Readings give the order of usage; dates are never compared (rule 12).
+
+**Rule 3:** starting a component when its type is full requires naming the one it replaces (`replaces`). Naming one is
+also allowed when there is room. Both change in one `set`.
+
+**Rule 4:** a start at reading `r`
+
+- is at or below the bicycle's odometer, at or above the component's own latest boundary on that bicycle, and at or
+  above the start of the replaced period;
+- leaves, at no reading from `r` on, more periods of that type open on the bicycle than `ACTIVE_LIMITS` allows. This
+  counts every component's periods on the bicycle, with the replaced period ended at `r` (`fitsActiveLimit`).
+
+The second check is exact for types with two in use: a late front-wheel swap does not block a later rear one. For a
+type with one, changes must be entered in order.
+
+**Rule 5:** a stop at reading `r` is between the period's own start and the bicycle's odometer.
+
+**Rule 6:** the odometer cannot go below the latest boundary on the bicycle (`setBicycleOdometer`, see
+[bicycle.md](./bicycle.md)).
+
+**Rule 7:** a period with zero length is dropped when it closes. A start at the reading where the component's last
+period ended, on the same bicycle, reopens that period instead of adding one, and the period keeps its own
+`replacedPeriodId`. It does not reopen when it replaces a period that stays. A start that replaces a dropped period
+takes over that period's `replacedPeriodId`. So A → B → A at one reading leaves A with one unbroken period and B with
+none, and C → B → D at one reading leaves D with C's period in `replacedPeriodId`: B never ran. A stop is undone by
+starting the component again at the same reading.
+
+"The component's last period" is the last one in `usage`, which must name this bicycle; an earlier period on this
+bicycle is never reopened after one on another bicycle.
 
 `DEFAULT_COMPONENT_LIMITS` holds the suggested limits per type. Only `chain` has any: stretch 0.5 % (11–13-speed; 0.75 %
 suits 5–10-speed), a top-up every 300 km, and a clean and relubrication every 1500 km, with no distance limit. Other types
@@ -273,6 +303,15 @@ interface ComponentHistoryInput {
   cleaned?: string | null;
 }
 type ComponentHistoryUpdate = Partial<ComponentHistoryInput>;
+
+interface ComponentReadingInput {
+  date: string | null;                // trimmed; null or blank: unknown. The UI supplies today.
+  odometer: number;                   // the bicycle's odometer, km
+}
+interface ComponentStartInput extends ComponentReadingInput {
+  replaces?: ComponentId | null;      // the component in use that this one replaces; missing, null, or '': none
+}
+type ComponentStopInput = ComponentReadingInput;
 ```
 
 Normalization runs before validation:
@@ -296,6 +335,12 @@ In updates, `null` (or blank text) clears an optional field. An omitted or `unde
 | `addComponentHistoryEntry(componentId, input)` | `ComponentHistoryResult` | Validates against the component's type, generates an entry `id`, and appends the entry. |
 | `updateComponentHistoryEntry(componentId, entryId, changes)` | `ComponentHistoryResult` | Merges, normalizes, and validates. Keeps the entry's `id` and place. |
 | `removeComponentHistoryEntry(componentId, entryId)` | `boolean` | Removes one entry. `false` for an unknown component or entry. |
+| `startComponentUse(bicycleId, componentId, input)` | `ComponentUsageResult` | Puts the component in use on the bicycle at `input.odometer` and `input.date` (rules 3, 4, and 7). Adds an open period with a generated id, or reopens the last one. With `replaces`, the replaced component's open period ends at the same reading in the same `set`, and the new period records it in `replacedPeriodId`. Returns the started component. Reads `bicycle`; writes only `components`. |
+| `stopComponentUse(componentId, input)` | `ComponentUsageResult` | Closes the component's open period at the reading (rules 5 and 7); a zero-length period is dropped. Returns the stopped component. |
+
+The usage actions validate in pure utilities, `planComponentStart` and `planComponentStop`, which return every changed
+component without writing. The slice writes them in one `set`, so later actions can combine a start with other changes.
+A reading is normalized like `setBicycleOdometer`'s: the date is trimmed (blank becomes `null`), and `-0` becomes `0`.
 
 A failed action never changes state and does not call `set`. Lookups by component id use an own-property check
 (`hasComponent`), as `hasBicycle` does.
@@ -323,12 +368,14 @@ type ComponentField =
   | 'id' | 'type' | 'model' | 'label' | 'initialDistance'
   | 'limits.distance' | 'limits.stretch' | 'limits.lubrication' | 'limits.cleaning';
 type ComponentHistoryField = keyof ComponentHistoryEntry | 'componentId' | 'history';
+type ComponentUsageField = 'bicycleId' | 'componentId' | 'replaces' | 'odometer' | 'date' | 'usage';
 
 type ComponentErrorCode =
   | 'required' | 'tooLong' | 'invalidFormat' | 'invalidOption' | 'outOfRange' | 'notAllowed' | 'tooMany' | 'notFound';
 
 interface ComponentValidationError { field: ComponentField; code: ComponentErrorCode }
 interface ComponentHistoryValidationError { field: ComponentHistoryField; code: ComponentErrorCode }
+interface ComponentUsageValidationError { field: ComponentUsageField; code: ComponentErrorCode }
 
 type ComponentResult =
   | { ok: true; component: BicycleComponent }
@@ -337,25 +384,32 @@ type ComponentResult =
 type ComponentHistoryResult =
   | { ok: true; entry: ComponentHistoryEntry }
   | { ok: false; errors: ComponentHistoryValidationError[] };
+
+type ComponentUsageResult =
+  | { ok: true; component: BicycleComponent }
+  | { ok: false; errors: ComponentUsageValidationError[] };
 ```
 
 | Code | Raised when |
 | --- | --- |
-| `required` | `type`, `model`, `date`, or `installed` is empty after trimming, or `lubricated` is missing while `cleaned` is a valid date. |
+| `required` | `type`, `model`, `date`, or `installed` is empty after trimming, or `lubricated` is missing while `cleaned` is a valid date. `startComponentUse`: the type is full on the bicycle and no `replaces` is named. |
 | `tooLong` | `model` is over 60 characters, or `label` over 20. |
-| `invalidFormat` | `model` or `label` has a control character; a date is not a real `YYYY-MM-DD` date; a number is not finite or has too many decimals. |
+| `invalidFormat` | `model` or `label` has a control character; a date is not a real `YYYY-MM-DD` date; a number (including a usage `odometer`) is not finite or has too many decimals. |
 | `invalidOption` | `type`, `position`, `subcomponent`, or `lubricant` is not one of its allowed values. A subcomponent of another type (`rim` on `brakes`) is also `invalidOption`. |
-| `outOfRange` | A number (`distance`, `stretch`, `initialDistance`, or a limit) is negative or above its maximum, or a limit is 0. |
-| `notAllowed` | A history field is set on a type that does not have it (§3); `lubricant` is set without `lubricated`; `cleaned` is not the same date as `lubricated`; a chain-only limit is set on another type; a type change conflicts with stored history or usage periods; or a new `initialDistance` conflicts with a stored history distance. |
-| `tooMany` | The component already has 500 history entries (field `history`). |
-| `notFound` | Unknown component (field `id` for component actions, `componentId` for history actions) or unknown entry (field `id`). |
+| `outOfRange` | A number (`distance`, `stretch`, `initialDistance`, or a limit) is negative or above its maximum, or a limit is 0. Usage actions: the `odometer` is negative, above 500 000, or breaks rule 4 (start) or rule 5 (stop). |
+| `notAllowed` | A history field is set on a type that does not have it (§3); `lubricant` is set without `lubricated`; `cleaned` is not the same date as `lubricated`; a chain-only limit is set on another type; a type change conflicts with stored history or usage periods; or a new `initialDistance` conflicts with a stored history distance. Usage actions, on `componentId`: start, the component is not listed on the bicycle, already in use, or retired; stop, it is not in use. On `replaces`: the named component is not in use on that bicycle, or has another type. |
+| `tooMany` | The component already has 500 history entries (field `history`), or `startComponentUse` would add a period to a component that has 500 (field `usage`). |
+| `notFound` | Unknown component (field `id` for component actions, `componentId` for history and usage actions), unknown entry (field `id`), or unknown bicycle (field `bicycleId`, `startComponentUse`). |
 
 Validation reports every failing field at once, at most one error per field, in field order (for components,
 `COMPONENT_FIELD_ORDER`). For one field, `notAllowed` is checked first. Numbers are then checked in the order finite, range, decimals.
 
 `notFound` and `tooMany` are checked before the input and are always returned alone. Only `addComponentHistoryEntry`
-returns `tooMany`, so entries of a full history can still be edited. `notFound` comes first; for history
-actions, an unknown component comes before an unknown entry.
+returns `tooMany` on `history`, so entries of a full history can still be edited. `notFound` comes first; for history
+actions, an unknown component comes before an unknown entry, and for `startComponentUse` an unknown bicycle comes
+before an unknown component. Usage errors follow `USAGE_FIELD_ORDER`. `tooMany` on `usage` is checked last, only when
+a new period is needed, and returned alone, so a full component can still be reopened. When `componentId` or
+`replaces` fails, the capacity part of rule 4 is not checked.
 
 On success, the returned object is the one held in the store; treat it as read-only.
 

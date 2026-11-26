@@ -9,6 +9,8 @@ import type {
   ComponentHistoryEntry,
   ComponentHistoryResult,
   ComponentResult,
+  ComponentUsagePlan,
+  ComponentUsageResult,
 } from './types';
 import { createComponentId } from './utilities/createComponentId';
 import { createHistoryEntryId } from './utilities/createHistoryEntryId';
@@ -19,6 +21,8 @@ import { hasSameDetails } from './utilities/hasSameDetails';
 import { mergeComponentErrors } from './utilities/mergeComponentErrors';
 import { normalizeComponentHistoryInput } from './utilities/normalizeComponentHistoryInput';
 import { normalizeComponentInput } from './utilities/normalizeComponentInput';
+import { planComponentStart } from './utilities/planComponentStart';
+import { planComponentStop } from './utilities/planComponentStop';
 import { validateComponent } from './utilities/validateComponent';
 import { validateComponentHistoryEntry } from './utilities/validateComponentHistoryEntry';
 
@@ -198,4 +202,42 @@ export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActi
 
     return true;
   },
+
+  startComponentUse: (bicycleId, componentId, input): ComponentUsageResult => {
+    const { bicycle, components } = get();
+
+    return applyUsagePlan(set, planComponentStart(bicycle, components, bicycleId, componentId, input));
+  },
+
+  stopComponentUse: (componentId, input): ComponentUsageResult => {
+    const { bicycle, components } = get();
+
+    return applyUsagePlan(set, planComponentStop(bicycle, components, componentId, input));
+  },
 });
+
+/**
+ * Writes a validated usage plan: every changed component in one `set`, so a swap is never half done. A failed plan is
+ * returned as it is, without calling `set`.
+ *
+ * @param set - Zustand `set`.
+ * @param plan - From `planComponentStart` or `planComponentStop`.
+ * @returns The action's result.
+ */
+function applyUsagePlan(
+  set: Parameters<typeof createComponentsSlice>[0],
+  plan: ComponentUsagePlan,
+): ComponentUsageResult {
+  if (!plan.ok) {
+    return plan;
+  }
+
+  set((state) => ({
+    components: {
+      byId: { ...state.components.byId, ...Object.fromEntries(plan.changed.map((changed) => [changed.id, changed])) },
+      allIds: state.components.allIds,
+    },
+  }));
+
+  return { ok: true, component: plan.component };
+}

@@ -316,6 +316,64 @@ export type ComponentHistoryResult =
   | { ok: true; entry: ComponentHistoryEntry }
   | { ok: false; errors: ComponentHistoryValidationError[] };
 
+/** An odometer reading as a form provides it, for the usage actions. Normalized before validation. */
+export interface ComponentReadingInput {
+  /** `YYYY-MM-DD` of the reading; `null` or blank means unknown. The store has no clock, so the UI supplies today. */
+  date: string | null;
+  /** The bicycle's odometer at that moment, in kilometres. */
+  odometer: number;
+}
+
+/** Input of `startComponentUse`: when the component went into use, and what it replaced, if anything. */
+export interface ComponentStartInput extends ComponentReadingInput {
+  /**
+   * The component in use on the same bicycle that this one replaces (a swap). Required when the type is full; also
+   * allowed when there is room. Missing, `null`, or `''` means none.
+   */
+  replaces?: ComponentId | null;
+}
+
+/** Input of `stopComponentUse`: when the component went out of use. */
+export type ComponentStopInput = ComponentReadingInput;
+
+/**
+ * A field that a usage validation error can point at: an argument of the action (`bicycleId`, `componentId`), a field
+ * of its input (`replaces`, `odometer`, `date`), or the component's whole `usage` list.
+ */
+export type ComponentUsageField = 'bicycleId' | 'componentId' | 'replaces' | 'odometer' | 'date' | 'usage';
+
+/** One failing usage field. Validation reports at most one error per field. */
+export interface ComponentUsageValidationError {
+  /** The failing field. */
+  field: ComponentUsageField;
+  /** Why it failed. */
+  code: ComponentErrorCode;
+}
+
+/**
+ * Result of a usage action: the started or stopped component on success, every failing field otherwise. On success
+ * `component` is the object held in the store; treat it as read-only.
+ */
+export type ComponentUsageResult =
+  | { ok: true; component: BicycleComponent }
+  | { ok: false; errors: ComponentUsageValidationError[] };
+
+/**
+ * A validated usage change that is not written yet: the component the action is about, and every component it
+ * changes (for a swap, also the replaced one). Writing `changed` in one `set` applies it.
+ */
+export type ComponentUsagePlan =
+  | { ok: true; component: BicycleComponent; changed: readonly BicycleComponent[] }
+  | { ok: false; errors: ComponentUsageValidationError[] };
+
+/** A usage period reduced to its readings, half-open: `[start, end)`; `end: null` means it is still open. */
+export interface UsageInterval {
+  /** The odometer reading where it starts. */
+  start: number;
+  /** The odometer reading where it ends, or `null` while open. */
+  end: number | null;
+}
+
 /** Component actions on `useAppStore`. A failed action never changes state. See `docs/store/components.md` §4. */
 export interface ComponentActions {
   /**
@@ -360,6 +418,24 @@ export interface ComponentActions {
    * for an unknown component or an entry that is not in its history.
    */
   removeComponentHistoryEntry: (componentId: ComponentId, entryId: HistoryEntryId) => boolean;
+  /**
+   * Puts the component in use on the bicycle at the given reading (rules 3, 4, and 7 in `docs/store/components.md`
+   * §2.3). Adds an open period, or reopens the component's last period when it ended at that reading on this bicycle.
+   * With `replaces`, the replaced component's open period ends at the same reading, in the same `set`; a zero-length
+   * period is dropped. Fails with only `notFound` on `bicycleId` or `componentId` for an unknown id. Reads `bicycle`;
+   * writes only `components`.
+   */
+  startComponentUse: (
+    bicycleId: BicycleId,
+    componentId: ComponentId,
+    input: ComponentStartInput,
+  ) => ComponentUsageResult;
+  /**
+   * Takes the component out of use: closes its open period at the given reading, between the period's start and the
+   * bicycle's odometer (rule 5). A zero-length period is dropped. Fails with only `notFound` on `componentId` for an
+   * unknown id, and with `notAllowed` on `componentId` when it is not in use.
+   */
+  stopComponentUse: (componentId: ComponentId, input: ComponentStopInput) => ComponentUsageResult;
 }
 
 /** Normalized component collection. `allIds` holds the display (insertion) order. */

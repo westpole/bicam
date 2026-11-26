@@ -1,5 +1,6 @@
 import type { BicycleId } from '../../bicycle/types';
 import type { ComponentCollection } from '../types';
+import { getLatestBoundary } from './getLatestBoundary';
 
 /**
  * Finds the lowest odometer reading a bicycle may be set to: the latest boundary (`start` or `end` reading) of any usage
@@ -13,15 +14,8 @@ import type { ComponentCollection } from '../types';
  * getMinimumOdometer(state.components, bicycleId); // 3100 after a swap at 3100
  */
 export function getMinimumOdometer(components: ComponentCollection, bicycleId: BicycleId): number {
-  let minimum = 0;
-
-  for (const id of components.allIds) {
-    for (const { bicycleId: periodBicycleId, start, end } of components.byId[id].usage) {
-      if (periodBicycleId === bicycleId) {
-        minimum = Math.max(minimum, start.odometer, end?.odometer ?? 0);
-      }
-    }
-  }
-
-  return minimum;
+  return components.allIds.reduce(
+    (minimum, id) => Math.max(minimum, getLatestBoundary(components.byId[id].usage, bicycleId)),
+    0,
+  );
 }

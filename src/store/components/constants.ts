@@ -5,6 +5,7 @@ import type {
   ComponentLimits,
   ComponentLimitsByType,
   ComponentPosition,
+  ComponentUsageField,
   Lubricant,
   Subcomponent,
 } from './types';
@@ -29,6 +30,8 @@ export const COMPONENT_LIMITS = {
   /** Largest `limits.distance`, `limits.lubrication`, and `limits.cleaning`, in kilometres. */
   limitDistanceMax: 500_000,
   historyMaxCount: 500,
+  /** Most usage periods one component can have. */
+  usageMaxCount: 500,
   distanceMax: 1_000_000,
   distanceMaxDecimals: 1,
   stretchMax: 5,
@@ -98,6 +101,16 @@ export const COMPONENT_FIELD_ORDER: readonly ComponentField[] = [
   'limits.stretch',
   'limits.lubrication',
   'limits.cleaning',
+];
+
+/** The fields that the usage actions report, in the order they report them. */
+export const USAGE_FIELD_ORDER: readonly ComponentUsageField[] = [
+  'bicycleId',
+  'componentId',
+  'replaces',
+  'odometer',
+  'date',
+  'usage',
 ];
 
 /** Every lubricant. Lists each {@link Lubricant} exactly once. */

@@ -1,7 +1,7 @@
 # [FEATURE] Start, stop, and swap components in the store
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #24)
 > **Sprint:** `24-ui-implement-add-component-screen`
@@ -33,11 +33,11 @@ odometer reading.
 **So that** only the one in use collects distance
 
 **Acceptance Criteria:**
-- [ ] `startComponentUse(bicycleId, componentId, { date, odometer, replaces? })` adds an open period, or reopens the
+- [x] `startComponentUse(bicycleId, componentId, { date, odometer, replaces? })` adds an open period, or reopens the
       last one ([rule 7](./plan.md#rules)).
-- [ ] `stopComponentUse(componentId, { date, odometer })` closes it. A zero-length period is dropped.
-- [ ] Start and stop readings follow rules 4 and 5; otherwise `outOfRange` on `odometer`.
-- [ ] The start and stop errors in the [error table](./plan.md#rules) are returned for their cases (undo comes with #38,
+- [x] `stopComponentUse(componentId, { date, odometer })` closes it. A zero-length period is dropped.
+- [x] Start and stop readings follow rules 4 and 5; otherwise `outOfRange` on `odometer`.
+- [x] The start and stop errors in the [error table](./plan.md#rules) are returned for their cases (undo comes with #38,
       the odometer with #31, retired components with #40). `notFound` is returned alone. A failed action keeps the same
       state references.
 
@@ -51,15 +51,15 @@ odometer reading.
 **So that** the distance splits at the right reading
 
 **Acceptance Criteria:**
-- [ ] With `replaces`, both components change in one `set`, at the same reading, and the new period keeps the replaced
+- [x] With `replaces`, both components change in one `set`, at the same reading, and the new period keeps the replaced
       period's id in `replacedPeriodId`.
-- [ ] When the type is full, a start without `replaces` fails with `required`. When there is room, `replaces` is still
+- [x] When the type is full, a start without `replaces` fails with `required`. When there is room, `replaces` is still
       accepted as a swap.
-- [ ] Swapping A → B → A at one reading leaves A with one unbroken period and B with none.
-- [ ] Swapping C → B → D at one reading leaves D with C's period in `replacedPeriodId`.
-- [ ] Chains: a swap before the latest chain swap fails. Wheels: a late swap of one wheel works after a newer swap of
+- [x] Swapping A → B → A at one reading leaves A with one unbroken period and B with none.
+- [x] Swapping C → B → D at one reading leaves D with C's period in `replacedPeriodId`.
+- [x] Chains: a swap before the latest chain swap fails. Wheels: a late swap of one wheel works after a newer swap of
       the other one.
-- [ ] A reopened period keeps its own `replacedPeriodId`. A start that replaces a period that stays always adds a new
+- [x] A reopened period keeps its own `replacedPeriodId`. A start that replaces a period that stays always adds a new
       period.
 
 **Out of scope:** undo (#38).
@@ -98,12 +98,12 @@ No visual assets (store-only ticket).
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Store tests passing; 90% branch threshold met
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function and type; docs updated
-- [ ] `code-reviewer` subagent run and findings addressed
-- [ ] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 32)`
+- [x] All acceptance criteria met
+- [x] Store tests passing; 90% branch threshold met
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function and type; docs updated
+- [x] `code-reviewer` subagent run and findings addressed
+- [x] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 32)`
 
 ---
 
