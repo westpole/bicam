@@ -29,6 +29,26 @@ const acceptNew = (): BicycleComponentResult => ({ ok: true, component: COMPONEN
 const acceptSpare = (): BicycleResult => ({ ok: true, bicycle: BICYCLES[0] });
 
 /**
+ * Stands in for a store that accepts every odometer reading.
+ *
+ * @returns A successful result.
+ */
+const acceptOdometer = (): BicycleResult => ({ ok: true, bicycle: BICYCLES[0] });
+
+/**
+ * Stands in for a store that rejects a total below the latest usage boundary, and the date.
+ *
+ * @returns A failed result.
+ */
+const rejectOdometer = (): BicycleResult => ({
+  ok: false,
+  errors: [
+    { field: 'odometer', code: 'outOfRange' },
+    { field: 'odometerDate', code: 'invalidFormat' },
+  ],
+});
+
+/**
  * Stands in for a store that rejects both fields of a new component.
  *
  * @returns A failed result.
@@ -80,16 +100,22 @@ const meta = {
       purchased: '2024-05-17',
       size: 'M/L',
       frameGeometry: 'Stack 594 mm, reach 393 mm\nHead tube angle 71°',
+      odometer: 3100.5,
+      odometerDate: '2026-04-12',
     },
     components: COMPONENTS,
     spareComponents: SPARE_COMPONENTS,
+    minimumOdometer: 1500,
+    onSetOdometer: fn(acceptOdometer),
     onCreateComponent: fn(acceptNew),
     onIncludeComponent: fn(acceptSpare),
   },
   play: async ({ args, canvas, canvasElement }) => {
     const heading = canvas.getByRole('heading', { level: 2, name: args.bicycle.name });
     await expect(heading).toBeVisible();
-    await expect(canvas.getAllByRole('term')).toHaveLength(5);
+    await expect(canvas.getAllByRole('term')).toHaveLength(7);
+    await expect(canvas.getByRole('region', { name: 'Distance' })).toBeVisible();
+    await expect(canvas.getByRole('button', { name: 'Update distance' })).toBeVisible();
     await expect(canvas.getByRole('button', { name: 'Include component' })).toBeVisible();
 
     if (args.components.length > 0) {
@@ -114,9 +140,25 @@ type Story = StoryObj<typeof meta>;
  * @param context - The story context.
  * @returns Queries bound to the dialog.
  */
-async function openDialog({ canvas, canvasElement, userEvent }: Parameters<NonNullable<Story['play']>>[0]) {
-  await userEvent.click(canvas.getByRole('button', { name: 'Include component' }));
-  const dialog = await within(canvasElement.ownerDocument.body).findByRole('dialog', { name: 'Include component' });
+async function openDialog(context: Parameters<NonNullable<Story['play']>>[0]) {
+  return openNamedDialog(context, 'Include component', 'Include component');
+}
+
+/**
+ * Opens a dialog from its button. Dialogs render in a portal outside the story canvas.
+ *
+ * @param context - The story context.
+ * @param button - The name of the button that opens it.
+ * @param name - The dialog's accessible name.
+ * @returns Queries bound to the dialog.
+ */
+async function openNamedDialog(
+  { canvas, canvasElement, userEvent }: Parameters<NonNullable<Story['play']>>[0],
+  button: string,
+  name: string,
+) {
+  await userEvent.click(canvas.getByRole('button', { name: button }));
+  const dialog = await within(canvasElement.ownerDocument.body).findByRole('dialog', { name });
   // The dialog fades in; wait for the end, so the a11y check sees the final colors.
   await waitFor(() => expect(getComputedStyle(dialog.parentElement as HTMLElement).opacity).toBe('1'));
 
@@ -235,5 +277,80 @@ export const IncludeDialogFull: Story = {
     await expect(dialog.getByRole('alert')).toHaveTextContent(
       'This bicycle already has the maximum of 100 components.',
     );
+  },
+};
+
+/**
+ * Opens the update distance dialog and checks its fields.
+ *
+ * @param context - The story context.
+ * @returns Queries bound to the dialog.
+ */
+async function openDistanceDialog(context: Parameters<NonNullable<Story['play']>>[0]) {
+  const dialog = await openNamedDialog(context, 'Update distance', 'Update distance');
+  await expect(dialog.getByRole('radio', { name: 'Set total' })).toBeChecked();
+  await expect(dialog.getByRole('textbox', { name: 'Total distance' })).toHaveFocus();
+  await expect(dialog.getByLabelText('Date')).not.toHaveValue('');
+  await expectNoOverflow(context.canvasElement);
+
+  return dialog;
+}
+
+/** The update distance dialog, set to a new total. */
+export const UpdateDistanceDialogDesktop: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  play: async (context) => {
+    await openDistanceDialog(context);
+  },
+};
+
+/** The update distance dialog on the narrowest viewport, set to add a ride. */
+export const UpdateDistanceDialogRideMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  play: async (context) => {
+    const dialog = await openDistanceDialog(context);
+
+    await context.userEvent.click(dialog.getByRole('radio', { name: 'Add ride' }));
+    await context.userEvent.type(dialog.getByRole('textbox', { name: 'Ride distance' }), '42.2');
+
+    await expect(dialog.getByText('Added to the current total of 3,100.5 km.')).toBeVisible();
+    await context.userEvent.click(dialog.getByRole('button', { name: 'Save' }));
+    await expect(context.args.onSetOdometer).toHaveBeenCalledWith(expect.objectContaining({ odometer: 3142.7 }));
+  },
+};
+
+/** The update distance dialog in dark mode, for the a11y contrast check. */
+export const UpdateDistanceDialogDark: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false }, colorScheme: 'dark' },
+  play: async (context) => {
+    await waitFor(() => expect(context.canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
+    await openDistanceDialog(context);
+  },
+};
+
+/** A total below the latest usage boundary names the lowest allowed reading. */
+export const UpdateDistanceDialogErrors: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  args: { onSetOdometer: fn(rejectOdometer) },
+  play: async (context) => {
+    const dialog = await openDistanceDialog(context);
+
+    await context.userEvent.type(dialog.getByRole('textbox', { name: 'Total distance' }), '1000');
+    await context.userEvent.click(dialog.getByRole('button', { name: 'Save' }));
+
+    await expect(dialog.getByText('The total must be from 1,500 to 500,000 km.')).toBeVisible();
+    await expect(dialog.getByText('Enter a complete date with a four-digit year, or leave it empty.')).toBeVisible();
+    await expect(dialog.getByRole('textbox', { name: 'Total distance' })).toHaveFocus();
+    await expectNoOverflow(context.canvasElement);
+  },
+};
+
+/** The rejected update distance dialog in dark mode, for the contrast of the error text. */
+export const UpdateDistanceDialogErrorsDark: Story = {
+  ...UpdateDistanceDialogErrors,
+  globals: { viewport: { value: 'mobile1', isRotated: false }, colorScheme: 'dark' },
+  play: async (context) => {
+    await waitFor(() => expect(context.canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
+    await UpdateDistanceDialogErrors.play?.(context);
   },
 };

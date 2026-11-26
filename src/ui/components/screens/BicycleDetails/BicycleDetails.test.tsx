@@ -24,6 +24,7 @@ function renderDetails(props: Partial<BicycleDetailsProps> = {}) {
     ok: true,
     bicycle: BICYCLES[0],
   }));
+  const onSetOdometer = vi.fn<BicycleDetailsProps['onSetOdometer']>(() => ({ ok: true, bicycle: BICYCLES[0] }));
 
   render(
     <ThemeProvider theme={theme}>
@@ -31,6 +32,8 @@ function renderDetails(props: Partial<BicycleDetailsProps> = {}) {
         bicycle={BICYCLES[0]}
         components={[]}
         spareComponents={[]}
+        minimumOdometer={0}
+        onSetOdometer={onSetOdometer}
         onCreateComponent={onCreateComponent}
         onIncludeComponent={onIncludeComponent}
         {...props}
@@ -38,7 +41,7 @@ function renderDetails(props: Partial<BicycleDetailsProps> = {}) {
     </ThemeProvider>,
   );
 
-  return { onCreateComponent, onIncludeComponent };
+  return { onCreateComponent, onIncludeComponent, onSetOdometer };
 }
 
 /**
@@ -55,7 +58,14 @@ function readDetails(): Array<[string | null, string | null]> {
 describe('BicycleDetails', () => {
   it("renders the bicycle's name as the screen heading and every field", () => {
     renderDetails({
-      bicycle: { ...BICYCLES[0], purchased: '2024-05-17', size: 'M/L', frameGeometry: 'Stack 594\nReach 393' },
+      bicycle: {
+        ...BICYCLES[0],
+        purchased: '2024-05-17',
+        size: 'M/L',
+        frameGeometry: 'Stack 594\nReach 393',
+        odometer: 3100.5,
+        odometerDate: '2026-04-12',
+      },
     });
 
     expect(screen.getByRole('heading', { level: 2, name: 'Gravel Grinder' })).toBeInTheDocument();
@@ -66,7 +76,10 @@ describe('BicycleDetails', () => {
       ['Purchase date', 'May 17, 2024'],
       ['Frame size', 'M/L'],
       ['Frame geometry', 'Stack 594\nReach 393'],
+      ['Odometer', '3,100.5 km'],
+      ['Reading date', 'Apr 12, 2026'],
     ]);
+    expect(screen.getByRole('region', { name: 'Distance' })).toBeInTheDocument();
   });
 
   it('marks unknown fields as not specified', () => {
@@ -76,7 +89,43 @@ describe('BicycleDetails', () => {
       ['Purchase date', 'Not specified'],
       ['Frame size', 'Not specified'],
       ['Frame geometry', 'Not specified'],
+      ['Odometer', '0 km'],
+      ['Reading date', 'Not specified'],
     ]);
+  });
+
+  it('opens the distance dialog from its button and returns focus to it on cancel', async () => {
+    const { onSetOdometer } = renderDetails();
+    const update = screen.getByRole('button', { name: 'Update distance' });
+
+    await userEvent.click(update);
+    expect(screen.getByRole('dialog', { name: 'Update distance' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(update).toHaveFocus());
+    expect(onSetOdometer).not.toHaveBeenCalled();
+  });
+
+  it('passes the current total and the lowest allowed reading to the distance dialog', async () => {
+    const onSetOdometer = vi.fn<BicycleDetailsProps['onSetOdometer']>(() => ({
+      ok: false,
+      errors: [{ field: 'odometer', code: 'outOfRange' }],
+    }));
+    renderDetails({ bicycle: { ...BICYCLES[0], odometer: 1500 }, minimumOdometer: 900, onSetOdometer });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Update distance' }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Add ride' }));
+
+    expect(screen.getByRole('textbox', { name: 'Ride distance' })).toHaveAccessibleDescription(
+      'Added to the current total of 1,500 km.',
+    );
+    await userEvent.type(screen.getByRole('textbox', { name: 'Ride distance' }), '-700');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(screen.getByRole('textbox', { name: 'Ride distance' })).toHaveAccessibleDescription(
+      'The ride must bring the total to between 900 and 500,000 km.',
+    );
+    expect(onSetOdometer).toHaveBeenCalledWith(expect.objectContaining({ odometer: 800 }));
   });
 
   it("lists the bicycle's components under their heading", () => {

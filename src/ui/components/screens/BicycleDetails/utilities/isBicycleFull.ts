@@ -9,8 +9,6 @@ import type { BicycleComponentValidationError } from '@store/types';
  * @example
  * isBicycleFull([{ field: 'components', code: 'tooMany' }]); // true
  */
-export function isBicycleFull(
-  errors: readonly (BicycleValidationError | BicycleComponentValidationError)[],
-): boolean {
+export function isBicycleFull(errors: readonly (BicycleValidationError | BicycleComponentValidationError)[]): boolean {
   return errors.some(({ field, code }) => field === 'components' && code === 'tooMany');
 }

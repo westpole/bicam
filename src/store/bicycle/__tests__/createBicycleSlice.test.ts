@@ -451,6 +451,176 @@ describe('bicycle slice', () => {
     });
   });
 
+  describe('setBicycleOdometer', () => {
+    let gravel: Bicycle;
+    let roadie: Bicycle;
+
+    /**
+     * Stores a component with one usage period.
+     *
+     * @param id - The component id.
+     * @param period - Where the period is and its readings.
+     * @param period.bicycleId - The bicycle the period names.
+     * @param period.start - The start reading.
+     * @param period.end - The end reading, or `null` while in use.
+     */
+    function storeUsage(id: string, period: { bicycleId: string; start: number; end: number | null }): void {
+      const usage = [
+        {
+          id: `period-${id}`,
+          bicycleId: period.bicycleId,
+          start: { date: null, odometer: period.start },
+          end: period.end === null ? null : { date: null, odometer: period.end },
+          replacedPeriodId: null,
+        },
+      ];
+      useAppStore.setState(({ components }) => ({
+        components: {
+          byId: { ...components.byId, [id]: storedComponent(id, 'chain', 'X12', { usage }) },
+          allIds: [...components.allIds, id],
+        },
+      }));
+    }
+
+    beforeEach(() => {
+      gravel = addOrFail(GRAVEL_INPUT);
+      roadie = addOrFail(minimalInput('Roadie'));
+    });
+
+    it('stores the reading and its date, keeping the other fields and bicycles', () => {
+      const result = useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 1500.5, date: ' 2026-04-12 ' });
+
+      const expected: Bicycle = { ...gravel, odometer: 1500.5, odometerDate: '2026-04-12' };
+      expect(result).toEqual({ ok: true, bicycle: expected });
+      expect(useAppStore.getState().bicycle.byId[gravel.id]).toEqual(expected);
+      expect(useAppStore.getState().bicycle.byId[roadie.id]).toBe(roadie);
+    });
+
+    it.each([null, '', '  '])('stores an unknown date for %j', (date) => {
+      const result = useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 300, date });
+
+      expect(result).toMatchObject({ ok: true, bicycle: { odometer: 300, odometerDate: null } });
+    });
+
+    it.each([0, 0.1, BICYCLE_LIMITS.odometerMax])('accepts the reading %s', (odometer) => {
+      expect(useAppStore.getState().setBicycleOdometer(gravel.id, { odometer, date: null }).ok).toBe(true);
+    });
+
+    it('stores -0 as 0', () => {
+      const result = useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: -0, date: null });
+
+      expect(Object.is(result.ok && result.bicycle.odometer, 0)).toBe(true);
+    });
+
+    it.each<[number, BicycleErrorCode]>([
+      [-0.1, 'outOfRange'],
+      [BICYCLE_LIMITS.odometerMax + 0.1, 'outOfRange'],
+      [300.55, 'invalidFormat'],
+      [NaN, 'invalidFormat'],
+      [Infinity, 'invalidFormat'],
+    ])('rejects the reading %s as %s, changing nothing', (odometer, code) => {
+      const before = useAppStore.getState();
+
+      expect(before.setBicycleOdometer(gravel.id, { odometer, date: null })).toEqual({
+        ok: false,
+        errors: [{ field: 'odometer', code }],
+      });
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it.each(['2026-02-30', '2026-4-12', 'yesterday'])('rejects the date %j as invalidFormat', (date) => {
+      expect(useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 300, date })).toEqual({
+        ok: false,
+        errors: [{ field: 'odometerDate', code: 'invalidFormat' }],
+      });
+    });
+
+    it('reports both fields, odometer first', () => {
+      expect(useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: -1, date: 'x' })).toEqual({
+        ok: false,
+        errors: [
+          { field: 'odometer', code: 'outOfRange' },
+          { field: 'odometerDate', code: 'invalidFormat' },
+        ],
+      });
+    });
+
+    it.each(['unknown-id', 'toString', '__proto__'])('returns only notFound for the unknown bicycle %j', (id) => {
+      const before = useAppStore.getState();
+
+      expect(before.setBicycleOdometer(id, { odometer: NaN, date: 'x' })).toEqual({
+        ok: false,
+        errors: [{ field: 'id', code: 'notFound' }],
+      });
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it('accepts a lower reading, to correct a mistake', () => {
+      useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 3000, date: null });
+
+      expect(useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 300, date: null })).toMatchObject({
+        ok: true,
+        bicycle: { odometer: 300 },
+      });
+    });
+
+    describe('rule 6: never below the latest boundary of a period on the bicycle', () => {
+      it('rejects a reading below the start of an open period', () => {
+        storeUsage('chain-a', { bicycleId: gravel.id, start: 1500, end: null });
+
+        expect(useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 1499.9, date: null })).toEqual({
+          ok: false,
+          errors: [{ field: 'odometer', code: 'outOfRange' }],
+        });
+      });
+
+      it('accepts a reading at the latest boundary, and above it', () => {
+        storeUsage('chain-a', { bicycleId: gravel.id, start: 1500, end: null });
+
+        expect(useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 1500, date: null }).ok).toBe(true);
+        expect(useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 1600, date: null }).ok).toBe(true);
+      });
+
+      it('counts the end of a closed period of a spare component', () => {
+        storeUsage('chain-spare', { bicycleId: gravel.id, start: 0, end: 3100 });
+
+        expect(useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 3000, date: null }).ok).toBe(false);
+        expect(useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 3100, date: null }).ok).toBe(true);
+      });
+
+      it('counts a closed period of a component that is now on another bicycle', () => {
+        storeUsage('chain-moved', { bicycleId: gravel.id, start: 200, end: 900 });
+
+        expect(useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 899, date: null }).ok).toBe(false);
+      });
+
+      it('ignores periods on other bicycles', () => {
+        storeUsage('chain-roadie', { bicycleId: roadie.id, start: 5000, end: null });
+
+        expect(useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 100, date: null }).ok).toBe(true);
+      });
+    });
+
+    it('does not write when the reading and date are unchanged', () => {
+      useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 300, date: '2026-04-12' });
+      const before = useAppStore.getState();
+
+      const result = before.setBicycleOdometer(gravel.id, { odometer: 300, date: '2026-04-12' });
+
+      expect(result).toEqual({ ok: true, bicycle: before.bicycle.byId[gravel.id] });
+      expect(useAppStore.getState()).toBe(before);
+    });
+
+    it('never writes the components', () => {
+      storeUsage('chain-a', { bicycleId: gravel.id, start: 0, end: null });
+      const { components } = useAppStore.getState();
+
+      useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 300, date: null });
+
+      expect(useAppStore.getState().components).toBe(components);
+    });
+  });
+
   it('reset() clears all bicycles', () => {
     addOrFail(GRAVEL_INPUT);
 

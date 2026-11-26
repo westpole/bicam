@@ -7,7 +7,7 @@ import { theme } from '@ui/theme';
 
 import { BICYCLES } from '../Home/__mocks__/bicycles';
 import { AddBicycle } from './AddBicycle';
-import { INCOMPLETE_DATE } from './constants';
+import { INCOMPLETE_DATE } from '../utilities/constants';
 import type { AddBicycleProps } from './types';
 
 /**

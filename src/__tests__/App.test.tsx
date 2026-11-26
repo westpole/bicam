@@ -292,6 +292,51 @@ describe('App', () => {
     expect(within(main).queryByRole('list', { name: 'Bicycles' })).not.toBeInTheDocument();
   });
 
+  it('sets the total and adds a ride from the details screen, showing the new distance', async () => {
+    useAppStore.setState({ bicycle: toBicycleCollection(BICYCLES) });
+    render(<App />);
+    await userEvent.click(screen.getByRole('button', { name: 'Roadie' }));
+    const distance = screen.getByRole('region', { name: 'Distance' });
+
+    await userEvent.click(within(distance).getByRole('button', { name: 'Update distance' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Total distance' }), '300');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(within(distance).getByText('300 km')).toBeInTheDocument();
+    expect(useAppStore.getState().bicycle.byId[BICYCLES[1].id]).toMatchObject({ odometer: 300 });
+
+    await userEvent.click(within(distance).getByRole('button', { name: 'Update distance' }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Add ride' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Ride distance' }), '42.5');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(within(distance).getByText('342.5 km')).toBeInTheDocument();
+    expect(useAppStore.getState().bicycle.byId[BICYCLES[0].id]).toMatchObject({ odometer: 0 });
+  });
+
+  it('keeps the distance dialog open and names the lowest reading when the total is below a usage boundary', async () => {
+    const usage = [
+      { id: 'p-1', bicycleId: BICYCLES[0].id, start: { date: null, odometer: 1500 }, end: null, replacedPeriodId: null },
+    ];
+    useAppStore.setState({
+      bicycle: toBicycleCollection([{ ...BICYCLES[0], odometer: 2000, components: [COMPONENTS[0].id] }]),
+      components: toComponentCollection([{ ...COMPONENTS[0], usage }]),
+      activeScreen: 'bicycleDetails',
+      selectedBicycleId: BICYCLES[0].id,
+    });
+    render(<App />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Update distance' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Total distance' }), '1000');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(screen.getByRole('textbox', { name: 'Total distance' })).toHaveAccessibleDescription(
+      'The total must be from 1,500 to 500,000 km.',
+    );
+    expect(useAppStore.getState().bicycle.byId[BICYCLES[0].id].odometer).toBe(2000);
+  });
+
   it('creates a component from the details screen and lists it on that bicycle only', async () => {
     useAppStore.setState({ bicycle: toBicycleCollection(BICYCLES) });
     render(<App />);

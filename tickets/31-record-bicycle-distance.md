@@ -1,7 +1,7 @@
 # [FEATURE] Record a bicycle's distance
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #24)
 > **Sprint:** `24-ui-implement-add-component-screen`
@@ -31,12 +31,12 @@ Let the rider set a bicycle's odometer, or add a ride to it, on the bicycle deta
 **So that** every component on it can derive its distance
 
 **Acceptance Criteria:**
-- [ ] `setBicycleOdometer(id, { odometer, date })` stores both and returns a `BicycleResult`.
-- [ ] 0–500 000 with at most 1 decimal; a wrong number or date uses the usual codes. An unknown bicycle is `notFound`,
+- [x] `setBicycleOdometer(id, { odometer, date })` stores both and returns a `BicycleResult`.
+- [x] 0–500 000 with at most 1 decimal; a wrong number or date uses the usual codes. An unknown bicycle is `notFound`,
       returned alone.
-- [ ] A reading below the latest boundary of any period with that `bicycleId` is `outOfRange` ([rule
+- [x] A reading below the latest boundary of any period with that `bicycleId` is `outOfRange` ([rule
       6](./plan.md#rules)). Periods of spare components and of components on another bicycle count.
-- [ ] A lower reading at or above that boundary is accepted.
+- [x] A lower reading at or above that boundary is accepted.
 
 **Out of scope:** a log of readings.
 
@@ -48,11 +48,11 @@ Let the rider set a bicycle's odometer, or add a ride to it, on the bicycle deta
 **So that** I can use whichever number I have
 
 **Acceptance Criteria:**
-- [ ] Bicycle details show the odometer in km, and its date or "Not specified".
-- [ ] **Update distance** opens a dialog with "Set total" or "Add ride", a distance, and a date that defaults to today.
-- [ ] "Add ride" saves the current total plus the ride, rounded to 1 decimal.
-- [ ] A total that is too low says which reading is the lowest allowed.
-- [ ] Cancel, Escape, and a click outside drop the draft. Closing returns focus to the button.
+- [x] Bicycle details show the odometer in km, and its date or "Not specified".
+- [x] **Update distance** opens a dialog with "Set total" or "Add ride", a distance, and a date that defaults to today.
+- [x] "Add ride" saves the current total plus the ride, rounded to 1 decimal.
+- [x] A total that is too low says which reading is the lowest allowed.
+- [x] Cancel, Escape, and a click outside drop the draft. Closing returns focus to the button.
 
 **Out of scope:** importing rides, indoor distance.
 
@@ -91,14 +91,14 @@ No mockups; follow the existing screens and the MUI theme.
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] Store tests passing; 90% branch threshold met
-- [ ] React tests passing; desktop and mobile stories added or updated, with the a11y check passing
-- [ ] All new text goes through `t()`, with keys in the English file
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function and type; docs updated
-- [ ] `code-reviewer` subagent run and findings addressed
-- [ ] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 31)`
+- [x] All acceptance criteria met
+- [x] Store tests passing; 90% branch threshold met
+- [x] React tests passing; desktop and mobile stories added or updated, with the a11y check passing
+- [x] All new text goes through `t()`, with keys in the English file
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function and type; docs updated
+- [x] `code-reviewer` subagent run and findings addressed
+- [x] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 31)`
 
 ---
 

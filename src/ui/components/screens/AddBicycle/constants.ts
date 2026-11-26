@@ -33,23 +33,8 @@ export const FIELD_MAX_LENGTH: Readonly<Partial<Record<AddBicycleField, number>>
   frameGeometry: BICYCLE_LIMITS.frameGeometryMaxLength,
 };
 
-/**
- * Submitted as the purchase date when the date input holds a half-typed date. The browser reports such a date as `''`,
- * which would be saved as "unknown"; this value makes the store reject it as `invalidFormat` instead.
- */
-export const INCOMPLETE_DATE = 'incomplete';
-
-/** Latest date the picker accepts. Without it browsers allow six-digit years, which the store rejects. */
-export const MAX_DATE = '9999-12-31';
-
 /** Rows the multi-line field shows before it grows. */
 export const MULTILINE_MIN_ROWS = 3;
 
 /** Keeps the form readable on wide screens; on phones it fills the width. */
 export const FORM_SX: SxProps<Theme> = { maxWidth: 'sm' };
-
-/** Lets the browser draw the native date picker icon for the active color scheme. */
-export const DATE_INPUT_SX: SxProps<Theme> = [
-  { colorScheme: 'light' },
-  (theme) => theme.applyStyles('dark', { colorScheme: 'dark' }),
-];

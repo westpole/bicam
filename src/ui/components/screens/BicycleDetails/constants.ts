@@ -2,7 +2,7 @@ import type { SxProps, Theme } from '@mui/material/styles';
 
 import type { ComponentInput } from '@store/components/types';
 
-import type { BicycleDetailsField, NewComponentField } from './types';
+import type { BicycleDetailsField, NewComponentField, UpdateDistanceField, UpdateDistanceMode } from './types';
 
 /** The bicycle fields shown under the name, top to bottom. */
 export const BICYCLE_DETAILS_FIELDS: readonly BicycleDetailsField[] = [
@@ -12,6 +12,12 @@ export const BICYCLE_DETAILS_FIELDS: readonly BicycleDetailsField[] = [
   'size',
   'frameGeometry',
 ];
+
+/** The ways to update the distance, in the order the dialog offers them. */
+export const UPDATE_DISTANCE_MODES: readonly UpdateDistanceMode[] = ['total', 'ride'];
+
+/** The update distance dialog's fields, top to bottom. The first invalid one gets focus after a rejected save. */
+export const UPDATE_DISTANCE_FIELDS: readonly UpdateDistanceField[] = ['distance', 'date'];
 
 /** Value of the "New component" option. Component ids are never empty, so it cannot match one. */
 export const NEW_COMPONENT = '';

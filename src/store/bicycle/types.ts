@@ -61,6 +61,14 @@ export interface BicycleInput {
 /** Changes for `updateBicycle`: any input field. Omitted keys stay unchanged; `null` clears an optional field. */
 export type BicycleUpdate = Partial<BicycleInput>;
 
+/** A new odometer reading for `setBicycleOdometer`. */
+export interface BicycleOdometerInput {
+  /** The bicycle's total in kilometres (not a ride: the UI adds a ride to the current total). */
+  odometer: number;
+  /** `YYYY-MM-DD` of the reading; `null` or blank means unknown. The store has no clock, so the UI supplies today. */
+  date: string | null;
+}
+
 /** A field of {@link Bicycle} that a validation error can point at. */
 export type BicycleField = keyof Bicycle;
 
@@ -72,7 +80,8 @@ export type BicycleErrorCode =
   | 'tooMany'
   | 'duplicate'
   | 'notFound'
-  | 'alreadyInstalled';
+  | 'alreadyInstalled'
+  | 'outOfRange';
 
 /** One failing field. Validation reports at most one error per field. */
 export interface BicycleValidationError {
@@ -107,6 +116,13 @@ export interface BicycleActions {
   updateBicycle: (id: BicycleId, changes: BicycleUpdate) => BicycleResult;
   /** Removes the bicycle stored under `id`. Returns `false`, changing nothing, for an unknown id. */
   removeBicycle: (id: BicycleId) => boolean;
+  /**
+   * Stores a new odometer reading and its date on the bicycle stored under `id`. The reading may be lower than the
+   * current one, to correct a mistake, but not below the latest usage period boundary on the bicycle (rule 6), which is
+   * `outOfRange`. Fails with only `notFound` on `id` for an unknown id. When nothing changes, the stored bicycle is
+   * returned and state is not written. Reads `components` and never writes it.
+   */
+  setBicycleOdometer: (id: BicycleId, input: BicycleOdometerInput) => BicycleResult;
 }
 
 /** Normalized bicycle collection. `allIds` holds the display (insertion) order. */

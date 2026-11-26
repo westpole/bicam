@@ -9,7 +9,10 @@ Object.freeze(INITIAL_BICYCLE_COLLECTION.byId);
 Object.freeze(INITIAL_BICYCLE_COLLECTION.allIds);
 Object.freeze(INITIAL_BICYCLE_COLLECTION);
 
-/** Bicycle field limits, counted in UTF-16 code units after trimming. Documented in `docs/store/bicycle.md` §2. */
+/**
+ * Bicycle field limits. Lengths are counted in UTF-16 code units after trimming; the odometer is in kilometres.
+ * Documented in `docs/store/bicycle.md` §2.
+ */
 export const BICYCLE_LIMITS = {
   nameMaxLength: 40,
   companyMaxLength: 60,
@@ -18,6 +21,8 @@ export const BICYCLE_LIMITS = {
   frameGeometryMaxLength: 500,
   componentIdMaxLength: 64,
   componentsMaxCount: 100,
+  odometerMax: 500_000,
+  odometerMaxDecimals: 1,
 } as const;
 
 /** Matches any control character except line breaks. Not allowed in multi-line text (`frameGeometry`). */

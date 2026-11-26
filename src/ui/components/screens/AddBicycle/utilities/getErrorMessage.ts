@@ -29,6 +29,7 @@ export function getErrorMessage(t: TFunction, field: AddBicycleField, code: Bicy
     case 'tooMany':
     case 'notFound':
     case 'alreadyInstalled':
+    case 'outOfRange':
       return t('screens.addBicycle.errors.rejected');
   }
 }

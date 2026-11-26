@@ -18,11 +18,13 @@ import {
 } from './constants';
 import { IncludeComponentDialog } from './IncludeComponentDialog';
 import type { BicycleDetailsField, BicycleDetailsProps } from './types';
+import { UpdateDistanceDialog } from './UpdateDistanceDialog';
 import { formatDate } from './utilities/formatDate';
 
 /**
- * "Bicycle details" screen, opened from a bicycle card on the home screen: the bicycle's name, its fields, and the
- * list of its components, with a dialog that includes another one. Unknown fields read "Not specified".
+ * "Bicycle details" screen, opened from a bicycle card on the home screen: the bicycle's name, its fields, its
+ * distance with a dialog that updates it, and the list of its components with a dialog that includes another one.
+ * Unknown values read "Not specified".
  *
  * @param props - See {@link BicycleDetailsProps}.
  * @returns The details screen.
@@ -31,6 +33,8 @@ import { formatDate } from './utilities/formatDate';
  *   bicycle={selectedBicycle}
  *   components={getInstalledComponents(components, selectedBicycle)}
  *   spareComponents={getSpareComponents(components, bicycles)}
+ *   minimumOdometer={getMinimumOdometer(components, selectedBicycle.id)}
+ *   onSetOdometer={setOdometer}
  *   onCreateComponent={createComponent}
  *   onIncludeComponent={includeComponent}
  * />
@@ -39,12 +43,16 @@ export function BicycleDetails({
   bicycle,
   components,
   spareComponents,
+  minimumOdometer,
+  onSetOdometer,
   onCreateComponent,
   onIncludeComponent,
 }: BicycleDetailsProps) {
   const { t, i18n } = useTranslation();
   const componentsTitleId = useId();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const distanceTitleId = useId();
+  const [openDialog, setOpenDialog] = useState<'distance' | 'include' | null>(null);
+  const closeDialog = () => setOpenDialog(null);
 
   /**
    * Reads one field as display text.
@@ -79,12 +87,42 @@ export function BicycleDetails({
           </Box>
         ))}
       </Stack>
+      <Stack spacing={1.5} component="section" aria-labelledby={distanceTitleId}>
+        <Stack direction="row" spacing={1} useFlexGap sx={SECTION_HEADER_SX}>
+          <Typography id={distanceTitleId} variant="h6" component="h3">
+            {t('screens.bicycleDetails.distance.title')}
+          </Typography>
+          <Button variant="contained" onClick={() => setOpenDialog('distance')}>
+            {t('screens.bicycleDetails.distance.update')}
+          </Button>
+        </Stack>
+        <Stack component="dl" spacing={1.5} sx={DETAILS_SX}>
+          <Box>
+            <Typography variant="body2" component="dt" sx={{ color: 'text.secondary' }}>
+              {t('screens.bicycleDetails.distance.odometer')}
+            </Typography>
+            <Typography variant="body1" component="dd" sx={VALUE_SX}>
+              {t('screens.bicycleDetails.distance.value', { odometer: bicycle.odometer })}
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="body2" component="dt" sx={{ color: 'text.secondary' }}>
+              {t('screens.bicycleDetails.distance.date')}
+            </Typography>
+            <Typography variant="body1" component="dd" sx={bicycle.odometerDate === null ? UNKNOWN_VALUE_SX : VALUE_SX}>
+              {bicycle.odometerDate === null
+                ? t('screens.bicycleDetails.notSpecified')
+                : formatDate(bicycle.odometerDate, i18n.language)}
+            </Typography>
+          </Box>
+        </Stack>
+      </Stack>
       <Stack spacing={1.5}>
         <Stack direction="row" spacing={1} useFlexGap sx={SECTION_HEADER_SX}>
           <Typography id={componentsTitleId} variant="h6" component="h3">
             {t('screens.bicycleDetails.components.title')}
           </Typography>
-          <Button variant="contained" onClick={() => setIsDialogOpen(true)}>
+          <Button variant="contained" onClick={() => setOpenDialog('include')}>
             {t('screens.bicycleDetails.components.include')}
           </Button>
         </Stack>
@@ -96,12 +134,20 @@ export function BicycleDetails({
           </Typography>
         )}
       </Stack>
-      {isDialogOpen && (
+      {openDialog === 'distance' && (
+        <UpdateDistanceDialog
+          odometer={bicycle.odometer}
+          minimumOdometer={minimumOdometer}
+          onSetOdometer={onSetOdometer}
+          onClose={closeDialog}
+        />
+      )}
+      {openDialog === 'include' && (
         <IncludeComponentDialog
           spareComponents={spareComponents}
           onCreateComponent={onCreateComponent}
           onIncludeComponent={onIncludeComponent}
-          onClose={() => setIsDialogOpen(false)}
+          onClose={closeDialog}
         />
       )}
     </Stack>

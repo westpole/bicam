@@ -1,4 +1,4 @@
-import type { ComponentErrorCode } from '../types';
+import type { NumberErrorCode } from '../types';
 
 /**
  * Checks one number against the common rules, in this order: finite, between 0 and `max`, number of decimals.
@@ -12,7 +12,7 @@ import type { ComponentErrorCode } from '../types';
  * checkNumber(-1, 500_000, 1);     // 'outOfRange'
  * checkNumber(412.55, 500_000, 1); // 'invalidFormat'
  */
-export function checkNumber(value: number, max: number, decimals: number): ComponentErrorCode | null {
+export function checkNumber(value: number, max: number, decimals: number): NumberErrorCode | null {
   if (!Number.isFinite(value)) {
     return 'invalidFormat';
   }

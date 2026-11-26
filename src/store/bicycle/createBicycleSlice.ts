@@ -1,12 +1,15 @@
 import type { StateCreator } from 'zustand';
 
 import { definedChanges } from '../common/utilities/definedChanges';
+import { toOptionalText } from '../common/utilities/toOptionalText';
+import { getMinimumOdometer } from '../components/utilities/getMinimumOdometer';
 import type { AppStore } from '../types';
 import type { Bicycle, BicycleActions, BicycleResult } from './types';
 import { createBicycleId } from './utilities/createBicycleId';
 import { hasBicycle } from './utilities/hasBicycle';
 import { normalizeBicycleInput } from './utilities/normalizeBicycleInput';
 import { validateBicycleInCollection } from './utilities/validateBicycleInCollection';
+import { validateOdometerReading } from './utilities/validateOdometerReading';
 
 /**
  * Creates the bicycle actions for {@link useAppStore}. Data lives in `state.bicycle`; every successful write replaces
@@ -78,5 +81,36 @@ export const createBicycleSlice: StateCreator<AppStore, [], [], BicycleActions> 
     }));
 
     return true;
+  },
+
+  setBicycleOdometer: (id, input): BicycleResult => {
+    const collection = get().bicycle;
+
+    if (!hasBicycle(collection, id)) {
+      return { ok: false, errors: [{ field: 'id', code: 'notFound' }] };
+    }
+
+    const stored = collection.byId[id];
+    // `-0 === 0`, so this also turns -0, which does not survive a JSON round trip, into 0.
+    const odometer = input.odometer === 0 ? 0 : input.odometer;
+    const date = toOptionalText(input.date);
+    const errors = validateOdometerReading(odometer, date, getMinimumOdometer(get().components, id));
+
+    if (errors.length > 0) {
+      return { ok: false, errors };
+    }
+
+    // Nothing to write: keep the stored object, so subscribers are not notified.
+    if (odometer === stored.odometer && date === stored.odometerDate) {
+      return { ok: true, bicycle: stored };
+    }
+
+    const bicycle: Bicycle = { ...stored, odometer, odometerDate: date };
+
+    set((state) => ({
+      bicycle: { byId: { ...state.bicycle.byId, [id]: bicycle }, allIds: state.bicycle.allIds },
+    }));
+
+    return { ok: true, bicycle };
   },
 });

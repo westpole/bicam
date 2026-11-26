@@ -1,4 +1,4 @@
-import { DECIMAL_PATTERN } from '../constants';
+import { DECIMAL_PATTERN } from './constants';
 
 /**
  * Reads a number typed into a form field. Text that is not a plain decimal number becomes `NaN`, so the store rejects

@@ -1,3 +1,4 @@
+import { checkNumber } from '../../common/utilities/checkNumber';
 import { isIsoDate } from '../../common/utilities/isIsoDate';
 import {
   CHAIN_CARE_TYPES,
@@ -15,7 +16,6 @@ import type {
   NormalizedComponentHistoryInput,
   OptionCheck,
 } from '../types';
-import { checkNumber } from './checkNumber';
 
 /**
  * Checks a required date: not blank, then a real calendar date.

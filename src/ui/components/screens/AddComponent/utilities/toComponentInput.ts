@@ -1,9 +1,9 @@
 import type { ComponentInput, ComponentLimits } from '@store/components/types';
 
+import { parseNumber } from '../../utilities/parseNumber';
 import { LIMIT_FIELDS } from '../constants';
 import type { AddComponentValues } from '../types';
 import { hasChainLimits } from './hasChainLimits';
-import { parseNumber } from './parseNumber';
 
 /**
  * Turns the draft into the store's input. Text is passed as typed; the store trims and checks it.

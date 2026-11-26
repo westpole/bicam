@@ -6,15 +6,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import {
-  ADD_BICYCLE_FIELDS,
-  DATE_INPUT_SX,
-  EMPTY_ADD_BICYCLE_VALUES,
-  FORM_SX,
-  INCOMPLETE_DATE,
-  MAX_DATE,
-  MULTILINE_MIN_ROWS,
-} from './constants';
+import { DATE_INPUT_SX, INCOMPLETE_DATE, MAX_DATE } from '../utilities/constants';
+import { ADD_BICYCLE_FIELDS, EMPTY_ADD_BICYCLE_VALUES, FORM_SX, MULTILINE_MIN_ROWS } from './constants';
 import type { AddBicycleErrors, AddBicycleField, AddBicycleProps, AddBicycleValues } from './types';
 import { getErrorMessage } from './utilities/getErrorMessage';
 import { hasOtherErrors } from './utilities/hasOtherErrors';

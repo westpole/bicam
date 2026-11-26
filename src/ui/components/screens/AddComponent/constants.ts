@@ -30,8 +30,5 @@ export const EMPTY_ADD_COMPONENT_VALUES: Readonly<AddComponentValues> = {
   'limits.cleaning': '',
 };
 
-/** A plain decimal number as typed: optional sign, digits, and at most one point. No exponent, no thousands separator. */
-export const DECIMAL_PATTERN = /^[+-]?(\d+\.?\d*|\.\d+)$/;
-
 /** Keeps the form readable on wide screens; on phones it fills the width. */
 export const FORM_SX: SxProps<Theme> = { maxWidth: 'sm' };

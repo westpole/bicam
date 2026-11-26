@@ -107,6 +107,13 @@
     },
     "bicycleDetails": {
       "notSpecified": "Not specified",
+      "distance": {
+        "title": "Distance",
+        "update": "Update distance",
+        "odometer": "Odometer",
+        "date": "Reading date",
+        "value": "{{odometer, number}} km"
+      },
       "components": {
         "title": "Components",
         "empty": "No components on this bicycle yet.",
@@ -136,6 +143,39 @@
         "errors": {
           "form": "The component could not be included.",
           "full": "This bicycle already has the maximum of {{max}} components."
+        }
+      },
+      "updateDistance": {
+        "title": "Update distance",
+        "save": "Save",
+        "cancel": "Cancel",
+        "mode": {
+          "label": "Update by",
+          "total": "Set total",
+          "ride": "Add ride"
+        },
+        "fields": {
+          "total": {
+            "label": "Total distance",
+            "hint": "The bicycle's total, as its computer shows it."
+          },
+          "ride": {
+            "label": "Ride distance",
+            "hint": "Added to the current total of {{total, number}} km."
+          },
+          "date": {
+            "label": "Date",
+            "hint": "Date of the reading. Leave empty when unknown."
+          }
+        },
+        "unit": "km",
+        "errors": {
+          "form": "The distance could not be saved.",
+          "invalidNumber": "Enter a number, for example 1500.",
+          "outOfRange": "The total must be from {{min, number}} to {{max, number}} km.",
+          "outOfRangeRide": "The ride must bring the total to between {{min, number}} and {{max, number}} km.",
+          "invalidDate": "Enter a complete date with a four-digit year, or leave it empty.",
+          "rejected": "This value cannot be used."
         }
       }
     },

@@ -3,3 +3,6 @@ export type IsoDate = string;
 
 /** Why a text value failed the common rules in `checkText`. Codes, not text: the UI translates them. */
 export type TextErrorCode = 'required' | 'tooLong' | 'invalidFormat';
+
+/** Why a number failed the common rules in `checkNumber`. Codes, not text: the UI translates them. */
+export type NumberErrorCode = 'invalidFormat' | 'outOfRange';

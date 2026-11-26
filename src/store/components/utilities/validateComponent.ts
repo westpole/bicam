@@ -1,4 +1,5 @@
 import { CONTROL_CHARACTER_PATTERN } from '../../common/constants';
+import { checkNumber } from '../../common/utilities/checkNumber';
 import { checkText } from '../../common/utilities/checkText';
 import { CHAIN_CARE_TYPES, CHAIN_LIMIT_KEYS, COMPONENT_LIMIT_KEYS, COMPONENT_LIMITS } from '../constants';
 import type {
@@ -9,7 +10,6 @@ import type {
   ComponentValidation,
   NormalizedComponentInput,
 } from '../types';
-import { checkNumber } from './checkNumber';
 import { isBicycleComponentType } from './isBicycleComponentType';
 
 /**

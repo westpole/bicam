@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { BicycleInput } from '@store/bicycle/types';
 import { getInstalledComponents } from '@store/components/utilities/getInstalledComponents';
+import { getMinimumOdometer } from '@store/components/utilities/getMinimumOdometer';
 import { getSpareComponents } from '@store/components/utilities/getSpareComponents';
 import { useAppStore } from '@store/useAppStore';
 import { AppHeader } from '@ui/components/AppHeader/AppHeader';
@@ -19,9 +20,9 @@ import { Home } from '@ui/components/screens/Home/Home';
 /**
  * Root application view: the app shell with its header, the app menu in the shell's overlay slot, and the active
  * screen in the main viewport: on `home`, the user's bicycles as cards (empty when there are none); on
- * `bicycleDetails`, the selected bicycle's details and components; on `addBicycle`, the new-bicycle form, which returns
- * to `home` when saved or cancelled; on `addComponent`, the spare-component form, which stays open after a save so
- * several parts can be added in a row; otherwise the chosen menu screen. The header title links back to `home`.
+ * `bicycleDetails`, the selected bicycle's details, distance, and components; on `addBicycle`, the new-bicycle form,
+ * which returns to `home` when saved or cancelled; on `addComponent`, the spare-component form, which stays open after
+ * a save so several parts can be added in a row; otherwise the chosen menu screen. The header title links back to `home`.
  *
  * `App` is the only component that reads `useAppStore`; it passes state and actions down as props, so the header,
  * menu, and screens stay presentational. The light/dark mode is owned by MUI's `ThemeProvider` (it applies the scheme
@@ -44,6 +45,7 @@ export function App() {
   const addBicycle = useAppStore((state) => state.addBicycle);
   const addComponent = useAppStore((state) => state.addComponent);
   const updateBicycle = useAppStore((state) => state.updateBicycle);
+  const setBicycleOdometer = useAppStore((state) => state.setBicycleOdometer);
   const addComponentToBicycle = useAppStore((state) => state.addComponentToBicycle);
   const openBicycleDetails = useAppStore((state) => state.openBicycleDetails);
   // `colorScheme` is the resolved scheme (`system` already applied). It is defined from the first render because
@@ -112,6 +114,8 @@ export function App() {
           bicycle={selectedBicycle}
           components={getInstalledComponents(componentCollection, selectedBicycle)}
           spareComponents={getSpareComponents(componentCollection, bicycleCollection)}
+          minimumOdometer={getMinimumOdometer(componentCollection, selectedBicycle.id)}
+          onSetOdometer={(input) => setBicycleOdometer(selectedBicycle.id, input)}
           onCreateComponent={(input) => addComponentToBicycle(selectedBicycle.id, input)}
           onIncludeComponent={(id) =>
             updateBicycle(selectedBicycle.id, { components: [...selectedBicycle.components, id] })
