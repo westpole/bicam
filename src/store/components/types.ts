@@ -382,6 +382,28 @@ export interface UsageInterval {
   end: number | null;
 }
 
+/**
+ * A component's derived distance and chain care state, as `getComponentUsage` returns it. Distances are kilometres,
+ * rounded to 1 decimal. A limit is reached when a value is at or above it; this object does not decide that. Documented
+ * in `docs/store/components.md` §2.4.
+ */
+export interface ComponentUsage {
+  /** All its usage, plus `initialDistance`. */
+  distance: number;
+  /** Distance in the open period, or `null` when it is not in use. */
+  distanceSinceInstalled: number | null;
+  /** Whether it has an open usage period. */
+  isInUse: boolean;
+  /** Stretch in percent from the newest entry that has one, or `null` (also for types without chain care). */
+  stretch: number | null;
+  /** Lubricant of the newest lubrication, or `null` when unknown or none. */
+  lubricant: Lubricant | null;
+  /** Distance since the newest lubrication (top-up or clean), never below 0; `null` when unknown. */
+  distanceSinceLubrication: number | null;
+  /** Distance since the newest clean, never below 0; `null` when unknown. Top-ups do not change it. */
+  distanceSinceCleaning: number | null;
+}
+
 /** Component actions on `useAppStore`. A failed action never changes state. See `docs/store/components.md` §4. */
 export interface ComponentActions {
   /**

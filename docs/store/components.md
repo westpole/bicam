@@ -260,6 +260,36 @@ changes nothing, and no state that a subscriber sees, or that `persist` saves, b
 suits 5–10-speed), a top-up every 300 km, and a clean and relubrication every 1500 km, with no distance limit. Other types
 start with `EMPTY_COMPONENT_LIMITS` (every limit `null`). `getDefaultLimits(type)` returns a copy.
 
+### 2.4 Usage contract
+
+`getComponentUsage(component, bicycles)` (`utilities/getComponentUsage.ts`) derives what readers need from a component
+and `state.bicycle.byId`. It is the contract for the later events manager. It is pure, reads no date, writes nothing,
+and returns a new object on each call, so `App` memoizes it instead of selecting it.
+
+```ts
+interface ComponentUsage {
+  distance: number;                         // all its usage, plus initialDistance
+  distanceSinceInstalled: number | null;    // in the open period; null when not in use
+  isInUse: boolean;
+  stretch: number | null;                   // newest reading
+  lubricant: Lubricant | null;              // from the newest lubrication
+  distanceSinceLubrication: number | null;  // top-up or clean; null when unknown
+  distanceSinceCleaning: number | null;     // null when unknown
+}
+```
+
+- Distances follow the formula in §2.3 and are rounded to 1 decimal (`0.1 + 0.2` gives `0.3`). Closed periods are not
+  looked up, so periods on another or a removed bicycle keep counting. A component that was never used has its
+  `initialDistance` and `null` since installed.
+- Care values come from whole-component entries (`subcomponent: null`) of the types in `CHAIN_CARE_TYPES`. Other types
+  get `null` for all four.
+- "Newest" means the latest date, then the last one added, also when entries were added out of order. `stretch` uses
+  `date` among entries that have a stretch; `lubricant` and `distanceSinceLubrication` use `lubricated`;
+  `distanceSinceCleaning` uses `cleaned`, so a top-up does not change it and a clean restarts both.
+- A distance since care is `null` when that newest entry has no distance, and never below 0.
+- A limit is reached when the value is at or above it. Together with `component.limits`, this is enough to decide that
+  service is due; the function does not decide it. Indoor distance is not tracked.
+
 ## 3. Type-specific history fields
 
 Every entry has every key. A field that does not apply to the component's type must be `null`.
@@ -376,6 +406,7 @@ A failed action never changes state and does not call `set`. Lookups by componen
   `{ field: 'components', code: 'tooMany' }`. Nothing is stored on failure. A component that is already stored is added
   with `updateBicycle`.
 - `getInstalledComponents` lists a bicycle's components; `getSpareComponents` lists the components on no bicycle.
+  `getComponentUsage` reads `state.bicycle.byId` to derive a component's distance (§2.4).
 - `removeBicycle` does not remove components: a rider keeps the parts, and their distance, when a bicycle goes.
 
 ## 5. Results and error codes
