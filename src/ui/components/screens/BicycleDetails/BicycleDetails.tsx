@@ -25,37 +25,30 @@ import {
 import { IncludeComponentDialog } from './IncludeComponentDialog';
 import { LogCareDialog } from './LogCareDialog';
 import type { BicycleDetailsField, BicycleDetailsProps } from './types';
+import { UndoStartDialog } from './UndoStartDialog';
 import { UpdateDistanceDialog } from './UpdateDistanceDialog';
 import { UseComponentDialog } from './UseComponentDialog';
 import { formatDate } from './utilities/formatDate';
 import { getComponentName } from './utilities/getComponentName';
 import { getTypesWithoutUse } from './utilities/getTypesWithoutUse';
 
-/**
- * The open dialog: a section's dialog, the use component dialog for one resting component, the log care dialog for one
- * chain, or none.
- */
-type OpenDialog = 'distance' | 'include' | { use: ComponentId } | { care: ComponentId } | null;
+/** A dialog about one component: put a resting one in use, log care on a chain, or undo the start of one in use. */
+type ComponentDialogKind = 'use' | 'care' | 'undo';
+
+/** The open dialog: a section's dialog, a dialog about one component, or none. */
+type OpenDialog = 'distance' | 'include' | { kind: ComponentDialogKind; componentId: ComponentId } | null;
 
 /**
  * Reads the component a component dialog is open for.
  *
  * @param openDialog - The open dialog.
- * @param kind - The dialog: `use` or `care`.
+ * @param kind - The dialog.
  * @returns The component's id, or `null` when that dialog is not open.
  * @example
- * getDialogComponentId({ care: 'chain-a' }, 'care'); // 'chain-a'
+ * getDialogComponentId({ kind: 'care', componentId: 'chain-a' }, 'care'); // 'chain-a'
  */
-function getDialogComponentId(openDialog: OpenDialog, kind: 'use' | 'care'): ComponentId | null {
-  if (typeof openDialog !== 'object' || openDialog === null) {
-    return null;
-  }
-
-  if (kind === 'use') {
-    return 'use' in openDialog ? openDialog.use : null;
-  }
-
-  return 'care' in openDialog ? openDialog.care : null;
+function getDialogComponentId(openDialog: OpenDialog, kind: ComponentDialogKind): ComponentId | null {
+  return typeof openDialog === 'object' && openDialog?.kind === kind ? openDialog.componentId : null;
 }
 
 /**
@@ -64,7 +57,8 @@ function getDialogComponentId(openDialog: OpenDialog, kind: 'use' | 'care'): Com
  * in two lists, **In use** and **Resting** (an empty one is hidden); a resting row has **Use now**, which opens a dialog
  * that starts it, as a swap when its type is full. A type with components but none in use shows a notice. After a
  * start, focus moves to the component's row. A chain row, in use or resting, has **Log care**, which opens a dialog that
- * adds a care entry. Unknown values read "Not specified".
+ * adds a care entry. A row in use whose start can be undone (`canUndoStart`) has **Undo**, which asks first; after it,
+ * focus moves to the component's row. Unknown values read "Not specified".
  *
  * @param props - See {@link BicycleDetailsProps}.
  * @returns The details screen.
@@ -80,6 +74,9 @@ function getDialogComponentId(openDialog: OpenDialog, kind: 'use' | 'care'): Com
  *   onStartComponent={startComponent}
  *   getStartRange={getRange}
  *   onLogCare={addHistoryEntry}
+ *   canUndoStart={canUndo}
+ *   getUndoPlan={planUndo}
+ *   onUndoStart={undo}
  * />
  */
 export function BicycleDetails({
@@ -93,6 +90,9 @@ export function BicycleDetails({
   onStartComponent,
   getStartRange,
   onLogCare,
+  canUndoStart,
+  getUndoPlan,
+  onUndoStart,
 }: BicycleDetailsProps) {
   const { t, i18n } = useTranslation();
   const componentsTitleId = useId();
@@ -101,8 +101,8 @@ export function BicycleDetails({
   const distanceTitleId = useId();
   const rowsId = useId();
   const [openDialog, setOpenDialog] = useState<OpenDialog>(null);
-  // The component whose row gets focus after the next commit: the one just put in use. A ref, because moving focus
-  // changes nothing that is rendered.
+  // The component whose row gets focus after the next commit: the one just put in use, or whose start was just undone.
+  // A ref, because moving focus changes nothing that is rendered.
   const focusIdRef = useRef<ComponentId | null>(null);
   const closeDialog = () => setOpenDialog(null);
 
@@ -114,13 +114,16 @@ export function BicycleDetails({
   // Shown only while the chain is still on the bicycle.
   const careId = getDialogComponentId(openDialog, 'care');
   const careRow = rows.find(({ component }) => component.id === careId);
+  // Shown only while the component is still in use.
+  const undoId = getDialogComponentId(openDialog, 'undo');
+  const undoRow = inUse.find(({ component }) => component.id === undoId);
   // What the chosen component can replace; the type is full when as many are in use as `ACTIVE_LIMITS` allows.
   const useCandidates = useRow ? inUse.filter(({ component }) => component.type === useRow.component.type) : [];
   const useLimit = useRow ? ACTIVE_LIMITS[useRow.component.type] : null;
 
   // Runs after every commit. Passive effects run after the closed dialog's cleanup, which returns focus to its (now
-  // removed) button, so the row keeps focus. Relies on `onStartComponent` being synchronous: the ref is set, then the
-  // store update and the dialog's close land in one commit, so the row exists when this runs.
+  // removed) button, so the row keeps focus. Relies on `onStartComponent` and `onUndoStart` being synchronous: the ref
+  // is set, then the store update and the dialog's close land in one commit, so the row exists when this runs.
   useEffect(() => {
     if (focusIdRef.current !== null) {
       document.getElementById(toRowId(rowsId, focusIdRef.current))?.focus();
@@ -162,6 +165,22 @@ export function BicycleDetails({
   };
 
   /**
+   * Undoes a component's start and, on success, moves focus to its row, now under **Resting**.
+   *
+   * @param componentId - The component.
+   * @returns The store's result.
+   */
+  const undoStart = (componentId: ComponentId) => {
+    const result = onUndoStart(componentId);
+
+    if (result.ok) {
+      focusIdRef.current = componentId;
+    }
+
+    return result;
+  };
+
+  /**
    * Renders the **Use now** button of a resting row. Its accessible name also names the component, so identical
    * buttons can be told apart.
    *
@@ -172,7 +191,7 @@ export function BicycleDetails({
     <Button
       variant="outlined"
       aria-label={t('screens.bicycleDetails.components.useNowLabel', { name: getComponentName(t, component) })}
-      onClick={() => setOpenDialog({ use: component.id })}
+      onClick={() => setOpenDialog({ kind: 'use', componentId: component.id })}
     >
       {t('screens.bicycleDetails.components.useNow')}
     </Button>
@@ -189,11 +208,33 @@ export function BicycleDetails({
       <Button
         variant="outlined"
         aria-label={t('screens.bicycleDetails.components.logCareLabel', { name: getComponentName(t, component) })}
-        onClick={() => setOpenDialog({ care: component.id })}
+        onClick={() => setOpenDialog({ kind: 'care', componentId: component.id })}
       >
         {t('screens.bicycleDetails.components.logCare')}
       </Button>
     ) : null;
+
+  /**
+   * Renders the actions of a row in use: **Log care** for a chain, then **Undo** when `canUndoStart` allows it. Its
+   * accessible name also names the component.
+   *
+   * @param row - The row in use.
+   * @returns The buttons, side by side, wrapping when they do not fit.
+   */
+  const renderInUseActions = (row: ComponentRow) => (
+    <Stack direction="row" spacing={1} useFlexGap sx={ACTIONS_SX}>
+      {renderLogCare(row)}
+      {canUndoStart(row.component.id) && (
+        <Button
+          variant="outlined"
+          aria-label={t('screens.bicycleDetails.components.undoLabel', { name: getComponentName(t, row.component) })}
+          onClick={() => setOpenDialog({ kind: 'undo', componentId: row.component.id })}
+        >
+          {t('screens.bicycleDetails.components.undo')}
+        </Button>
+      )}
+    </Stack>
+  );
 
   /**
    * Renders the actions of a resting row: **Log care** for a chain, then **Use now**.
@@ -278,7 +319,7 @@ export function BicycleDetails({
               aria-labelledby={inUseTitleId}
               rows={inUse}
               rowIdPrefix={rowsId}
-              renderAction={renderLogCare}
+              renderAction={renderInUseActions}
             />
           </Stack>
         )}
@@ -325,6 +366,14 @@ export function BicycleDetails({
           odometer={bicycle.odometer}
           onStart={(input) => startComponent(useRow.component.id, input)}
           getStartRange={(replaces) => getStartRange(useRow.component.id, replaces)}
+          onClose={closeDialog}
+        />
+      )}
+      {undoRow && (
+        <UndoStartDialog
+          row={undoRow}
+          plan={getUndoPlan(undoRow.component.id)}
+          onUndo={() => undoStart(undoRow.component.id)}
           onClose={closeDialog}
         />
       )}

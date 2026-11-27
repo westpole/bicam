@@ -9,6 +9,8 @@ import type {
   ComponentHistoryEntry,
   ComponentHistoryResult,
   ComponentResult,
+  ComponentUndoPlan,
+  ComponentUndoResult,
   ComponentUsagePlan,
   ComponentUsageResult,
 } from './types';
@@ -23,6 +25,7 @@ import { normalizeComponentInput } from './utilities/normalizeComponentInput';
 import { planComponentAdd } from './utilities/planComponentAdd';
 import { planComponentStart } from './utilities/planComponentStart';
 import { planComponentStop } from './utilities/planComponentStop';
+import { planComponentUndo } from './utilities/planComponentUndo';
 import { validateComponent } from './utilities/validateComponent';
 import { validateComponentHistoryEntry } from './utilities/validateComponentHistoryEntry';
 import { withoutComponent } from './utilities/withoutComponent';
@@ -196,6 +199,19 @@ export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActi
 
     return applyUsagePlan(set, planComponentStop(bicycle, components, componentId, input));
   },
+
+  undoComponentStart: (componentId): ComponentUndoResult => {
+    const { bicycle, components } = get();
+    const plan = planComponentUndo(bicycle, components, componentId);
+
+    if (!plan.ok) {
+      return plan;
+    }
+
+    applyUsagePlan(set, plan);
+
+    return { ok: true, component: plan.component, restored: plan.restored };
+  },
 });
 
 /**
@@ -203,12 +219,13 @@ export const createComponentsSlice: StateCreator<AppStore, [], [], ComponentActi
  * returned as it is, without calling `set`.
  *
  * @param set - Zustand `set`.
- * @param plan - From `planComponentStart` or `planComponentStop`.
- * @returns The action's result.
+ * @param plan - From `planComponentStart`, `planComponentStop`, or `planComponentUndo`.
+ * @returns The result of a start or stop. `undoComponentStart` ignores it and builds its own result, which adds
+ * `restored` from the plan.
  */
 function applyUsagePlan(
   set: Parameters<typeof createComponentsSlice>[0],
-  plan: ComponentUsagePlan,
+  plan: ComponentUsagePlan | ComponentUndoPlan,
 ): ComponentUsageResult {
   if (!plan.ok) {
     return plan;

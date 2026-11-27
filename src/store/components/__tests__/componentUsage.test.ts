@@ -4,10 +4,12 @@ import { isPersistedAppState } from '../../persistence/utilities/isPersistedAppS
 import { useAppStore } from '../../useAppStore';
 import { storedComponent } from '../__mocks__/storedComponent';
 import { COMPONENT_LIMITS } from '../constants';
+import { planComponentUndo } from '../utilities/planComponentUndo';
 import type {
   BicycleComponent,
   BicycleComponentType,
   ComponentErrorCode,
+  ComponentHistoryEntry,
   ComponentUsagePeriod,
   ComponentUsageResult,
   ComponentUsageValidationError,
@@ -629,6 +631,177 @@ describe('component usage', () => {
           { field: 'date', code: 'invalidFormat' },
         ],
       );
+    });
+  });
+
+  describe('undoComponentStart (rule 10)', () => {
+    /**
+     * Undoes a component's start.
+     *
+     * @param componentId - The component.
+     * @returns The action's result.
+     */
+    const undo = (componentId: string) => useAppStore.getState().undoComponentStart(componentId);
+
+    it('undoes the late swap of the worked example in one set, and the odometer can then be lowered', () => {
+      seed(0, [{ id: 'chain-a' }, { id: 'chain-b' }, { id: 'chain-c' }, { id: 'cassette', type: 'cassette' }]);
+      start('chain-a', 0);
+      start('cassette', 0);
+      setOdometer(1500);
+      start('chain-b', 1500, 'chain-a');
+      setOdometer(4500);
+      start('chain-a', 3100, 'chain-b');
+      const listener = vi.fn();
+      const unsubscribe = useAppStore.subscribe(listener);
+
+      const result = undo('chain-a');
+
+      unsubscribe();
+      const { byId } = useAppStore.getState().components;
+      expect(listener).toHaveBeenCalledOnce();
+      expect(result).toEqual({ ok: true, component: byId['chain-a'], restored: byId['chain-b'] });
+      expect([distance('chain-a'), distance('chain-b'), distance('chain-c'), distance('cassette')]).toEqual([
+        1500, 3000, 0, 4500,
+      ]);
+      expect(readings('chain-b')).toEqual([[1500, null, expect.any(String)]]);
+      expect(isPersistedAppState(useAppStore.getState())).toBe(true);
+
+      expect(useAppStore.getState().setBicycleOdometer(BIKE, { odometer: 1499, date: null }).ok).toBe(false);
+      setOdometer(1500);
+    });
+
+    it('removes a start that replaced nothing, keeping the history', () => {
+      const history: ComponentHistoryEntry[] = [
+        {
+          id: 'entry-1',
+          date: '2026-04-12',
+          installed: '2026-04-12',
+          distance: 1200,
+          position: null,
+          subcomponent: null,
+          lubricated: null,
+          stretch: 0.3,
+          lubricant: null,
+          cleaned: null,
+        },
+      ];
+      seed(1500, [
+        {
+          id: 'chain-a',
+          usage: [period('p-old', 0, 500), period('p-a', 1000, null)],
+          overrides: { history },
+        },
+      ]);
+
+      expect(undo('chain-a')).toEqual({
+        ok: true,
+        component: useAppStore.getState().components.byId['chain-a'],
+        restored: null,
+      });
+      expect(readings('chain-a')).toEqual([[0, 500, null]]);
+      expect(useAppStore.getState().components.byId['chain-a'].history).toBe(history);
+    });
+
+    it('goes back one swap at a time', () => {
+      seed(0, [{ id: 'chain-a' }, { id: 'chain-b' }, { id: 'chain-c' }]);
+      start('chain-a', 0);
+      setOdometer(1500);
+      start('chain-b', 1500, 'chain-a');
+      setOdometer(3000);
+      start('chain-c', 3000, 'chain-b');
+
+      expect(undo('chain-c').ok).toBe(true);
+      expect([distance('chain-a'), distance('chain-b'), distance('chain-c')]).toEqual([1500, 1500, 0]);
+
+      expect(undo('chain-b').ok).toBe(true);
+      expect([distance('chain-a'), distance('chain-b'), distance('chain-c')]).toEqual([3000, 0, 0]);
+      expect(readings('chain-a')).toEqual([[0, null, null]]);
+    });
+
+    it('brings back C after C → B → D at one reading, because B never ran', () => {
+      seed(0, [{ id: 'chain-b' }, { id: 'chain-c' }, { id: 'chain-d' }]);
+      start('chain-c', 0);
+      setOdometer(1000);
+      start('chain-b', 1000, 'chain-c');
+      start('chain-d', 1000, 'chain-b');
+      setOdometer(2000);
+
+      expect(undo('chain-d')).toEqual(expect.objectContaining({ ok: true }));
+      expect(readings('chain-c')).toEqual([[0, null, null]]);
+      expect(readings('chain-b')).toEqual([]);
+    });
+
+    describe('when nothing takes its place', () => {
+      /** Chain A in use since 1500 in place of chain B, which ran from 0 to 1500. */
+      const swapped = (overridesB: Partial<BicycleComponent> = {}, usageB = [period('p-b', 0, 1500)]): Seed[] => [
+        { id: 'chain-a', usage: [period('p-a', 1500, null, { replacedPeriodId: 'p-b' })] },
+        { id: 'chain-b', usage: usageB, overrides: overridesB },
+      ];
+
+      /**
+       * Asserts what the plan says and that the undo only removed chain A's period.
+       *
+       * @param blockedBy - The expected reason.
+       */
+      function expectBlocked(blockedBy: string) {
+        const { bicycle: bicycles, components } = useAppStore.getState();
+
+        expect(planComponentUndo(bicycles, components, 'chain-a')).toEqual(
+          expect.objectContaining({ ok: true, restored: null, blockedBy }),
+        );
+        expect(undo('chain-a')).toEqual(expect.objectContaining({ ok: true, restored: null }));
+        expect(readings('chain-a')).toEqual([]);
+      }
+
+      it('when the replaced component was removed', () => {
+        seed(3000, swapped());
+        useAppStore.getState().removeComponent('chain-b');
+
+        expectBlocked('removed');
+      });
+
+      it('when it was retired', () => {
+        seed(3000, swapped({ retired: { date: '2026-04-12', bicycleId: BIKE } }));
+
+        expectBlocked('retired');
+        expect(readings('chain-b')).toEqual([[0, 1500, null]]);
+      });
+
+      it('when it was taken off the bicycle', () => {
+        seed(3000, swapped());
+        expect(useAppStore.getState().updateBicycle(BIKE, { components: ['chain-a'] }).ok).toBe(true);
+
+        expectBlocked('notOnBicycle');
+      });
+
+      it('when it was used again since', () => {
+        seed(3000, swapped({}, [period('p-b', 0, 1500), period('p-b2', 0, 100, { bicycleId: OTHER_BIKE })]));
+
+        expectBlocked('usedSince');
+      });
+
+      it('when its type would have no room', () => {
+        seed(3000, [
+          { id: 'chain-a', usage: [period('p-a', 2000, null, { replacedPeriodId: 'p-b' })] },
+          { id: 'chain-b', usage: [period('p-b', 0, 1500)] },
+          { id: 'chain-c', usage: [period('p-c', 1500, 1800)] },
+        ]);
+
+        expectBlocked('noRoom');
+        expect(readings('chain-b')).toEqual([[0, 1500, null]]);
+      });
+    });
+
+    it('returns only notFound for an unknown component', () => {
+      seed(0, []);
+
+      expectRejected(() => undo('__proto__'), [{ field: 'componentId', code: 'notFound' }]);
+    });
+
+    it('rejects a component that is not in use', () => {
+      seed(100, [{ id: 'chain-a', usage: [period('p-a', 0, 50)] }]);
+
+      expectRejected(() => undo('chain-a'), [{ field: 'componentId', code: 'notAllowed' }]);
     });
   });
 

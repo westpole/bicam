@@ -596,6 +596,34 @@ describe('App', () => {
       expect(readDistance('In use', 'B')).toBe('1,600 km');
     });
 
+    it('undoes the late swap of the worked example, and the odometer can then be lowered', async () => {
+      showThreeChains(0);
+      await startFromDialog('Use now: Chain Shimano CN-M8100 (A)');
+      const setOdometer = (odometer: number) =>
+        act(() => {
+          useAppStore.getState().setBicycleOdometer(gravel.id, { odometer, date: null });
+        });
+      setOdometer(1500);
+      await startFromDialog('Use now: Chain Shimano CN-M8100 (B)');
+      setOdometer(4500);
+      await startFromDialog('Use now: Chain Shimano CN-M8100 (A)', '3100');
+      // The cassette's start is older and replaced nothing.
+      expect(screen.queryByRole('button', { name: 'Undo start: Cassette CS-M8100' })).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Undo start: Chain Shimano CN-M8100 (A)' }));
+      const dialog = within(screen.getByRole('dialog', { name: 'Undo start?' }));
+      expect(dialog.getByText('Chain Shimano CN-M8100 (A) loses the 1,400 km ridden since it went in use.')).toBeVisible();
+      await userEvent.click(dialog.getByRole('button', { name: 'Undo' }));
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(readDistance('Resting', 'A')).toBe('1,500 km');
+      expect(readDistance('In use', 'B')).toBe('3,000 km');
+      expect(readDistance('Resting', 'C')).toBe('0 km');
+      expect(readDistance('In use', 'CS-M8100')).toBe('4,500 km');
+      setOdometer(1500);
+      expect(useAppStore.getState().bicycle.byId[gravel.id].odometer).toBe(1500);
+    }, 20_000);
+
     it('logs the chain care of the worked example: a top-up restarts lubrication, a clean restarts both', async () => {
       showThreeChains(0);
       await startFromDialog('Use now: Chain Shimano CN-M8100 (A)');

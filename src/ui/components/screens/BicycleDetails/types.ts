@@ -7,6 +7,8 @@ import type {
   ComponentId,
   ComponentInput,
   ComponentStartInput,
+  ComponentUndoPlan,
+  ComponentUndoResult,
   ComponentUsageResult,
   StartRange,
 } from '@store/components/types';
@@ -53,6 +55,12 @@ export interface BicycleDetailsProps extends IncludeComponentHandlers {
   getStartRange: (componentId: ComponentId, replaces: ComponentId | null) => StartRange | null;
   /** Adds a care entry to one of the bicycle's chains (`addComponentHistoryEntry`). Returns the store's result. */
   onLogCare: (componentId: ComponentId, input: ComponentHistoryInput) => ComponentHistoryResult;
+  /** Whether a component in use offers **Undo** (`canUndoStart`). */
+  canUndoStart: (componentId: ComponentId) => boolean;
+  /** What undoing a component's start would do (`planComponentUndo`), named in the dialog before it is confirmed. */
+  getUndoPlan: (componentId: ComponentId) => ComponentUndoPlan;
+  /** Undoes a component's start (`undoComponentStart`). Returns the store's result. */
+  onUndoStart: (componentId: ComponentId) => ComponentUndoResult;
 }
 
 /** Props for {@link IncludeComponentDialog}. */
@@ -157,3 +165,15 @@ export type LogCareErrors = Partial<Record<LogCareField, LogCareErrorCode>>;
 export type ReadingDistance =
   | { ok: true; distance: number }
   | { ok: false; code: 'aboveOdometer' | 'beforeInstallation'; min: number; max: number };
+
+/** Props for {@link UndoStartDialog}. */
+export interface UndoStartDialogProps {
+  /** The component in use whose start is undone, with its usage. */
+  row: ComponentRow;
+  /** What the undo would do (`planComponentUndo`), read when the dialog opens. */
+  plan: ComponentUndoPlan;
+  /** Undoes the start. Returns the store's result. */
+  onUndo: () => ComponentUndoResult;
+  /** Called after the start was undone, and when the user leaves the dialog without undoing it. */
+  onClose: () => void;
+}

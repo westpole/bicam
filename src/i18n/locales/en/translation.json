@@ -143,7 +143,9 @@
         "useNow": "Use now",
         "useNowLabel": "Use now: {{name}}",
         "logCare": "Log care",
-        "logCareLabel": "Log care: {{name}}"
+        "logCareLabel": "Log care: {{name}}",
+        "undo": "Undo",
+        "undoLabel": "Undo start: {{name}}"
       },
       "includeComponent": {
         "title": "Include component",
@@ -298,6 +300,23 @@
           "beforeInstallation": "The chain went in use at {{min, number}} km. Enter its distance at that time instead and leave the odometer empty.",
           "rejected": "This value cannot be used."
         }
+      },
+      "undoStart": {
+        "title": "Undo start?",
+        "lost": "{{name}} loses the {{distance, number}} km ridden since it went in use.",
+        "restored": "{{name}}, which it replaced, comes back in use and gets those kilometres.",
+        "blocked": {
+          "removed": "The component it replaced was removed, so nothing takes its place.",
+          "retired": "{{name}}, which it replaced, was retired, so nothing takes its place.",
+          "notOnBicycle": "{{name}}, which it replaced, is no longer on this bicycle, so nothing takes its place.",
+          "usedSince": "{{name}}, which it replaced, was used again since, so nothing takes its place.",
+          "noRoom": "{{name}}, which it replaced, cannot come back because its type has no room, so nothing takes its place."
+        },
+        "careWarning_one": "{{count}} care entry has a distance above {{distance, number}} km, the distance after the undo. Check it in Care history; nothing is deleted.",
+        "careWarning_other": "{{count}} care entries have a distance above {{distance, number}} km, the distance after the undo. Check them in Care history; nothing is deleted.",
+        "error": "The start could not be undone.",
+        "cancel": "Cancel",
+        "confirm": "Undo"
       }
     },
     "addComponent": {

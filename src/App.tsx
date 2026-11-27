@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Bicycle, BicycleInput } from '@store/bicycle/types';
 import type { BicycleComponentType, ComponentInput, ComponentStartInput } from '@store/components/types';
+import { canUndoStart } from '@store/components/utilities/canUndoStart';
 import { getComponentUsage } from '@store/components/utilities/getComponentUsage';
 import { getInstalledComponents } from '@store/components/utilities/getInstalledComponents';
 import { getMinimumOdometer } from '@store/components/utilities/getMinimumOdometer';
@@ -12,6 +13,7 @@ import { getStartRange } from '@store/components/utilities/getStartRange';
 import { hasComponent } from '@store/components/utilities/hasComponent';
 import { hasRoomForType } from '@store/components/utilities/hasRoomForType';
 import { isBicycleComponentType } from '@store/components/utilities/isBicycleComponentType';
+import { planComponentUndo } from '@store/components/utilities/planComponentUndo';
 import { useAppStore } from '@store/useAppStore';
 import { AppHeader } from '@ui/components/AppHeader/AppHeader';
 import { AppMenu } from '@ui/components/AppMenu/AppMenu';
@@ -28,8 +30,8 @@ import { getCurrentUse } from '@ui/components/screens/utilities/getCurrentUse';
 /**
  * Root application view: the app shell with its header, the app menu in the shell's overlay slot, and the active
  * screen in the main viewport: on `home`, the user's bicycles as cards (empty when there are none); on
- * `bicycleDetails`, the selected bicycle's details, distance, and components (in use and resting, with distances, and
- * chain care); on `addBicycle`, the new-bicycle form, which returns to `home` when saved or cancelled; on
+ * `bicycleDetails`, the selected bicycle's details, distance, and components (in use and resting, with distances, chain
+ * care, and undo); on `addBicycle`, the new-bicycle form, which returns to `home` when saved or cancelled; on
  * `addComponent`, the component form, which opens the chosen bicycle's details after a save, or stays open after saving
  * a spare so several parts can be added in a row; otherwise the chosen menu screen. The header title links back to
  * `home`.
@@ -59,6 +61,7 @@ export function App() {
   const assignComponent = useAppStore((state) => state.assignComponent);
   const startComponentUse = useAppStore((state) => state.startComponentUse);
   const addComponentHistoryEntry = useAppStore((state) => state.addComponentHistoryEntry);
+  const undoComponentStart = useAppStore((state) => state.undoComponentStart);
   const openBicycleDetails = useAppStore((state) => state.openBicycleDetails);
   // `colorScheme` is the resolved scheme (`system` already applied). It is defined from the first render because
   // `main.tsx` (and the Storybook preview) pass `noSsr`; the light fallback only covers rendering without such a
@@ -205,6 +208,9 @@ export function App() {
             getStartRange(bicycleCollection, componentCollection, selectedBicycle.id, componentId, replaces)
           }
           onLogCare={addComponentHistoryEntry}
+          canUndoStart={(componentId) => canUndoStart(componentCollection, componentId)}
+          getUndoPlan={(componentId) => planComponentUndo(bicycleCollection, componentCollection, componentId)}
+          onUndoStart={undoComponentStart}
         />
       )}
     </AppShell>

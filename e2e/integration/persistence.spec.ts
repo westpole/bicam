@@ -27,7 +27,7 @@ test.describe('electron persistence', () => {
     }
   });
 
-  test('restores swapped components and their distances after a restart (worked example)', async ({
+  test('restores swapped and undone components and their distances after a restart (worked example)', async ({
     userDataDir,
   }) => {
     const firstApp = await launchElectronApp(userDataDir);

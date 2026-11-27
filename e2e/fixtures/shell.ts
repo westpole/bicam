@@ -273,6 +273,18 @@ const WORKED_EXAMPLE_IN_USE = [
 /** The worked example's resting rows after its third step. */
 const WORKED_EXAMPLE_RESTING = [/^Chain.*KMC X12.*LabelB.*Distance1,600 km/, /^Chain.*KMC X12.*LabelC.*Distance0 km/];
 
+/** The worked example's rows in use after the late swap was undone: chain B is back. */
+const WORKED_EXAMPLE_UNDONE_IN_USE = [
+  /^Cassette.*CS-M8100.*Distance4,500 km.*Since installed4,500 km/,
+  /^Chain.*KMC X12.*LabelB.*Distance3,000 km.*Since installed3,000 km/,
+];
+
+/** The worked example's resting rows after the undo: chain A is back at 1,500 km, the reading of its last clean. */
+const WORKED_EXAMPLE_UNDONE_RESTING = [
+  /^Chain.*KMC X12.*LabelA.*Distance1,500 km.*Since lubrication0 of 300 km.*Since cleaning0 of 1,500 km/,
+  /^Chain.*KMC X12.*LabelC.*Distance0 km/,
+];
+
 /**
  * Adds a labelled chain to the "Gravel Grinder" bicycle from the "Add component" form, leaving "In use now" at its
  * default (on while the bicycle has no chain in use). The form opens the bicycle's details after the save.
@@ -395,8 +407,8 @@ async function expectWorkedExampleDistances(page: Page): Promise<void> {
 }
 
 /**
- * The first three usage steps and the chain care steps of the worked example (`tickets/plan.md`), entered through the UI. Run it right after
- * {@link expectAddBicycleFlow}.
+ * The usage steps and the chain care steps of the worked example (`tickets/plan.md`), entered through the UI. Run it
+ * right after {@link expectAddBicycleFlow}.
  *
  * - (a) A cassette is included, and chains A, B, and C are added from the form: A starts in use, B and C rest, and no
  *   notice shows.
@@ -406,6 +418,7 @@ async function expectWorkedExampleDistances(page: Page): Promise<void> {
  * - (c) Swap A → B at 1500; odometer 3100.
  * - (d) Odometer 4500; swap B → A entered late, at 3100: A 2,900 km (1,400 since installed), B 1,600, C 0, and the
  *   cassette 4,500; chain A 1,400 km since its last care.
+ * - (e) Undo that swap from chain A's **Undo** dialog: A 1,500 km and resting, B 3,000 km and in use again.
  *
  * @param page - Page showing the home screen with only the "Gravel Grinder" bicycle, at 0 km.
  * @example
@@ -446,6 +459,42 @@ export async function expectWorkedExampleFlow(page: Page): Promise<void> {
   await setTotal(page, '4500');
   await useChain(page, 'A', '3100');
   await expectWorkedExampleDistances(page);
+
+  // (e) Undo the late swap.
+  await undoChainA(page);
+  await expectUndoneWorkedExample(page);
+}
+
+/**
+ * Undoes chain A's start from its **Undo** dialog, which names chain B coming back, and checks that focus moved to its
+ * row, now resting.
+ *
+ * @param page - Page showing the bicycle's details with chain A in use.
+ */
+async function undoChainA(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Undo start: Chain KMC X12 (A)' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Undo start?' });
+  await expect(dialog).toContainText('Chain KMC X12 (A) loses the 1,400 km ridden since it went in use.');
+  await expect(dialog).toContainText('Chain KMC X12 (B), which it replaced, comes back in use');
+  await dialog.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    page.getByRole('list', { name: 'Resting' }).getByRole('listitem').filter({ hasText: 'LabelA' }),
+  ).toBeFocused();
+}
+
+/**
+ * Asserts the worked example's distances after the late swap was undone.
+ *
+ * @param page - Page showing the "Gravel Grinder" details.
+ */
+async function expectUndoneWorkedExample(page: Page): Promise<void> {
+  await expect(page.getByRole('list', { name: 'In use' }).getByRole('listitem')).toHaveText(
+    WORKED_EXAMPLE_UNDONE_IN_USE,
+  );
+  await expect(page.getByRole('list', { name: 'Resting' }).getByRole('listitem')).toHaveText(
+    WORKED_EXAMPLE_UNDONE_RESTING,
+  );
 }
 
 /**
@@ -459,5 +508,5 @@ export async function expectRestoredWorkedExample(page: Page): Promise<void> {
   await page.getByRole('list', { name: 'Bicycles' }).getByRole('button').click();
   await expect(page.getByRole('heading', { level: 2, name: 'Gravel Grinder' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Distance' }).getByText('4,500 km')).toBeVisible();
-  await expectWorkedExampleDistances(page);
+  await expectUndoneWorkedExample(page);
 }

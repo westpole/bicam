@@ -27,6 +27,7 @@ import {
 
 import { BICYCLES, LONG_NAME_BICYCLE } from '../Home/__mocks__/bicycles';
 import { acceptCare } from './__mocks__/careEntry';
+import { acceptUndo, blockedPlan, UNDO_SWAP_PLAN } from './__mocks__/undo';
 import { IDENTICAL_CHAIN_SPARES, SPARES } from './__mocks__/spareComponents';
 import { BicycleDetails } from './BicycleDetails';
 
@@ -149,6 +150,10 @@ const meta = {
     onStartComponent: fn(acceptStart),
     getStartRange: fn(startRange),
     onLogCare: fn((_componentId: ComponentId, input: ComponentHistoryInput) => acceptCare(input)),
+    // Chain A's swap can be undone; the wheel's start is older and replaced nothing.
+    canUndoStart: fn((componentId: ComponentId) => componentId === CHAIN_IN_USE_ROW.component.id),
+    getUndoPlan: fn(() => UNDO_SWAP_PLAN),
+    onUndoStart: fn(acceptUndo),
   },
   play: async ({ args, canvas, canvasElement }) => {
     const heading = canvas.getByRole('heading', { level: 2, name: args.bicycle.name });
@@ -645,5 +650,97 @@ export const LogCareDialogRestingMobile: Story = {
     await expect(dialog.getByRole('textbox', { name: 'Chain distance' })).toHaveValue('1600');
     await expect(dialog.getByRole('combobox', { name: /^Lubricant/ })).toHaveValue('');
     await expectNoOverflow(context.canvasElement);
+  },
+};
+
+/**
+ * Opens the undo dialog for chain A and checks what it names.
+ *
+ * @param context - The story context.
+ * @returns Queries bound to the dialog.
+ */
+async function openUndoDialog(context: Parameters<NonNullable<Story['play']>>[0]) {
+  const dialog = await openNamedDialog(context, 'Undo start: Chain Shimano CN-M8100 (A)', 'Undo start?');
+  await expect(dialog.getByText('Chain Shimano CN-M8100 (A) loses the 1,400 km ridden since it went in use.')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+  await expectNoOverflow(context.canvasElement);
+
+  return dialog;
+}
+
+/** The undo dialog for a swap: chain B, which chain A replaced, comes back in use. */
+export const UndoDialogDesktop: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  play: async (context) => {
+    const dialog = await openUndoDialog(context);
+
+    await expect(dialog.getByText(/^Chain Shimano CN-M8100 \(B\), which it replaced, comes back in use/)).toBeVisible();
+    await context.userEvent.click(dialog.getByRole('button', { name: 'Undo' }));
+    await expect(context.args.onUndoStart).toHaveBeenCalledWith(CHAIN_IN_USE_ROW.component.id);
+  },
+};
+
+export const UndoDialogMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  play: async (context) => {
+    await openUndoDialog(context);
+  },
+};
+
+/** The undo dialog in dark mode, for the a11y contrast check. */
+export const UndoDialogDark: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false }, colorScheme: 'dark' },
+  play: async (context) => {
+    await waitFor(() => expect(context.canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
+    await openUndoDialog(context);
+  },
+};
+
+/**
+ * The replaced chain was used again since, so nothing takes its place, and two care entries of chain A lie above its
+ * distance after the undo.
+ */
+export const UndoDialogBlocked: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  args: {
+    rows: [
+      {
+        ...CHAIN_IN_USE_ROW,
+        component: {
+          ...CHAIN_IN_USE_ROW.component,
+          history: [2400, 2800].map((distance) => ({
+            id: `entry-${distance}`,
+            date: '2026-04-12',
+            installed: '2026-03-01',
+            distance,
+            position: null,
+            subcomponent: null,
+            lubricated: '2026-04-12',
+            stretch: null,
+            lubricant: 'wax' as const,
+            cleaned: null,
+          })),
+        },
+      },
+      WHEEL_IN_USE_ROW,
+    ],
+    getUndoPlan: fn(() => blockedPlan('usedSince')),
+  },
+  play: async (context) => {
+    const dialog = await openUndoDialog(context);
+
+    await expect(dialog.getByText(/was used again since, so nothing takes its place\.$/)).toBeVisible();
+    await expect(dialog.getByRole('alert')).toHaveTextContent('2 care entries have a distance above 1,500 km');
+    await expectNoOverflow(context.canvasElement);
+  },
+};
+
+/** The blocked undo in dark mode, for the contrast of the warning. */
+export const UndoDialogBlockedDark: Story = {
+  ...UndoDialogBlocked,
+  globals: { viewport: { value: 'mobile1', isRotated: false }, colorScheme: 'dark' },
+  play: async (context) => {
+    await waitFor(() => expect(context.canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
+    await UndoDialogBlocked.play?.(context);
   },
 };

@@ -17,6 +17,7 @@ import { theme } from '@ui/theme';
 
 import { BICYCLES } from '../Home/__mocks__/bicycles';
 import { acceptCare } from './__mocks__/careEntry';
+import { acceptUndo, UNDO_SWAP_PLAN } from './__mocks__/undo';
 import { SPARES } from './__mocks__/spareComponents';
 import { BicycleDetails } from './BicycleDetails';
 import type { BicycleDetailsProps } from './types';
@@ -43,6 +44,9 @@ function renderDetails(props: Partial<BicycleDetailsProps> = {}) {
   }));
   const getStartRange = vi.fn<BicycleDetailsProps['getStartRange']>(() => ({ min: 0, max: 0 }));
   const onLogCare = vi.fn<BicycleDetailsProps['onLogCare']>((_id, input) => acceptCare(input));
+  const canUndoStart = vi.fn<BicycleDetailsProps['canUndoStart']>(() => false);
+  const getUndoPlan = vi.fn<BicycleDetailsProps['getUndoPlan']>(() => UNDO_SWAP_PLAN);
+  const onUndoStart = vi.fn<BicycleDetailsProps['onUndoStart']>(acceptUndo);
 
   render(
     <ThemeProvider theme={theme}>
@@ -57,12 +61,24 @@ function renderDetails(props: Partial<BicycleDetailsProps> = {}) {
         onStartComponent={onStartComponent}
         getStartRange={getStartRange}
         onLogCare={onLogCare}
+        canUndoStart={canUndoStart}
+        getUndoPlan={getUndoPlan}
+        onUndoStart={onUndoStart}
         {...props}
       />
     </ThemeProvider>,
   );
 
-  return { onCreateComponent, onIncludeComponent, onSetOdometer, onStartComponent, getStartRange, onLogCare };
+  return {
+    onCreateComponent,
+    onIncludeComponent,
+    onSetOdometer,
+    onStartComponent,
+    getStartRange,
+    onLogCare,
+    getUndoPlan,
+    onUndoStart,
+  };
 }
 
 /**
@@ -87,6 +103,14 @@ function StatefulDetails({ initialRows }: { initialRows: readonly ComponentRow[]
       }),
     );
 
+  // Rests the component, as an undo that brings nothing back does.
+  const undo = (id: ComponentId) =>
+    setRows((current) =>
+      current.map((row) =>
+        row.component.id === id ? { ...row, usage: { ...row.usage, isInUse: false, distanceSinceInstalled: null } } : row,
+      ),
+    );
+
   return (
     <ThemeProvider theme={theme}>
       <BicycleDetails
@@ -103,6 +127,12 @@ function StatefulDetails({ initialRows }: { initialRows: readonly ComponentRow[]
         }}
         getStartRange={() => null}
         onLogCare={() => ({ ok: false, errors: [] })}
+        canUndoStart={(id) => rows.some(({ component, usage }) => component.id === id && usage.isInUse)}
+        getUndoPlan={() => UNDO_SWAP_PLAN}
+        onUndoStart={(id) => {
+          undo(id);
+          return acceptUndo();
+        }}
       />
     </ThemeProvider>
   );
@@ -358,6 +388,45 @@ describe('BicycleDetails', () => {
     expect(readList('Resting')).toEqual(['Chain Shimano CN-M8100 (A)', 'Bar tape Supacaz Super Sticky Kush (Red)']);
     const [, started] = within(screen.getByRole('list', { name: 'In use' })).getAllByRole('listitem');
     await waitFor(() => expect(started).toHaveFocus());
+  });
+
+  it('offers Undo only on rows in use whose start can be undone, naming the component', () => {
+    const { getUndoPlan } = renderDetails({
+      rows: ROWS,
+      canUndoStart: (id) => id === CHAIN_IN_USE_ROW.component.id || id === TAPE_RESTING_ROW.component.id,
+    });
+
+    expect(screen.getAllByRole('button', { name: /^Undo/ }).map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Undo start: Chain Shimano CN-M8100 (A)',
+    ]);
+    expect(getUndoPlan).not.toHaveBeenCalled();
+  });
+
+  it("asks before undoing, names what comes back, then moves focus to the component's row", async () => {
+    render(<StatefulDetails initialRows={ROWS} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Undo start: Chain Shimano CN-M8100 (A)' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Undo start?' }));
+    expect(dialog.getByText(/^Chain Shimano CN-M8100 \(B\), which it replaced, comes back in use/)).toBeInTheDocument();
+    await userEvent.click(dialog.getByRole('button', { name: 'Undo' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(readList('In use')).toEqual(['Wheel DT Swiss G 1800']);
+    const undone = within(screen.getByRole('list', { name: 'Resting' }))
+      .getAllByRole('listitem')
+      .find((row) => within(row).queryByText('A') !== null);
+    await waitFor(() => expect(undone).toHaveFocus());
+  });
+
+  it('returns focus to Undo when its dialog is cancelled, without undoing', async () => {
+    const { onUndoStart } = renderDetails({ rows: ROWS, canUndoStart: () => true });
+    const undo = screen.getByRole('button', { name: 'Undo start: Chain Shimano CN-M8100 (A)' });
+
+    await userEvent.click(undo);
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(undo).toHaveFocus());
+    expect(onUndoStart).not.toHaveBeenCalled();
   });
 
   it('returns focus to Use now when the use dialog is closed with Escape, without starting', async () => {

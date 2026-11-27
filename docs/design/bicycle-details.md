@@ -50,7 +50,9 @@ with `usage` from `getComponentUsage`) and an optional `renderAction` slot. A ro
 A resting row has **Use now** (outlined button). Its accessible name also names the component ("Use now: Chain KMC
 X12 (B)"), so identical buttons can be told apart. A chain row (`CHAIN_CARE_TYPES`), in use or resting, has **Log care**,
 named the same way ("Log care: Chain KMC X12 (A)"); on a resting chain it comes before **Use now**, and the two wrap
-when they do not fit.
+when they do not fit. A row in use has **Undo** ("Undo start: Chain KMC X12 (A)") after **Log care** when
+`canUndoStart` allows it: the start replaced another component or is the latest boundary on the bicycle, and its date
+is known.
 
 ## 3. Include component dialog
 
@@ -153,21 +155,41 @@ Opened by **Log care** on a chain row. Titled "Log chain care"; the first line n
 - On success the dialog closes and focus returns to **Log care**. **Cancel**, Escape, and a click outside drop the draft.
 - The dialog is unmounted when closed, and it is shown only while the chain is still on the bicycle.
 
-## 7. Wiring
+## 7. Undo start dialog
+
+Opened by **Undo** on a row in use. Titled "Undo start?"; it asks first and deletes nothing but the open period.
+
+- The first line, also the dialog's description, names the distance the component loses: "Chain KMC X12 (A) loses the
+  1,400 km ridden since it went in use." (`usage.distanceSinceInstalled`).
+- From `planComponentUndo`: the component that comes back ("Chain KMC X12 (B), which it replaced, comes back in use and
+  gets those kilometres."), or why it cannot, one sentence per `blockedBy` reason ("... was used again since, so
+  nothing takes its place."). A removed component has no name, so its sentence names none. A start that replaced
+  nothing adds no sentence.
+- When whole-component history entries have a distance above the component's distance after the undo
+  (`countEntriesAbove`), a warning (`Alert`) gives their number and points to Care history; nothing is deleted.
+- Focus starts on **Cancel**. **Undo** calls `undoComponentStart`; on success the dialog closes and focus moves to the
+  component's row, now under **Resting**. A rejected undo shows an alert. **Cancel**, Escape, and a click outside
+  return focus to **Undo**.
+- The dialog is shown only while the component is still in use.
+
+## 8. Wiring
 
 - `App` passes the bicycle, its rows (`getInstalledComponents(...)` with `getComponentUsage` for each), and the spares
   with their distances, both memoized, because `getComponentUsage` returns a new object. It wires the include callbacks
   to `addComponentToBicycle` (new) and `assignComponent` (spare), each with a start when the type has room. It passes
   `getMinimumOdometer(...)` and wires `onSetOdometer` to `setBicycleOdometer`, `onStartComponent` to
-  `startComponentUse`, `getStartRange` to the store utility of that name, and `onLogCare` to `addComponentHistoryEntry`.
+  `startComponentUse`, `getStartRange` to the store utility of that name, `onLogCare` to `addComponentHistoryEntry`, `canUndoStart` and
+  `getUndoPlan` to the store utilities `canUndoStart` and `planComponentUndo`, and `onUndoStart` to
+  `undoComponentStart`.
 - Which dialog is open, its draft, and its errors are local state. The row to focus after a start is a ref, read in an
   effect after the commit that closes the dialog (after the dialog has returned focus to its removed button). The store
   owns all validation.
 
-## 8. Out of scope
+## 9. Out of scope
 
 - Removing a component from a bicycle, moving it between bicycles, and editing it.
-- Undoing a start (#38), retiring (#40), and listing, editing, or deleting care entries (#39).
+- Undoing a stop, bringing back a retired replaced component, and retiring (#40); listing, editing, or deleting care
+  entries (#39).
 - Care entries for other types and for subcomponents.
 - Notifications when a limit is reached.
 - Editing or deleting the bicycle, a log of odometer readings, and importing rides.

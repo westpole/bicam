@@ -374,6 +374,38 @@ export type ComponentUsagePlan =
   | { ok: true; component: BicycleComponent; changed: readonly BicycleComponent[] }
   | { ok: false; errors: ComponentUsageValidationError[] };
 
+/**
+ * Why an undo does not reopen the period its start replaced (rule 10): the replaced component was removed, retired,
+ * taken off the bicycle, used again since, or its type would have no room.
+ */
+export type UndoBlockReason = 'removed' | 'retired' | 'notOnBicycle' | 'usedSince' | 'noRoom';
+
+/**
+ * A validated undo that is not written yet, as `planComponentUndo` prepares it: the component without its open period,
+ * every changed component, the component that held the replaced period as stored now (`null` when the start replaced
+ * nothing or that component was removed), and the same component in use again (`null` when none comes back).
+ * `blockedBy` says why a replaced period does not reopen; it is `null` when the start replaced nothing or the period
+ * reopens.
+ */
+export type ComponentUndoPlan =
+  | {
+      ok: true;
+      component: BicycleComponent;
+      changed: readonly BicycleComponent[];
+      replaced: BicycleComponent | null;
+      restored: BicycleComponent | null;
+      blockedBy: UndoBlockReason | null;
+    }
+  | { ok: false; errors: ComponentUsageValidationError[] };
+
+/**
+ * Result of `undoComponentStart`: the component without its open period and the component that came back in use (`null`
+ * when none did), as held in the store; every failing field otherwise.
+ */
+export type ComponentUndoResult =
+  | { ok: true; component: BicycleComponent; restored: BicycleComponent | null }
+  | { ok: false; errors: ComponentUsageValidationError[] };
+
 /** A field that an assign error can point at: a usage field, or `components` for a full bicycle. */
 export type ComponentAssignField = ComponentUsageField | 'components';
 
@@ -493,6 +525,13 @@ export interface ComponentActions {
    * unknown id, and with `notAllowed` on `componentId` when it is not in use.
    */
   stopComponentUse: (componentId: ComponentId, input: ComponentStopInput) => ComponentUsageResult;
+  /**
+   * Undoes the component's start: removes its open period and, when that start replaced another component's period
+   * that can come back, reopens it in the same `set` (rule 10 in `docs/store/components.md` §2.3; see
+   * `planComponentUndo`). History entries stay. Fails with only `notFound` on `componentId` for an unknown id, and with
+   * `notAllowed` on `componentId` when it is not in use.
+   */
+  undoComponentStart: (componentId: ComponentId) => ComponentUndoResult;
 }
 
 /** Normalized component collection. `allIds` holds the display (insertion) order. */
