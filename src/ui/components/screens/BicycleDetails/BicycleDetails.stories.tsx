@@ -3,7 +3,12 @@ import Box from '@mui/material/Box';
 import { expect, fn, waitFor, within } from 'storybook/test';
 
 import type { BicycleResult } from '@store/bicycle/types';
-import type { ComponentUsageResult, StartRange } from '@store/components/types';
+import type {
+  ComponentHistoryInput,
+  ComponentId,
+  ComponentUsageResult,
+  StartRange,
+} from '@store/components/types';
 import type { BicycleComponentResult } from '@store/types';
 import {
   ALL_TYPE_COMPONENTS,
@@ -21,6 +26,7 @@ import {
 } from '@ui/components/ComponentList/__mocks__/rows';
 
 import { BICYCLES, LONG_NAME_BICYCLE } from '../Home/__mocks__/bicycles';
+import { acceptCare } from './__mocks__/careEntry';
 import { IDENTICAL_CHAIN_SPARES, SPARES } from './__mocks__/spareComponents';
 import { BicycleDetails } from './BicycleDetails';
 
@@ -142,6 +148,7 @@ const meta = {
     onIncludeComponent: fn(acceptSpare),
     onStartComponent: fn(acceptStart),
     getStartRange: fn(startRange),
+    onLogCare: fn((_componentId: ComponentId, input: ComponentHistoryInput) => acceptCare(input)),
   },
   play: async ({ args, canvas, canvasElement }) => {
     const heading = canvas.getByRole('heading', { level: 2, name: args.bicycle.name });
@@ -526,5 +533,117 @@ export const UpdateDistanceDialogErrorsDark: Story = {
   play: async (context) => {
     await waitFor(() => expect(context.canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
     await UpdateDistanceDialogErrors.play?.(context);
+  },
+};
+
+/**
+ * Opens the log care dialog for chain A, in use, and checks its defaults.
+ *
+ * @param context - The story context.
+ * @returns Queries bound to the dialog.
+ */
+async function openCareDialog(context: Parameters<NonNullable<Story['play']>>[0]) {
+  const dialog = await openNamedDialog(context, 'Log care: Chain Shimano CN-M8100 (A)', 'Log chain care');
+  await expect(dialog.getByRole('radio', { name: 'Topped up' })).toBeChecked();
+  await expect(dialog.getByRole('combobox', { name: /^Lubricant/ })).toHaveValue('wax');
+  await expect(dialog.getByRole('textbox', { name: 'Odometer' })).toHaveValue('3100.5');
+  await expect(dialog.getByRole('textbox', { name: 'Chain distance' })).toHaveValue('2900');
+  await expectNoOverflow(context.canvasElement);
+
+  return dialog;
+}
+
+/** The log care dialog for a chain in use: a top-up with the last lubricant, at the current odometer. */
+export const LogCareDialogDesktop: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  play: async (context) => {
+    const dialog = await openCareDialog(context);
+
+    await context.userEvent.click(dialog.getByRole('button', { name: 'Save' }));
+    await expect(context.args.onLogCare).toHaveBeenCalledWith(
+      CHAIN_IN_USE_ROW.component.id,
+      expect.objectContaining({ distance: 2900, lubricant: 'wax', cleaned: null }),
+    );
+  },
+};
+
+export const LogCareDialogMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  play: async (context) => {
+    await openCareDialog(context);
+  },
+};
+
+/** The log care dialog in dark mode, for the a11y contrast check. */
+export const LogCareDialogDark: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false }, colorScheme: 'dark' },
+  play: async (context) => {
+    await waitFor(() => expect(context.canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
+    await openCareDialog(context);
+  },
+};
+
+/** A top-up with the other lubricant warns that the chain should be cleaned first. */
+export const LogCareDialogSwitchWarning: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  play: async (context) => {
+    const dialog = await openCareDialog(context);
+
+    await context.userEvent.selectOptions(dialog.getByRole('combobox', { name: /^Lubricant/ }), 'Oil');
+    await expect(dialog.getByRole('alert')).toHaveTextContent('Clean the chain before you switch');
+    await expectNoOverflow(context.canvasElement);
+  },
+};
+
+/** The warning in dark mode, for its contrast. */
+export const LogCareDialogSwitchWarningDark: Story = {
+  ...LogCareDialogSwitchWarning,
+  globals: { viewport: { value: 'mobile1', isRotated: false }, colorScheme: 'dark' },
+  play: async (context) => {
+    await waitFor(() => expect(context.canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
+    await LogCareDialogSwitchWarning.play?.(context);
+  },
+};
+
+/** A measurement without a stretch and a reading before the chain's installation, which asks for the distance. */
+export const LogCareDialogErrors: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  play: async (context) => {
+    const dialog = await openCareDialog(context);
+    const odometer = dialog.getByRole('textbox', { name: 'Odometer' });
+
+    await context.userEvent.click(dialog.getByRole('radio', { name: 'Measured only' }));
+    await context.userEvent.clear(odometer);
+    await context.userEvent.type(odometer, '1000');
+    await context.userEvent.click(dialog.getByRole('button', { name: 'Save' }));
+
+    await expect(dialog.getByText(/^The chain went in use at 1,700.5 km\./)).toBeVisible();
+    await expect(dialog.getByText('Enter the stretch you measured.')).toBeVisible();
+    await expect(odometer).toHaveFocus();
+    await expect(context.args.onLogCare).not.toHaveBeenCalled();
+    await expectNoOverflow(context.canvasElement);
+  },
+};
+
+/** The rejected log care dialog in dark mode, for the contrast of the error text. */
+export const LogCareDialogErrorsDark: Story = {
+  ...LogCareDialogErrors,
+  globals: { viewport: { value: 'mobile1', isRotated: false }, colorScheme: 'dark' },
+  play: async (context) => {
+    await waitFor(() => expect(context.canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
+    await LogCareDialogErrors.play?.(context);
+  },
+};
+
+/** A resting chain has no odometer field; its current distance is filled in. */
+export const LogCareDialogRestingMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  play: async (context) => {
+    const dialog = await openNamedDialog(context, 'Log care: Chain Shimano CN-M8100 (B)', 'Log chain care');
+
+    await expect(dialog.queryByRole('textbox', { name: 'Odometer' })).not.toBeInTheDocument();
+    await expect(dialog.getByRole('textbox', { name: 'Chain distance' })).toHaveValue('1600');
+    await expect(dialog.getByRole('combobox', { name: /^Lubricant/ })).toHaveValue('');
+    await expectNoOverflow(context.canvasElement);
   },
 };

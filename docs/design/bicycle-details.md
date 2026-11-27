@@ -48,7 +48,9 @@ with `usage` from `getComponentUsage`) and an optional `renderAction` slot. A ro
   then shows a focus outline.
 
 A resting row has **Use now** (outlined button). Its accessible name also names the component ("Use now: Chain KMC
-X12 (B)"), so identical buttons can be told apart.
+X12 (B)"), so identical buttons can be told apart. A chain row (`CHAIN_CARE_TYPES`), in use or resting, has **Log care**,
+named the same way ("Log care: Chain KMC X12 (A)"); on a resting chain it comes before **Use now**, and the two wrap
+when they do not fit.
 
 ## 3. Include component dialog
 
@@ -118,21 +120,55 @@ distance ("Chain KMC X12 (B), 1,600 km").
 - The dialog is unmounted when closed, and it is shown only while the chosen component still rests.
 - The type being full is read from the rows shown, so the dialog and the lists agree.
 
-## 6. Wiring
+## 6. Log care dialog
+
+Opened by **Log care** on a chain row. Titled "Log chain care"; the first line names the chain and its distance.
+
+| Field | Shown | Input |
+| --- | --- | --- |
+| What was done | Always | Radio group: **Topped up** (default, focused), **Cleaned and relubricated**, **Measured only** |
+| Lubricant | Topped up, cleaned | Native select, Oil or Wax, required. Preset to the last lubricant (`usage.lubricant`); without one, "Choose oil or wax" comes first |
+| Date | Always | Native date picker, today by default, required |
+| Odometer | Chain in use | Decimal text, `km`, the bicycle's odometer by default; may be left empty |
+| Chain distance | Always | Decimal text, `km`: the chain's own distance at that moment (`getDistanceAtReading`); editable, empty means unknown |
+| Stretch | Always | Decimal text, `%`; required for **Measured only**, optional otherwise |
+
+- **Save** calls `addComponentHistoryEntry` with `date`, `distance`, `stretch`, and `installed` (`getInstalledDate`: the
+  start date of the chain's first usage period, or the entry's date when that is unknown or the chain was never used).
+  A top-up also sets `lubricated` to the date and `lubricant`; a clean also sets `cleaned` to the same date. A
+  measurement sets neither. The row updates at once: a top-up restarts only "Since lubrication", a clean restarts both.
+- **Distance of a past reading.** For a chain in use, a usable reading fills in `distance − (odometer − reading)`
+  (`getDistanceAtReading`), so care entered late counts from the right distance. A reading above the odometer reads
+  "The odometer can be at most 4,500 km."; a reading before the chain's current installation (`odometer −
+  distanceSinceInstalled`) reads "The chain went in use at 3,100 km. Enter its distance at that time instead and leave
+  the odometer empty." A resting chain has no odometer field and gets its current distance. A filled-in distance is
+  capped at `COMPONENT_LIMITS.distanceMax`.
+- A top-up with another lubricant than the last one shows a warning (`Alert`, warning) that the chain should be cleaned
+  before switching. It can still be saved.
+- The dialog checks what the store cannot know (a measurement needs a stretch, a lubrication needs a lubricant, the
+  reading's range) before saving; the store checks the rest. A half-typed date is submitted so the store rejects it,
+  and its errors on `installed`, `lubricated`, and `cleaned` (all copies of the date) show once, on the date. The first
+  invalid field gets focus; an error that belongs to no field (`history` full, for example) shows as an alert until the
+  next edit.
+- On success the dialog closes and focus returns to **Log care**. **Cancel**, Escape, and a click outside drop the draft.
+- The dialog is unmounted when closed, and it is shown only while the chain is still on the bicycle.
+
+## 7. Wiring
 
 - `App` passes the bicycle, its rows (`getInstalledComponents(...)` with `getComponentUsage` for each), and the spares
   with their distances, both memoized, because `getComponentUsage` returns a new object. It wires the include callbacks
   to `addComponentToBicycle` (new) and `assignComponent` (spare), each with a start when the type has room. It passes
   `getMinimumOdometer(...)` and wires `onSetOdometer` to `setBicycleOdometer`, `onStartComponent` to
-  `startComponentUse`, and `getStartRange` to the store utility of that name.
+  `startComponentUse`, `getStartRange` to the store utility of that name, and `onLogCare` to `addComponentHistoryEntry`.
 - Which dialog is open, its draft, and its errors are local state. The row to focus after a start is a ref, read in an
   effect after the commit that closes the dialog (after the dialog has returned focus to its removed button). The store
   owns all validation.
 
-## 7. Out of scope
+## 8. Out of scope
 
 - Removing a component from a bicycle, moving it between bicycles, and editing it.
-- Undoing a start (#38), retiring (#40), and logging or listing chain care (#37, #39).
+- Undoing a start (#38), retiring (#40), and listing, editing, or deleting care entries (#39).
+- Care entries for other types and for subcomponents.
 - Notifications when a limit is reached.
 - Editing or deleting the bicycle, a log of odometer readings, and importing rides.
 - The "Add component" menu screen (since implemented, see [add-component.md](./add-component.md)).

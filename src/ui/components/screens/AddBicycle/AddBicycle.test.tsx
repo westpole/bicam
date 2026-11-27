@@ -64,11 +64,17 @@ describe('AddBicycle', () => {
   it('submits the values as typed', async () => {
     const { onSubmit } = renderForm();
 
-    await userEvent.type(screen.getByRole('textbox', { name: 'Name' }), 'Gravel Grinder');
-    await userEvent.type(screen.getByRole('textbox', { name: 'Company' }), 'Canyon');
-    await userEvent.type(screen.getByRole('textbox', { name: 'Model' }), 'Grizl');
+    // Pasted rather than typed key by key, which takes longer than 5 s while every test lane runs in parallel.
+    for (const [name, value] of [
+      ['Name', 'Gravel Grinder'],
+      ['Company', 'Canyon'],
+      ['Model', 'Grizl'],
+      ['Frame size', 'M/L'],
+    ]) {
+      await userEvent.click(screen.getByRole('textbox', { name }));
+      await userEvent.paste(value);
+    }
     await userEvent.type(screen.getByLabelText('Purchase date'), '2024-05-17');
-    await userEvent.type(screen.getByRole('textbox', { name: 'Frame size' }), 'M/L');
     await userEvent.type(screen.getByRole('textbox', { name: 'Frame geometry' }), 'Stack 594{Enter}Reach 393');
     await userEvent.click(screen.getByRole('button', { name: 'Save bicycle' }));
 

@@ -141,7 +141,9 @@
         "resting": "Resting",
         "noneInUse": "{{type}}: none in use. Choose one under Resting with Use now.",
         "useNow": "Use now",
-        "useNowLabel": "Use now: {{name}}"
+        "useNowLabel": "Use now: {{name}}",
+        "logCare": "Log care",
+        "logCareLabel": "Log care: {{name}}"
       },
       "includeComponent": {
         "title": "Include component",
@@ -234,6 +236,66 @@
           "invalidNumber": "Enter a number, for example 1500.",
           "outOfRange": "The odometer must be from {{min, number}} to {{max, number}} km.",
           "invalidDate": "Enter a complete date with a four-digit year, or leave it empty.",
+          "rejected": "This value cannot be used."
+        }
+      },
+      "logCare": {
+        "title": "Log chain care",
+        "save": "Save",
+        "cancel": "Cancel",
+        "component": "{{name}}, {{distance, number}} km",
+        "action": {
+          "label": "What was done",
+          "toppedUp": "Topped up",
+          "cleaned": "Cleaned and relubricated",
+          "measured": "Measured only"
+        },
+        "chooseLubricant": "Choose oil or wax",
+        "switchWarning": "The last lubrication was with {{last}}. Clean the chain before you switch, so the two do not mix.",
+        "fields": {
+          "lubricant": {
+            "label": "Lubricant",
+            "hint": "Preset to the last one used."
+          },
+          "date": {
+            "label": "Date",
+            "hint": "Date of the care."
+          },
+          "odometer": {
+            "label": "Odometer",
+            "hint": "The bicycle's total at that time. Fills in the chain's distance."
+          },
+          "distance": {
+            "label": "Chain distance",
+            "hint": "The chain's own distance at that time. Leave empty when unknown."
+          },
+          "stretch": {
+            "label": "Stretch"
+          },
+          "stretchOptional": {
+            "hint": "Optional: the stretch measured with a chain checker."
+          },
+          "stretchRequired": {
+            "hint": "The stretch measured with a chain checker."
+          }
+        },
+        "units": {
+          "km": "km",
+          "percent": "%"
+        },
+        "errors": {
+          "form": "The care could not be saved.",
+          "required": {
+            "lubricant": "Choose oil or wax.",
+            "stretch": "Enter the stretch you measured.",
+            "date": "Enter the date of the care."
+          },
+          "invalidDate": "Enter a complete date with a four-digit year.",
+          "invalidNumber": "Enter a number with at most {{decimals}} decimals, for example {{example}}.",
+          "distanceRange": "The distance must be from 0 to {{max, number}} km.",
+          "stretchRange": "The stretch must be from 0 to {{max, number}} %.",
+          "aboveOdometer": "The odometer can be at most {{max, number}} km.",
+          "beforeInstallation": "The chain went in use at {{min, number}} km. Enter its distance at that time instead and leave the odometer empty.",
           "rejected": "This value cannot be used."
         }
       }

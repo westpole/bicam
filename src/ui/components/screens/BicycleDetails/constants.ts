@@ -4,6 +4,8 @@ import type { ComponentInput } from '@store/components/types';
 
 import type {
   BicycleDetailsField,
+  CareAction,
+  LogCareField,
   NewComponentField,
   UpdateDistanceField,
   UpdateDistanceMode,
@@ -27,6 +29,12 @@ export const UPDATE_DISTANCE_FIELDS: readonly UpdateDistanceField[] = ['distance
 
 /** The use component dialog's fields, top to bottom. The first invalid one gets focus after a rejected save. */
 export const USE_COMPONENT_FIELDS: readonly UseComponentField[] = ['replaces', 'date', 'odometer'];
+
+/** What can be logged on a chain, in the order the log care dialog offers it; the first is the default. */
+export const CARE_ACTIONS: readonly CareAction[] = ['toppedUp', 'cleaned', 'measured'];
+
+/** The log care dialog's fields that can be invalid, top to bottom. The first invalid one gets focus after a save. */
+export const LOG_CARE_FIELDS: readonly LogCareField[] = ['lubricant', 'date', 'odometer', 'distance', 'stretch'];
 
 /** Value of the "New component" option. Component ids are never empty, so it cannot match one. */
 export const NEW_COMPONENT = '';
@@ -58,6 +66,9 @@ export const SECTION_HEADER_SX: SxProps<Theme> = {
   alignItems: 'center',
   justifyContent: 'space-between',
 };
+
+/** The buttons of a resting row; the second moves under the first when they do not fit. */
+export const ACTIONS_SX: SxProps<Theme> = { flexWrap: 'wrap' };
 
 /** Form fields in the dialog. The top padding keeps the first field's floating label from being clipped. */
 export const DIALOG_FIELDS_SX: SxProps<Theme> = { pt: 1 };

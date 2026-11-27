@@ -6,13 +6,14 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { ACTIVE_LIMITS } from '@store/components/constants';
+import { ACTIVE_LIMITS, CHAIN_CARE_TYPES } from '@store/components/constants';
 import type { ComponentId, ComponentStartInput } from '@store/components/types';
 import { ComponentList } from '@ui/components/ComponentList/ComponentList';
 import type { ComponentRow } from '@ui/components/ComponentList/types';
 import { toRowId } from '@ui/components/ComponentList/utilities/toRowId';
 
 import {
+  ACTIONS_SX,
   BICYCLE_DETAILS_FIELDS,
   DETAILS_SX,
   NAME_SX,
@@ -22,6 +23,7 @@ import {
   VALUE_SX,
 } from './constants';
 import { IncludeComponentDialog } from './IncludeComponentDialog';
+import { LogCareDialog } from './LogCareDialog';
 import type { BicycleDetailsField, BicycleDetailsProps } from './types';
 import { UpdateDistanceDialog } from './UpdateDistanceDialog';
 import { UseComponentDialog } from './UseComponentDialog';
@@ -29,15 +31,40 @@ import { formatDate } from './utilities/formatDate';
 import { getComponentName } from './utilities/getComponentName';
 import { getTypesWithoutUse } from './utilities/getTypesWithoutUse';
 
-/** The open dialog: a section's dialog, the use component dialog for one resting component, or none. */
-type OpenDialog = 'distance' | 'include' | { use: ComponentId } | null;
+/**
+ * The open dialog: a section's dialog, the use component dialog for one resting component, the log care dialog for one
+ * chain, or none.
+ */
+type OpenDialog = 'distance' | 'include' | { use: ComponentId } | { care: ComponentId } | null;
+
+/**
+ * Reads the component a component dialog is open for.
+ *
+ * @param openDialog - The open dialog.
+ * @param kind - The dialog: `use` or `care`.
+ * @returns The component's id, or `null` when that dialog is not open.
+ * @example
+ * getDialogComponentId({ care: 'chain-a' }, 'care'); // 'chain-a'
+ */
+function getDialogComponentId(openDialog: OpenDialog, kind: 'use' | 'care'): ComponentId | null {
+  if (typeof openDialog !== 'object' || openDialog === null) {
+    return null;
+  }
+
+  if (kind === 'use') {
+    return 'use' in openDialog ? openDialog.use : null;
+  }
+
+  return 'care' in openDialog ? openDialog.care : null;
+}
 
 /**
  * "Bicycle details" screen, opened from a bicycle card on the home screen: the bicycle's name, its fields, its
  * distance with a dialog that updates it, and its components with a dialog that includes another one. Components show
  * in two lists, **In use** and **Resting** (an empty one is hidden); a resting row has **Use now**, which opens a dialog
  * that starts it, as a swap when its type is full. A type with components but none in use shows a notice. After a
- * start, focus moves to the component's row. Unknown values read "Not specified".
+ * start, focus moves to the component's row. A chain row, in use or resting, has **Log care**, which opens a dialog that
+ * adds a care entry. Unknown values read "Not specified".
  *
  * @param props - See {@link BicycleDetailsProps}.
  * @returns The details screen.
@@ -52,6 +79,7 @@ type OpenDialog = 'distance' | 'include' | { use: ComponentId } | null;
  *   onIncludeComponent={includeComponent}
  *   onStartComponent={startComponent}
  *   getStartRange={getRange}
+ *   onLogCare={addHistoryEntry}
  * />
  */
 export function BicycleDetails({
@@ -64,6 +92,7 @@ export function BicycleDetails({
   onIncludeComponent,
   onStartComponent,
   getStartRange,
+  onLogCare,
 }: BicycleDetailsProps) {
   const { t, i18n } = useTranslation();
   const componentsTitleId = useId();
@@ -80,8 +109,11 @@ export function BicycleDetails({
   const inUse = rows.filter(({ usage }) => usage.isInUse);
   const resting = rows.filter(({ usage }) => !usage.isInUse);
   // Shown only while the chosen component still rests here, so a dialog never starts a component that changed.
-  const chosenId = typeof openDialog === 'object' && openDialog !== null ? openDialog.use : null;
+  const chosenId = getDialogComponentId(openDialog, 'use');
   const useRow = resting.find(({ component }) => component.id === chosenId);
+  // Shown only while the chain is still on the bicycle.
+  const careId = getDialogComponentId(openDialog, 'care');
+  const careRow = rows.find(({ component }) => component.id === careId);
   // What the chosen component can replace; the type is full when as many are in use as `ACTIVE_LIMITS` allows.
   const useCandidates = useRow ? inUse.filter(({ component }) => component.type === useRow.component.type) : [];
   const useLimit = useRow ? ACTIVE_LIMITS[useRow.component.type] : null;
@@ -144,6 +176,36 @@ export function BicycleDetails({
     >
       {t('screens.bicycleDetails.components.useNow')}
     </Button>
+  );
+
+  /**
+   * Renders the **Log care** button of a chain row, named like {@link renderUseNow}; other types get none.
+   *
+   * @param row - The row.
+   * @returns The button, or `null`.
+   */
+  const renderLogCare = ({ component }: ComponentRow) =>
+    CHAIN_CARE_TYPES.includes(component.type) ? (
+      <Button
+        variant="outlined"
+        aria-label={t('screens.bicycleDetails.components.logCareLabel', { name: getComponentName(t, component) })}
+        onClick={() => setOpenDialog({ care: component.id })}
+      >
+        {t('screens.bicycleDetails.components.logCare')}
+      </Button>
+    ) : null;
+
+  /**
+   * Renders the actions of a resting row: **Log care** for a chain, then **Use now**.
+   *
+   * @param row - The resting row.
+   * @returns The buttons, side by side, wrapping when they do not fit.
+   */
+  const renderRestingActions = (row: ComponentRow) => (
+    <Stack direction="row" spacing={1} useFlexGap sx={ACTIONS_SX}>
+      {renderLogCare(row)}
+      {renderUseNow(row)}
+    </Stack>
   );
 
   return (
@@ -212,7 +274,12 @@ export function BicycleDetails({
             <Typography id={inUseTitleId} variant="subtitle1" component="h4">
               {t('screens.bicycleDetails.components.inUse')}
             </Typography>
-            <ComponentList aria-labelledby={inUseTitleId} rows={inUse} rowIdPrefix={rowsId} />
+            <ComponentList
+              aria-labelledby={inUseTitleId}
+              rows={inUse}
+              rowIdPrefix={rowsId}
+              renderAction={renderLogCare}
+            />
           </Stack>
         )}
         {resting.length > 0 && (
@@ -224,7 +291,7 @@ export function BicycleDetails({
               aria-labelledby={restingTitleId}
               rows={resting}
               rowIdPrefix={rowsId}
-              renderAction={renderUseNow}
+              renderAction={renderRestingActions}
             />
           </Stack>
         )}
@@ -258,6 +325,14 @@ export function BicycleDetails({
           odometer={bicycle.odometer}
           onStart={(input) => startComponent(useRow.component.id, input)}
           getStartRange={(replaces) => getStartRange(useRow.component.id, replaces)}
+          onClose={closeDialog}
+        />
+      )}
+      {careRow && (
+        <LogCareDialog
+          row={careRow}
+          odometer={bicycle.odometer}
+          onLogCare={(input) => onLogCare(careRow.component.id, input)}
           onClose={closeDialog}
         />
       )}

@@ -2,6 +2,8 @@ import type { Bicycle, BicycleErrorCode, BicycleOdometerInput, BicycleResult } f
 import type {
   BicycleComponent,
   ComponentErrorCode,
+  ComponentHistoryInput,
+  ComponentHistoryResult,
   ComponentId,
   ComponentInput,
   ComponentStartInput,
@@ -49,6 +51,8 @@ export interface BicycleDetailsProps extends IncludeComponentHandlers {
   onStartComponent: (componentId: ComponentId, input: ComponentStartInput) => ComponentUsageResult;
   /** The readings the store accepts for starting `componentId` in place of `replaces` (`getStartRange`). */
   getStartRange: (componentId: ComponentId, replaces: ComponentId | null) => StartRange | null;
+  /** Adds a care entry to one of the bicycle's chains (`addComponentHistoryEntry`). Returns the store's result. */
+  onLogCare: (componentId: ComponentId, input: ComponentHistoryInput) => ComponentHistoryResult;
 }
 
 /** Props for {@link IncludeComponentDialog}. */
@@ -117,3 +121,39 @@ export type UseComponentField = 'replaces' | 'date' | 'odometer';
 
 /** The store's error code for each invalid dialog field. */
 export type UseComponentErrors = Partial<Record<UseComponentField, ComponentErrorCode>>;
+
+/** What was done to a chain: a stretch reading only, a top-up, or a clean with relubrication. */
+export type CareAction = 'measured' | 'toppedUp' | 'cleaned';
+
+/** Props for {@link LogCareDialog}. */
+export interface LogCareDialogProps {
+  /** The chain, in use or resting, with its usage. */
+  row: ComponentRow;
+  /** The bicycle's current odometer: the default reading, and the highest one accepted. */
+  odometer: number;
+  /** Adds the entry. Returns the store's result, so errors can be shown. */
+  onLogCare: (input: ComponentHistoryInput) => ComponentHistoryResult;
+  /** Called after the entry was saved, and when the user leaves the dialog without saving. */
+  onClose: () => void;
+}
+
+/** A field of the log care dialog that can show an error. All but `odometer` are also the store's field names. */
+export type LogCareField = 'lubricant' | 'date' | 'odometer' | 'distance' | 'stretch';
+
+/**
+ * Why a log care field is invalid: the store's code, or the dialog's own check of the odometer reading
+ * (see {@link ReadingDistance}).
+ */
+export type LogCareErrorCode = ComponentErrorCode | 'aboveOdometer' | 'beforeInstallation';
+
+/** The error code for each invalid log care field. */
+export type LogCareErrors = Partial<Record<LogCareField, LogCareErrorCode>>;
+
+/**
+ * A component's own distance at an odometer reading (`getDistanceAtReading`), or why the reading cannot be used:
+ * above the bicycle's odometer, or before the component's current installation. `min` and `max` are the readings that
+ * can be used.
+ */
+export type ReadingDistance =
+  | { ok: true; distance: number }
+  | { ok: false; code: 'aboveOdometer' | 'beforeInstallation'; min: number; max: number };

@@ -254,10 +254,20 @@ export async function expectRestoredBicycle(page: Page): Promise<void> {
   ]);
 }
 
-/** The worked example's rows in use after its third step, in the bicycle's order. */
+/**
+ * The worked example's rows in use after its third step, in the bicycle's order. Chain A was last cleaned at 1500 km of
+ * its own distance, so 1,400 km of riding count since its care.
+ */
 const WORKED_EXAMPLE_IN_USE = [
   /^Cassette.*CS-M8100.*Distance4,500 km.*Since installed4,500 km/,
-  /^Chain.*KMC X12.*LabelA.*Distance2,900 km.*Since installed1,400 km/,
+  // One literal is too long for a line; the parts are joined with `.*`.
+  new RegExp(
+    [
+      /^Chain.*KMC X12.*LabelA.*Distance2,900 km.*Since installed1,400 km/.source,
+      /LubricantWax.*Stretch0\.2 of 0\.5 %/.source,
+      /Since lubrication1,400 of 300 km, limit reached.*Since cleaning1,400 of 1,500 km/.source,
+    ].join('.*'),
+  ),
 ];
 
 /** The worked example's resting rows after its third step. */
@@ -320,6 +330,60 @@ async function useChain(page: Page, label: string, odometer?: string): Promise<v
   ).toBeFocused();
 }
 
+/** What a care entry records, as the log care dialog offers it. */
+interface CareStep {
+  /** The option of "What was done". */
+  action: 'Topped up' | 'Cleaned and relubricated' | 'Measured only';
+  /** The lubricant to choose, or `undefined` to keep the preset one. */
+  lubricant?: 'Oil' | 'Wax';
+  /** The odometer at the care, or `undefined` to keep the current odometer. */
+  odometer?: string;
+  /** The measured stretch in percent, or `undefined` for none. */
+  stretch?: string;
+}
+
+/**
+ * Logs care on chain A, in use, from its **Log care** dialog, and checks that focus returned to the button.
+ *
+ * @param page - Page showing the bicycle's details.
+ * @param step - What was done.
+ */
+async function logCareOnChainA(page: Page, { action, lubricant, odometer, stretch }: CareStep): Promise<void> {
+  const button = page.getByRole('button', { name: 'Log care: Chain KMC X12 (A)' });
+  await button.click();
+  const dialog = page.getByRole('dialog', { name: 'Log chain care' });
+  await dialog.getByRole('radio', { name: action }).check();
+
+  if (lubricant !== undefined) {
+    await dialog.getByRole('combobox', { name: 'Lubricant' }).selectOption(lubricant);
+  }
+
+  if (odometer !== undefined) {
+    await dialog.getByRole('textbox', { name: 'Odometer' }).fill(odometer);
+  }
+
+  if (stretch !== undefined) {
+    await dialog.getByRole('textbox', { name: 'Stretch' }).fill(stretch);
+  }
+
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(button).toBeFocused();
+}
+
+/**
+ * Asserts chain A's distances since its care.
+ *
+ * @param page - Page showing the bicycle's details with chain A in use.
+ * @param lubrication - The expected "Since lubrication" text.
+ * @param cleaning - The expected "Since cleaning" text.
+ */
+async function expectChainACare(page: Page, lubrication: string, cleaning: string): Promise<void> {
+  const row = page.getByRole('list', { name: 'In use' }).getByRole('listitem').filter({ hasText: 'LabelA' });
+  await expect(row).toContainText(`Since lubrication${lubrication}`);
+  await expect(row).toContainText(`Since cleaning${cleaning}`);
+}
+
 /**
  * Asserts the worked example's distances after its third step (`tickets/plan.md`, Worked example).
  *
@@ -331,14 +395,17 @@ async function expectWorkedExampleDistances(page: Page): Promise<void> {
 }
 
 /**
- * The first three usage steps of the worked example (`tickets/plan.md`), entered through the UI. Run it right after
+ * The first three usage steps and the chain care steps of the worked example (`tickets/plan.md`), entered through the UI. Run it right after
  * {@link expectAddBicycleFlow}.
  *
  * - (a) A cassette is included, and chains A, B, and C are added from the form: A starts in use, B and C rest, and no
  *   notice shows.
- * - (b) Odometer 1500; swap A → B at 1500; odometer 3100.
- * - (c) Odometer 4500; swap B → A entered late, at 3100: A 2,900 km (1,400 since installed), B 1,600, C 0, and the
- *   cassette 4,500.
+ * - (b) Chain care over the first 1500 km: cleaned and waxed at 0, odometer 300 (300 / 300 km since lubrication /
+ *   cleaning); odometer 550, then a wax top-up entered late, at 300 (250 / 550); odometer 1500, cleaned and waxed with a
+ *   stretch of 0.2 % (0 / 0).
+ * - (c) Swap A → B at 1500; odometer 3100.
+ * - (d) Odometer 4500; swap B → A entered late, at 3100: A 2,900 km (1,400 since installed), B 1,600, C 0, and the
+ *   cassette 4,500; chain A 1,400 km since its last care.
  *
  * @param page - Page showing the home screen with only the "Gravel Grinder" bicycle, at 0 km.
  * @example
@@ -360,12 +427,22 @@ export async function expectWorkedExampleFlow(page: Page): Promise<void> {
   await expect(page.getByRole('list', { name: 'Resting' }).getByRole('listitem')).toHaveCount(2);
   await expect(page.getByRole('alert')).toHaveCount(0);
 
-  // (b) First swap, on time.
+  // (b) Chain care.
+  await logCareOnChainA(page, { action: 'Cleaned and relubricated', lubricant: 'Wax' });
+  await setTotal(page, '300');
+  await expectChainACare(page, '300 of 300 km, limit reached', '300 of 1,500 km');
+  await setTotal(page, '550');
+  await logCareOnChainA(page, { action: 'Topped up', odometer: '300' });
+  await expectChainACare(page, '250 of 300 km', '550 of 1,500 km');
   await setTotal(page, '1500');
+  await logCareOnChainA(page, { action: 'Cleaned and relubricated', stretch: '0.2' });
+  await expectChainACare(page, '0 of 300 km', '0 of 1,500 km');
+
+  // (c) First swap, on time.
   await useChain(page, 'B');
   await setTotal(page, '3100');
 
-  // (c) Second swap, entered late.
+  // (d) Second swap, entered late.
   await setTotal(page, '4500');
   await useChain(page, 'A', '3100');
   await expectWorkedExampleDistances(page);

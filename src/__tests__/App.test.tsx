@@ -595,6 +595,58 @@ describe('App', () => {
       await userEvent.keyboard('{Escape}');
       expect(readDistance('In use', 'B')).toBe('1,600 km');
     });
+
+    it('logs the chain care of the worked example: a top-up restarts lubrication, a clean restarts both', async () => {
+      showThreeChains(0);
+      await startFromDialog('Use now: Chain Shimano CN-M8100 (A)');
+
+      /**
+       * Logs care on chain A at the current odometer.
+       *
+       * @param action - What was done.
+       * @param lubricant - The lubricant to choose, or `undefined` to keep the preset one.
+       */
+      const logCare = async (action: string, lubricant?: string) => {
+        await userEvent.click(screen.getByRole('button', { name: 'Log care: Chain Shimano CN-M8100 (A)' }));
+        const dialog = within(screen.getByRole('dialog', { name: 'Log chain care' }));
+
+        await userEvent.click(dialog.getByRole('radio', { name: action }));
+
+        if (lubricant !== undefined) {
+          await userEvent.selectOptions(dialog.getByRole('combobox', { name: /^Lubricant/ }), lubricant);
+        }
+
+        await userEvent.click(dialog.getByRole('button', { name: 'Save' }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      };
+      const setOdometer = (odometer: number) =>
+        act(() => {
+          useAppStore.getState().setBicycleOdometer(gravel.id, { odometer, date: null });
+        });
+      const readCare = () => {
+        const row = within(screen.getByRole('list', { name: 'In use' }))
+          .getAllByRole('listitem')
+          .find((item) => within(item).queryByText('A') !== null) as HTMLElement;
+        const read = (term: string) => within(row).getByText(term).nextElementSibling?.textContent;
+
+        return [read('Lubricant'), read('Since lubrication'), read('Since cleaning')];
+      };
+
+      await logCare('Cleaned and relubricated', 'Wax');
+      setOdometer(300);
+      expect(readCare()).toEqual(['Wax', '300 of 300 km, limit reached', '300 of 1,500 km']);
+
+      await logCare('Topped up');
+      setOdometer(550);
+      expect(readCare()).toEqual(['Wax', '250 of 300 km', '550 of 1,500 km']);
+
+      setOdometer(1500);
+      await logCare('Cleaned and relubricated');
+      expect(readCare()).toEqual(['Wax', '0 of 300 km', '0 of 1,500 km']);
+      expect(useAppStore.getState().components.byId['chain-A'].history.map(({ distance }) => distance)).toEqual([
+        0, 300, 1500,
+      ]);
+    }, 20_000);
   });
 
   describe('starting included components (rule 2)', () => {

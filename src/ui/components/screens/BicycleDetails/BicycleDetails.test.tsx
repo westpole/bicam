@@ -16,6 +16,7 @@ import type { ComponentRow } from '@ui/components/ComponentList/types';
 import { theme } from '@ui/theme';
 
 import { BICYCLES } from '../Home/__mocks__/bicycles';
+import { acceptCare } from './__mocks__/careEntry';
 import { SPARES } from './__mocks__/spareComponents';
 import { BicycleDetails } from './BicycleDetails';
 import type { BicycleDetailsProps } from './types';
@@ -41,6 +42,7 @@ function renderDetails(props: Partial<BicycleDetailsProps> = {}) {
     component: { ...COMPONENTS[0], id },
   }));
   const getStartRange = vi.fn<BicycleDetailsProps['getStartRange']>(() => ({ min: 0, max: 0 }));
+  const onLogCare = vi.fn<BicycleDetailsProps['onLogCare']>((_id, input) => acceptCare(input));
 
   render(
     <ThemeProvider theme={theme}>
@@ -54,12 +56,13 @@ function renderDetails(props: Partial<BicycleDetailsProps> = {}) {
         onIncludeComponent={onIncludeComponent}
         onStartComponent={onStartComponent}
         getStartRange={getStartRange}
+        onLogCare={onLogCare}
         {...props}
       />
     </ThemeProvider>,
   );
 
-  return { onCreateComponent, onIncludeComponent, onSetOdometer, onStartComponent, getStartRange };
+  return { onCreateComponent, onIncludeComponent, onSetOdometer, onStartComponent, getStartRange, onLogCare };
 }
 
 /**
@@ -99,6 +102,7 @@ function StatefulDetails({ initialRows }: { initialRows: readonly ComponentRow[]
           return { ok: true, component: COMPONENTS[0] };
         }}
         getStartRange={() => null}
+        onLogCare={() => ({ ok: false, errors: [] })}
       />
     </ThemeProvider>
   );
@@ -239,7 +243,52 @@ describe('BicycleDetails', () => {
       'Use now: Bar tape Supacaz Super Sticky Kush (Red)',
       'Use now: Chain Shimano CN-M8100 (B)',
     ]);
-    expect(within(screen.getByRole('list', { name: 'In use' })).queryByRole('button')).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('list', { name: 'In use' })).queryByRole('button', { name: /^Use now/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('offers Log care on chain rows only, in use and resting, naming the chain', () => {
+    renderDetails({ rows: ROWS });
+
+    const inUse = within(screen.getByRole('list', { name: 'In use' }));
+    const resting = within(screen.getByRole('list', { name: 'Resting' }));
+
+    expect(inUse.getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Log care: Chain Shimano CN-M8100 (A)',
+    ]);
+    expect(resting.getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Use now: Bar tape Supacaz Super Sticky Kush (Red)',
+      'Log care: Chain Shimano CN-M8100 (B)',
+      'Use now: Chain Shimano CN-M8100 (B)',
+    ]);
+  });
+
+  it('logs care on the chosen chain at the bicycle odometer, then returns focus to Log care', async () => {
+    const { onLogCare } = renderDetails({ bicycle: { ...BICYCLES[0], odometer: 4500 }, rows: ROWS });
+    const logCare = screen.getByRole('button', { name: 'Log care: Chain Shimano CN-M8100 (A)' });
+
+    await userEvent.click(logCare);
+    const dialog = within(screen.getByRole('dialog', { name: 'Log chain care' }));
+    expect(dialog.getByRole('textbox', { name: 'Odometer' })).toHaveValue('4500');
+    await userEvent.click(dialog.getByRole('button', { name: 'Save' }));
+
+    expect(onLogCare).toHaveBeenCalledExactlyOnceWith(
+      CHAIN_IN_USE_ROW.component.id,
+      expect.objectContaining({ distance: 2900, lubricant: 'wax' }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(logCare).toHaveFocus();
+  });
+
+  it('opens the log care dialog of a resting chain without an odometer', async () => {
+    renderDetails({ rows: ROWS });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Log care: Chain Shimano CN-M8100 (B)' }));
+
+    const dialog = within(screen.getByRole('dialog', { name: 'Log chain care' }));
+    expect(dialog.queryByRole('textbox', { name: 'Odometer' })).not.toBeInTheDocument();
+    expect(dialog.getByRole('textbox', { name: 'Chain distance' })).toHaveValue('1600');
   });
 
   it('asks the rider to choose when a type has components but none in use', () => {

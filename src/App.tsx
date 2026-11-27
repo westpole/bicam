@@ -28,10 +28,11 @@ import { getCurrentUse } from '@ui/components/screens/utilities/getCurrentUse';
 /**
  * Root application view: the app shell with its header, the app menu in the shell's overlay slot, and the active
  * screen in the main viewport: on `home`, the user's bicycles as cards (empty when there are none); on
- * `bicycleDetails`, the selected bicycle's details, distance, and components (in use and resting, with distances);
- * on `addBicycle`, the new-bicycle form, which returns to `home` when saved or cancelled; on `addComponent`, the component form, which opens the chosen
- * bicycle's details after a save, or stays open after saving a spare so several parts can be added in a row; otherwise
- * the chosen menu screen. The header title links back to `home`.
+ * `bicycleDetails`, the selected bicycle's details, distance, and components (in use and resting, with distances, and
+ * chain care); on `addBicycle`, the new-bicycle form, which returns to `home` when saved or cancelled; on
+ * `addComponent`, the component form, which opens the chosen bicycle's details after a save, or stays open after saving
+ * a spare so several parts can be added in a row; otherwise the chosen menu screen. The header title links back to
+ * `home`.
  *
  * `App` is the only component that reads `useAppStore`; it passes state and actions down as props, so the header,
  * menu, and screens stay presentational. The light/dark mode is owned by MUI's `ThemeProvider` (it applies the scheme
@@ -57,6 +58,7 @@ export function App() {
   const addComponentToBicycle = useAppStore((state) => state.addComponentToBicycle);
   const assignComponent = useAppStore((state) => state.assignComponent);
   const startComponentUse = useAppStore((state) => state.startComponentUse);
+  const addComponentHistoryEntry = useAppStore((state) => state.addComponentHistoryEntry);
   const openBicycleDetails = useAppStore((state) => state.openBicycleDetails);
   // `colorScheme` is the resolved scheme (`system` already applied). It is defined from the first render because
   // `main.tsx` (and the Storybook preview) pass `noSsr`; the light fallback only covers rendering without such a
@@ -202,6 +204,7 @@ export function App() {
           getStartRange={(componentId, replaces) =>
             getStartRange(bicycleCollection, componentCollection, selectedBicycle.id, componentId, replaces)
           }
+          onLogCare={addComponentHistoryEntry}
         />
       )}
     </AppShell>

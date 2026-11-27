@@ -1,7 +1,7 @@
 # [FEATURE] Log chain stretch, lubrication, and cleaning
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P2
 > **Epic:** [plan.md](./plan.md) (batch #24)
 > **Sprint:** `24-ui-implement-add-component-screen`
@@ -32,14 +32,14 @@ wax and the stretch.
 **So that** I know when it is due again
 
 **Acceptance Criteria:**
-- [ ] **Log care** shows on chain rows, in use and resting.
-- [ ] "Measured only" needs a stretch value. "Topped up" saves `lubricated` and `lubricant`. "Cleaned and relubricated"
+- [x] **Log care** shows on chain rows, in use and resting.
+- [x] "Measured only" needs a stretch value. "Topped up" saves `lubricated` and `lubricant`. "Cleaned and relubricated"
       also saves the same date as `cleaned`. Stretch is optional for the last two.
-- [ ] For "topped up" and "cleaned and relubricated", oil or wax is preset to the last lubricant and required. "Measured
+- [x] For "topped up" and "cleaned and relubricated", oil or wax is preset to the last lubricant and required. "Measured
       only" does not ask for it.
-- [ ] A top-up with a different lubricant than the last one shows a warning that the chain should be cleaned first. It
+- [x] A top-up with a different lubricant than the last one shows a warning that the chain should be cleaned first. It
       can still be saved.
-- [ ] The row updates at once: a top-up restarts only the lubrication distance, a clean restarts both.
+- [x] The row updates at once: a top-up restarts only the lubrication distance, a clean restarts both.
 
 **Out of scope:** other component types.
 
@@ -51,13 +51,13 @@ wax and the stretch.
 **So that** it counts from the right distance
 
 **Acceptance Criteria:**
-- [ ] For a chain in use, the dialog asks for the odometer (current by default) and fills in the distance of that
+- [x] For a chain in use, the dialog asks for the odometer (current by default) and fills in the distance of that
       moment.
-- [ ] A reading above the odometer is rejected. A reading before the chain's current installation is rejected with a
+- [x] A reading above the odometer is rejected. A reading before the chain's current installation is rejected with a
       message that asks the rider to enter the chain's distance instead; the odometer field can then be left empty.
-- [ ] A resting chain has no odometer field; the current distance is filled in. The distance can be edited and is capped
+- [x] A resting chain has no odometer field; the current distance is filled in. The distance can be edited and is capped
       at `COMPONENT_LIMITS.distanceMax`.
-- [ ] `installed` is the first usage start date, or the entry's date when that is unknown or the chain was never used.
+- [x] `installed` is the first usage start date, or the entry's date when that is unknown or the chain was never used.
 
 **Out of scope:** editing a saved entry; delete it and log it again (#39).
 
@@ -95,13 +95,13 @@ No mockups; follow the existing screens and the MUI theme.
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] React tests passing; desktop and mobile stories added or updated, with the a11y check passing
-- [ ] All new text goes through `t()`, with keys in the English file
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function and type; docs updated
-- [ ] `code-reviewer` subagent run and findings addressed
-- [ ] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 37)`
+- [x] All acceptance criteria met
+- [x] React tests passing; desktop and mobile stories added or updated, with the a11y check passing
+- [x] All new text goes through `t()`, with keys in the English file
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function and type; docs updated
+- [x] `code-reviewer` subagent run and findings addressed
+- [x] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 37)`
 
 ---
 
