@@ -224,7 +224,7 @@ export async function expectIncludeComponentFlow(page: Page): Promise<void> {
   await dialog.getByRole('button', { name: 'Include' }).click();
   await expect(dialog).toHaveCount(0);
   await expect(include).toBeFocused();
-  await expect(page.getByRole('list', { name: 'Components' }).getByRole('listitem')).toHaveText([
+  await expect(page.getByRole('list', { name: 'In use' }).getByRole('listitem')).toHaveText([
     /Chain.*Shimano CN-M8100/,
   ]);
 }
@@ -249,7 +249,138 @@ export async function expectRestoredBicycle(page: Page): Promise<void> {
   // (b) Details.
   await card.click();
   await expect(page.getByRole('heading', { level: 2, name: 'Gravel Grinder' })).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Components' }).getByRole('listitem')).toHaveText([
+  await expect(page.getByRole('list', { name: 'In use' }).getByRole('listitem')).toHaveText([
     /Chain.*Shimano CN-M8100/,
   ]);
+}
+
+/** The worked example's rows in use after its third step, in the bicycle's order. */
+const WORKED_EXAMPLE_IN_USE = [
+  /^Cassette.*CS-M8100.*Distance4,500 km.*Since installed4,500 km/,
+  /^Chain.*KMC X12.*LabelA.*Distance2,900 km.*Since installed1,400 km/,
+];
+
+/** The worked example's resting rows after its third step. */
+const WORKED_EXAMPLE_RESTING = [/^Chain.*KMC X12.*LabelB.*Distance1,600 km/, /^Chain.*KMC X12.*LabelC.*Distance0 km/];
+
+/**
+ * Adds a labelled chain to the "Gravel Grinder" bicycle from the "Add component" form, leaving "In use now" at its
+ * default (on while the bicycle has no chain in use). The form opens the bicycle's details after the save.
+ *
+ * @param page - Page showing the app with the menu closed.
+ * @param label - The chain's label.
+ */
+async function addChain(page: Page, label: string): Promise<void> {
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  await page.getByRole('navigation', { name: 'Main menu' }).getByRole('button', { name: 'Add component' }).click();
+  const main = page.getByRole('main');
+  await main.getByRole('combobox', { name: 'Type' }).selectOption('Chain');
+  await main.getByRole('textbox', { name: 'Model' }).fill('KMC X12');
+  await main.getByRole('textbox', { name: 'Label' }).fill(label);
+  await main.getByRole('combobox', { name: 'Bicycle' }).selectOption('Gravel Grinder');
+  await main.getByRole('button', { name: 'Save component' }).click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Gravel Grinder' })).toBeVisible();
+}
+
+/**
+ * Sets the shown bicycle's total from the update distance dialog.
+ *
+ * @param page - Page showing the bicycle's details.
+ * @param total - The new total in kilometres.
+ */
+async function setTotal(page: Page, total: string): Promise<void> {
+  await page.getByRole('button', { name: 'Update distance' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Update distance' });
+  await dialog.getByRole('textbox', { name: 'Total distance' }).fill(total);
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(dialog).toHaveCount(0);
+}
+
+/**
+ * Puts a resting chain in use from its **Use now** dialog, in place of the chain in use (preselected), and checks that
+ * focus moved to its row.
+ *
+ * @param page - Page showing the bicycle's details.
+ * @param label - The chain's label.
+ * @param odometer - The reading at the swap, or `undefined` to keep the current odometer.
+ */
+async function useChain(page: Page, label: string, odometer?: string): Promise<void> {
+  await page.getByRole('button', { name: `Use now: Chain KMC X12 (${label})` }).click();
+  const dialog = page.getByRole('dialog', { name: 'Put component in use' });
+  await expect(dialog.getByRole('combobox', { name: 'Replaces' })).toHaveValue(/.+/);
+
+  if (odometer !== undefined) {
+    await dialog.getByRole('textbox', { name: 'Odometer' }).fill(odometer);
+  }
+
+  await dialog.getByRole('button', { name: 'Use now', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    page.getByRole('list', { name: 'In use' }).getByRole('listitem').filter({ hasText: `Label${label}` }),
+  ).toBeFocused();
+}
+
+/**
+ * Asserts the worked example's distances after its third step (`tickets/plan.md`, Worked example).
+ *
+ * @param page - Page showing the "Gravel Grinder" details.
+ */
+async function expectWorkedExampleDistances(page: Page): Promise<void> {
+  await expect(page.getByRole('list', { name: 'In use' }).getByRole('listitem')).toHaveText(WORKED_EXAMPLE_IN_USE);
+  await expect(page.getByRole('list', { name: 'Resting' }).getByRole('listitem')).toHaveText(WORKED_EXAMPLE_RESTING);
+}
+
+/**
+ * The first three usage steps of the worked example (`tickets/plan.md`), entered through the UI. Run it right after
+ * {@link expectAddBicycleFlow}.
+ *
+ * - (a) A cassette is included, and chains A, B, and C are added from the form: A starts in use, B and C rest, and no
+ *   notice shows.
+ * - (b) Odometer 1500; swap A → B at 1500; odometer 3100.
+ * - (c) Odometer 4500; swap B → A entered late, at 3100: A 2,900 km (1,400 since installed), B 1,600, C 0, and the
+ *   cassette 4,500.
+ *
+ * @param page - Page showing the home screen with only the "Gravel Grinder" bicycle, at 0 km.
+ * @example
+ * await expectAddBicycleFlow(page);
+ * await expectWorkedExampleFlow(page);
+ */
+export async function expectWorkedExampleFlow(page: Page): Promise<void> {
+  // (a) Setup.
+  await page.getByRole('list', { name: 'Bicycles' }).getByRole('button').click();
+  await page.getByRole('button', { name: 'Include component' }).click();
+  const include = page.getByRole('dialog', { name: 'Include component' });
+  await include.getByRole('combobox', { name: 'Type' }).selectOption('Cassette');
+  await include.getByRole('textbox', { name: 'Model' }).fill('CS-M8100');
+  await include.getByRole('button', { name: 'Include' }).click();
+  await expect(include).toHaveCount(0);
+  for (const label of ['A', 'B', 'C']) {
+    await addChain(page, label);
+  }
+  await expect(page.getByRole('list', { name: 'Resting' }).getByRole('listitem')).toHaveCount(2);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+
+  // (b) First swap, on time.
+  await setTotal(page, '1500');
+  await useChain(page, 'B');
+  await setTotal(page, '3100');
+
+  // (c) Second swap, entered late.
+  await setTotal(page, '4500');
+  await useChain(page, 'A', '3100');
+  await expectWorkedExampleDistances(page);
+}
+
+/**
+ * Asserts that the worked example from {@link expectWorkedExampleFlow} was restored. Run it after the app restarted.
+ *
+ * @param page - Page showing the restarted app.
+ * @example
+ * await expectRestoredWorkedExample(page);
+ */
+export async function expectRestoredWorkedExample(page: Page): Promise<void> {
+  await page.getByRole('list', { name: 'Bicycles' }).getByRole('button').click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Gravel Grinder' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Distance' }).getByText('4,500 km')).toBeVisible();
+  await expectWorkedExampleDistances(page);
 }

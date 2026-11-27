@@ -20,14 +20,42 @@ const DETAILED_BICYCLE = {
   size: 'M/L',
   frameGeometry: 'Stack 594 mm, reach 393 mm\nHead tube angle 71°',
   components: COMPONENTS.map(({ id }) => id),
+  odometer: 1234.5,
 };
+
+const [CHAIN, WHEEL, TAPE] = COMPONENTS;
+
+/**
+ * The installed fixtures: the chain (labelled) and the wheel in use since 0 km, the bar tape resting with 812.4 km from
+ * before tracking.
+ */
+const DETAILED_COMPONENTS = [
+  { ...CHAIN, label: 'A' },
+  WHEEL,
+  { ...TAPE, initialDistance: 812.4 },
+].map((component) =>
+  component.id === TAPE.id
+    ? component
+    : {
+        ...component,
+        usage: [
+          {
+            id: `period-${component.id}`,
+            bicycleId: DETAILED_BICYCLE.id,
+            start: { date: '2024-05-17', odometer: 0 },
+            end: null,
+            replacedPeriodId: null,
+          },
+        ],
+      },
+);
 
 /** Store fields that show {@link DETAILED_BICYCLE} on the details screen, with spare components to include. */
 const DETAILS_SEED: Partial<AppStoreState> = {
   activeScreen: 'bicycleDetails',
   selectedBicycleId: DETAILED_BICYCLE.id,
   bicycle: toBicycleCollection([DETAILED_BICYCLE]),
-  components: toComponentCollection([...COMPONENTS, ...SPARE_COMPONENTS]),
+  components: toComponentCollection([...DETAILED_COMPONENTS, ...SPARE_COMPONENTS]),
 };
 
 /**
@@ -123,8 +151,9 @@ test.describe('main window visuals', () => {
       test('bicycle details', async ({ mainWindow }) => {
         await seedStore(mainWindow, DETAILS_SEED);
         await expect(mainWindow.getByRole('heading', { level: 2, name: DETAILED_BICYCLE.name })).toBeVisible();
-        const list = mainWindow.getByRole('list', { name: en.screens.bicycleDetails.components.title });
-        await expect(list.getByRole('listitem')).toHaveCount(COMPONENTS.length);
+        const { inUse, resting } = en.screens.bicycleDetails.components;
+        await expect(mainWindow.getByRole('list', { name: inUse }).getByRole('listitem')).toHaveCount(2);
+        await expect(mainWindow.getByRole('list', { name: resting }).getByRole('listitem')).toHaveCount(1);
 
         await expect(mainWindow).toHaveScreenshot(`bicycle-details-${colorScheme}.png`);
       });

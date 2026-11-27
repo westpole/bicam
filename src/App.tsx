@@ -8,6 +8,7 @@ import { getComponentUsage } from '@store/components/utilities/getComponentUsage
 import { getInstalledComponents } from '@store/components/utilities/getInstalledComponents';
 import { getMinimumOdometer } from '@store/components/utilities/getMinimumOdometer';
 import { getSpareComponents } from '@store/components/utilities/getSpareComponents';
+import { getStartRange } from '@store/components/utilities/getStartRange';
 import { hasComponent } from '@store/components/utilities/hasComponent';
 import { hasRoomForType } from '@store/components/utilities/hasRoomForType';
 import { isBicycleComponentType } from '@store/components/utilities/isBicycleComponentType';
@@ -27,8 +28,8 @@ import { getCurrentUse } from '@ui/components/screens/utilities/getCurrentUse';
 /**
  * Root application view: the app shell with its header, the app menu in the shell's overlay slot, and the active
  * screen in the main viewport: on `home`, the user's bicycles as cards (empty when there are none); on
- * `bicycleDetails`, the selected bicycle's details, distance, and components; on `addBicycle`, the new-bicycle form,
- * which returns to `home` when saved or cancelled; on `addComponent`, the component form, which opens the chosen
+ * `bicycleDetails`, the selected bicycle's details, distance, and components (in use and resting, with distances);
+ * on `addBicycle`, the new-bicycle form, which returns to `home` when saved or cancelled; on `addComponent`, the component form, which opens the chosen
  * bicycle's details after a save, or stays open after saving a spare so several parts can be added in a row; otherwise
  * the chosen menu screen. The header title links back to `home`.
  *
@@ -55,6 +56,7 @@ export function App() {
   const setBicycleOdometer = useAppStore((state) => state.setBicycleOdometer);
   const addComponentToBicycle = useAppStore((state) => state.addComponentToBicycle);
   const assignComponent = useAppStore((state) => state.assignComponent);
+  const startComponentUse = useAppStore((state) => state.startComponentUse);
   const openBicycleDetails = useAppStore((state) => state.openBicycleDetails);
   // `colorScheme` is the resolved scheme (`system` already applied). It is defined from the first render because
   // `main.tsx` (and the Storybook preview) pass `noSsr`; the light fallback only covers rendering without such a
@@ -88,6 +90,18 @@ export function App() {
 
   // The selection may briefly point at a removed bicycle, so the details screen is only rendered when it resolves.
   const selectedBicycle = selectedBicycleId === null ? undefined : bicycleCollection.byId[selectedBicycleId];
+
+  // The details screen's rows: each installed component with its distance and care state, memoized for the same reason.
+  const selectedRows = useMemo(
+    () =>
+      selectedBicycle
+        ? getInstalledComponents(componentCollection, selectedBicycle).map((component) => ({
+            component,
+            usage: getComponentUsage(component, bicycleCollection.byId),
+          }))
+        : [],
+    [selectedBicycle, componentCollection, bicycleCollection],
+  );
 
   useEffect(() => {
     document.title = title;
@@ -167,7 +181,7 @@ export function App() {
       {activeScreen === 'bicycleDetails' && selectedBicycle && (
         <BicycleDetails
           bicycle={selectedBicycle}
-          components={getInstalledComponents(componentCollection, selectedBicycle)}
+          rows={selectedRows}
           spareComponents={spareComponents}
           minimumOdometer={getMinimumOdometer(componentCollection, selectedBicycle.id)}
           onSetOdometer={(input) => setBicycleOdometer(selectedBicycle.id, input)}
@@ -183,6 +197,10 @@ export function App() {
                 hasComponent(componentCollection, id) ? componentCollection.byId[id].type : null,
               ),
             )
+          }
+          onStartComponent={(componentId, input) => startComponentUse(selectedBicycle.id, componentId, input)}
+          getStartRange={(componentId, replaces) =>
+            getStartRange(bicycleCollection, componentCollection, selectedBicycle.id, componentId, replaces)
           }
         />
       )}

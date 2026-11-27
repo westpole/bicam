@@ -333,6 +333,14 @@ export interface ComponentStartInput extends ComponentReadingInput {
   replaces?: ComponentId | null;
 }
 
+/** The odometer readings a start accepts, as `getStartRange` finds them; both ends included. */
+export interface StartRange {
+  /** The lowest accepted reading, in kilometres. */
+  min: number;
+  /** The highest accepted reading: the bicycle's odometer. */
+  max: number;
+}
+
 /** Input of `stopComponentUse`: when the component went out of use. */
 export type ComponentStopInput = ComponentReadingInput;
 

@@ -1,6 +1,15 @@
 import type { Bicycle, BicycleErrorCode, BicycleOdometerInput, BicycleResult } from '@store/bicycle/types';
-import type { BicycleComponent, ComponentErrorCode, ComponentId, ComponentInput } from '@store/components/types';
+import type {
+  BicycleComponent,
+  ComponentErrorCode,
+  ComponentId,
+  ComponentInput,
+  ComponentStartInput,
+  ComponentUsageResult,
+  StartRange,
+} from '@store/components/types';
 import type { BicycleComponentResult } from '@store/types';
+import type { ComponentRow } from '@ui/components/ComponentList/types';
 
 /** A bicycle field shown in the details; also its translation key under `screens.addBicycle.fields`. */
 export type BicycleDetailsField = 'company' | 'model' | 'purchased' | 'size' | 'frameGeometry';
@@ -28,14 +37,18 @@ export interface SpareComponent {
 export interface BicycleDetailsProps extends IncludeComponentHandlers {
   /** The selected bicycle. */
   bicycle: Bicycle;
-  /** The bicycle's components, in its own order. */
-  components: readonly BicycleComponent[];
+  /** The bicycle's components with their usage (`getComponentUsage`), in its own order. */
+  rows: readonly ComponentRow[];
   /** Stored components that are on no bicycle, with their distance, in display order. */
   spareComponents: readonly SpareComponent[];
   /** The lowest odometer reading the bicycle may be set to (`getMinimumOdometer`), named when a total is too low. */
   minimumOdometer: number;
   /** Stores a new odometer reading. Returns the store's result, so errors can be shown. */
   onSetOdometer: (input: BicycleOdometerInput) => BicycleResult;
+  /** Puts one of the bicycle's resting components in use (a swap when `replaces` is set). Returns the store's result. */
+  onStartComponent: (componentId: ComponentId, input: ComponentStartInput) => ComponentUsageResult;
+  /** The readings the store accepts for starting `componentId` in place of `replaces` (`getStartRange`). */
+  getStartRange: (componentId: ComponentId, replaces: ComponentId | null) => StartRange | null;
 }
 
 /** Props for {@link IncludeComponentDialog}. */
@@ -80,3 +93,27 @@ export type UpdateDistanceField = 'distance' | 'date';
 
 /** The store's error code for each invalid dialog field. */
 export type UpdateDistanceErrors = Partial<Record<UpdateDistanceField, BicycleErrorCode>>;
+
+/** Props for {@link UseComponentDialog}. */
+export interface UseComponentDialogProps {
+  /** The resting component to put in use, with its usage. */
+  row: ComponentRow;
+  /** Components of the same type in use on the bicycle, which it can replace, in the bicycle's order. */
+  candidates: readonly ComponentRow[];
+  /** Whether the type is full, so the dialog asks which component to replace. */
+  needsReplace: boolean;
+  /** The bicycle's current odometer, the default reading. */
+  odometer: number;
+  /** Starts the component with the dialog's input. Returns the store's result, so errors can be shown. */
+  onStart: (input: ComponentStartInput) => ComponentUsageResult;
+  /** The readings the store accepts for this start when it replaces `replaces`, named when a reading is rejected. */
+  getStartRange: (replaces: ComponentId | null) => StartRange | null;
+  /** Called after the component was started, and when the user leaves the dialog without starting it. */
+  onClose: () => void;
+}
+
+/** A field of the use component dialog, also the store's field name. */
+export type UseComponentField = 'replaces' | 'date' | 'odometer';
+
+/** The store's error code for each invalid dialog field. */
+export type UseComponentErrors = Partial<Record<UseComponentField, ComponentErrorCode>>;

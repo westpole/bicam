@@ -426,8 +426,8 @@ describe('App', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Include' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    const list = screen.getByRole('list', { name: 'Components' });
-    expect(within(list).getByRole('listitem')).toHaveTextContent('ChainCN-M8100');
+    const list = screen.getByRole('list', { name: 'In use' });
+    expect(within(list).getByRole('listitem')).toHaveTextContent(/^ChainCN-M8100Distance/);
     const { activeScreen, bicycle, components } = useAppStore.getState();
     expect(activeScreen).toBe('bicycleDetails');
     expect(components.allIds).toHaveLength(1);
@@ -464,11 +464,137 @@ describe('App', () => {
       tape.id,
       SPARE_COMPONENTS[1].id,
     ]);
-    expect(screen.getAllByRole('listitem').map((row) => row.textContent)).toEqual([
-      'ChainShimano CN-M8100',
-      'Bar tapeSupacaz Super Sticky Kush',
-      'SaddleFizik Argo',
-    ]);
+    const resting = within(screen.getByRole('list', { name: 'Resting' })).getAllByRole('listitem');
+    expect(resting.map((row) => row.querySelector('p')?.textContent)).toEqual(['Chain', 'Bar tape']);
+    // The saddle had room, so it started in use.
+    const inUse = within(screen.getByRole('list', { name: 'In use' })).getAllByRole('listitem');
+    expect(inUse.map((row) => row.querySelector('p')?.textContent)).toEqual(['Saddle']);
+  });
+
+  describe('using a resting component', () => {
+    const [gravel] = BICYCLES;
+    const chains = ['A', 'B', 'C'].map((label) => ({ ...COMPONENTS[0], id: `chain-${label}`, label }));
+    const cassette = {
+      ...COMPONENTS[0],
+      id: 'cassette',
+      type: 'cassette' as const,
+      model: 'CS-M8100',
+      limits: { distance: null, stretch: null, lubrication: null, cleaning: null },
+      usage: [
+        { id: 'period-cassette', bicycleId: gravel.id, start: { date: null, odometer: 0 }, end: null, replacedPeriodId: null },
+      ],
+    };
+
+    /**
+     * Shows the details of a bicycle with chains A, B, and C, none in use and none with usage periods (the state the
+     * migration leaves for three chains), and a cassette in use since 0.
+     *
+     * @param odometer - The bicycle's odometer.
+     */
+    function showThreeChains(odometer: number) {
+      useAppStore.setState({
+        activeScreen: 'bicycleDetails',
+        selectedBicycleId: gravel.id,
+        bicycle: toBicycleCollection([
+          { ...gravel, odometer, components: [...chains.map(({ id }) => id), cassette.id] },
+        ]),
+        components: toComponentCollection([...chains, cassette]),
+      });
+      render(<App />);
+    }
+
+    /**
+     * Reads the distance of a row in a list.
+     *
+     * @param list - The list's name.
+     * @param label - The component's label, or its model when it has none.
+     * @returns The row's distance text.
+     */
+    function readDistance(list: string, label: string): string | null | undefined {
+      const row = within(screen.getByRole('list', { name: list }))
+        .getAllByRole('listitem')
+        .find((item) => within(item).queryByText(label) !== null);
+
+      return row && within(row).getByText('Distance').nextElementSibling?.textContent;
+    }
+
+    /**
+     * Uses a component through its dialog.
+     *
+     * @param name - The accessible name of its **Use now** button.
+     * @param odometer - The reading to type, or `undefined` to keep the current one.
+     */
+    async function startFromDialog(name: string, odometer?: string) {
+      await userEvent.click(screen.getByRole('button', { name }));
+      const dialog = screen.getByRole('dialog', { name: 'Put component in use' });
+
+      if (odometer !== undefined) {
+        const field = within(dialog).getByRole('textbox', { name: 'Odometer' });
+        await userEvent.clear(field);
+        await userEvent.type(field, odometer);
+      }
+
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Use now' }));
+    }
+
+    it('credits the chosen chain with everything since 0 when none was in use', async () => {
+      showThreeChains(1500);
+      expect(screen.getByRole('alert')).toHaveTextContent('Chain: none in use.');
+
+      await startFromDialog('Use now: Chain Shimano CN-M8100 (B)', '0');
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(readDistance('In use', 'B')).toBe('1,500 km');
+      expect(readDistance('Resting', 'A')).toBe('0 km');
+      expect(readDistance('Resting', 'C')).toBe('0 km');
+      expect(useAppStore.getState().components.byId['chain-B'].usage).toEqual([
+        expect.objectContaining({ bicycleId: gravel.id, start: expect.objectContaining({ odometer: 0 }), end: null }),
+      ]);
+    });
+
+    // Seven dialogs in a row take several seconds under load.
+    it('swaps chains, splitting the distance at a late reading, as in the worked example', async () => {
+      showThreeChains(0);
+      await startFromDialog('Use now: Chain Shimano CN-M8100 (A)');
+
+      const setTotal = async (total: string) => {
+        await userEvent.click(screen.getByRole('button', { name: 'Update distance' }));
+        await userEvent.type(screen.getByRole('textbox', { name: 'Total distance' }), total);
+        await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+      };
+
+      await setTotal('1500');
+      await startFromDialog('Use now: Chain Shimano CN-M8100 (B)');
+      await setTotal('3100');
+      await setTotal('4500');
+      await startFromDialog('Use now: Chain Shimano CN-M8100 (A)', '3100');
+
+      expect(readDistance('In use', 'A')).toBe('2,900 km');
+      expect(readDistance('Resting', 'B')).toBe('1,600 km');
+      expect(readDistance('Resting', 'C')).toBe('0 km');
+      expect(readDistance('In use', 'CS-M8100')).toBe('4,500 km');
+    }, 20_000);
+
+    it('names the accepted readings when a swap reading is too early', async () => {
+      showThreeChains(0);
+      await startFromDialog('Use now: Chain Shimano CN-M8100 (A)');
+      act(() => {
+        useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 1500, date: null });
+      });
+      await startFromDialog('Use now: Chain Shimano CN-M8100 (B)');
+      act(() => {
+        useAppStore.getState().setBicycleOdometer(gravel.id, { odometer: 3100, date: null });
+      });
+
+      await startFromDialog('Use now: Chain Shimano CN-M8100 (A)', '1000');
+
+      expect(screen.getByRole('textbox', { name: 'Odometer' })).toHaveAccessibleDescription(
+        'The odometer must be from 1,500 to 3,100 km.',
+      );
+      await userEvent.keyboard('{Escape}');
+      expect(readDistance('In use', 'B')).toBe('1,600 km');
+    });
   });
 
   describe('starting included components (rule 2)', () => {

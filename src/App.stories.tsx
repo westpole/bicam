@@ -233,10 +233,11 @@ async function playIncludeComponent({ canvas, canvasElement, userEvent }: Parame
   await userEvent.click(page.getByRole('button', { name: 'Include' }));
   await waitFor(() => expect(page.queryByRole('dialog')).not.toBeInTheDocument());
 
-  const list = canvas.getByRole('list', { name: 'Components' });
+  // Both types had room, so both started in use.
+  const list = canvas.getByRole('list', { name: 'In use' });
   await expect(within(list).getAllByRole('listitem').map((row) => row.textContent)).toEqual([
-    'CassetteCS-M8100',
-    'ChainKMC X12',
+    expect.stringMatching(/^CassetteCS-M8100Distance0 km/),
+    expect.stringMatching(/^ChainKMC X12Distance0 km/),
   ]);
 }
 

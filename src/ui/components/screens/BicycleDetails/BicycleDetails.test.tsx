@@ -1,8 +1,18 @@
+import { useState } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import type { ComponentId } from '@store/components/types';
 import { COMPONENTS, SPARE_COMPONENTS } from '@ui/components/ComponentList/__mocks__/components';
+import {
+  CHAIN_IN_USE_ROW,
+  CHAIN_RESTING_ROW,
+  ROWS,
+  TAPE_RESTING_ROW,
+  WHEEL_IN_USE_ROW,
+} from '@ui/components/ComponentList/__mocks__/rows';
+import type { ComponentRow } from '@ui/components/ComponentList/types';
 import { theme } from '@ui/theme';
 
 import { BICYCLES } from '../Home/__mocks__/bicycles';
@@ -26,23 +36,89 @@ function renderDetails(props: Partial<BicycleDetailsProps> = {}) {
     component: SPARE_COMPONENTS[0],
   }));
   const onSetOdometer = vi.fn<BicycleDetailsProps['onSetOdometer']>(() => ({ ok: true, bicycle: BICYCLES[0] }));
+  const onStartComponent = vi.fn<BicycleDetailsProps['onStartComponent']>((id) => ({
+    ok: true,
+    component: { ...COMPONENTS[0], id },
+  }));
+  const getStartRange = vi.fn<BicycleDetailsProps['getStartRange']>(() => ({ min: 0, max: 0 }));
 
   render(
     <ThemeProvider theme={theme}>
       <BicycleDetails
         bicycle={BICYCLES[0]}
-        components={[]}
+        rows={[]}
         spareComponents={[]}
         minimumOdometer={0}
         onSetOdometer={onSetOdometer}
         onCreateComponent={onCreateComponent}
         onIncludeComponent={onIncludeComponent}
+        onStartComponent={onStartComponent}
+        getStartRange={getStartRange}
         {...props}
       />
     </ThemeProvider>,
   );
 
-  return { onCreateComponent, onIncludeComponent, onSetOdometer };
+  return { onCreateComponent, onIncludeComponent, onSetOdometer, onStartComponent, getStartRange };
+}
+
+/**
+ * Stands in for `App` and the store: a start puts the component in use, and a swap rests the replaced one.
+ *
+ * @param props - The component's props.
+ * @param props.initialRows - The bicycle's rows before any start.
+ * @returns The screen.
+ */
+function StatefulDetails({ initialRows }: { initialRows: readonly ComponentRow[] }) {
+  const [rows, setRows] = useState(initialRows);
+  const start = (id: ComponentId, replaces: ComponentId | null | undefined) =>
+    setRows((current) =>
+      current.map((row) => {
+        if (row.component.id === id) {
+          return { ...row, usage: { ...row.usage, isInUse: true, distanceSinceInstalled: 0 } };
+        }
+
+        return row.component.id === replaces
+          ? { ...row, usage: { ...row.usage, isInUse: false, distanceSinceInstalled: null } }
+          : row;
+      }),
+    );
+
+  return (
+    <ThemeProvider theme={theme}>
+      <BicycleDetails
+        bicycle={{ ...BICYCLES[0], odometer: 4500 }}
+        rows={rows}
+        spareComponents={[]}
+        minimumOdometer={0}
+        onSetOdometer={() => ({ ok: true, bicycle: BICYCLES[0] })}
+        onCreateComponent={() => ({ ok: true, component: COMPONENTS[0] })}
+        onIncludeComponent={() => ({ ok: true, component: COMPONENTS[0] })}
+        onStartComponent={(id, input) => {
+          start(id, input.replaces);
+          return { ok: true, component: COMPONENTS[0] };
+        }}
+        getStartRange={() => null}
+      />
+    </ThemeProvider>
+  );
+}
+
+/**
+ * Lists the rows of a list by their text.
+ *
+ * @param name - The list's accessible name.
+ * @returns The type, model, and label of each row, as "Chain Shimano CN-M8100 (A)".
+ */
+function readList(name: string): string[] {
+  return within(screen.getByRole('list', { name }))
+    .getAllByRole('listitem')
+    .map((row) => {
+      const [type, model] = row.querySelectorAll('p');
+      const label = within(row).queryByText('Label')?.nextElementSibling?.textContent;
+
+      return `${type.textContent} ${model.textContent}${label ? ` (${label})` : ''}`;
+    });
 }
 
 /**
@@ -127,13 +203,124 @@ describe('BicycleDetails', () => {
     expect(onSetOdometer).toHaveBeenCalledWith(expect.objectContaining({ odometer: 800 }));
   });
 
-  it("lists the bicycle's components under their heading", () => {
-    renderDetails({ components: COMPONENTS });
+  it("lists the bicycle's components in use and resting, in the bicycle's order, under the components heading", () => {
+    renderDetails({ rows: [TAPE_RESTING_ROW, CHAIN_IN_USE_ROW, CHAIN_RESTING_ROW, WHEEL_IN_USE_ROW] });
 
     expect(screen.getByRole('heading', { level: 3, name: 'Components' })).toBeInTheDocument();
-    const list = screen.getByRole('list', { name: 'Components' });
-    expect(within(list).getAllByRole('listitem')).toHaveLength(COMPONENTS.length);
+    expect(screen.getByRole('heading', { level: 4, name: 'In use' })).toBeInTheDocument();
+    expect(readList('In use')).toEqual(['Chain Shimano CN-M8100 (A)', 'Wheel DT Swiss G 1800']);
+    expect(readList('Resting')).toEqual(['Bar tape Supacaz Super Sticky Kush (Red)', 'Chain Shimano CN-M8100 (B)']);
     expect(screen.queryByText('No components on this bicycle yet.')).not.toBeInTheDocument();
+  });
+
+  it('shows the distances on each row, and since installed only in use', () => {
+    renderDetails({ rows: ROWS });
+
+    const [chain] = within(screen.getByRole('list', { name: 'In use' })).getAllByRole('listitem');
+    expect(within(chain).getByText('2,900 km')).toBeInTheDocument();
+    expect(within(chain).getByText('1,400 km')).toBeInTheDocument();
+    expect(within(chain).getByText('1,550 of 1,500 km, limit reached')).toBeInTheDocument();
+    const [tape] = within(screen.getByRole('list', { name: 'Resting' })).getAllByRole('listitem');
+    expect(within(tape).queryByText('Since installed')).not.toBeInTheDocument();
+  });
+
+  it('hides an empty list', () => {
+    renderDetails({ rows: [CHAIN_IN_USE_ROW] });
+
+    expect(screen.getByRole('list', { name: 'In use' })).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Resting' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Resting' })).not.toBeInTheDocument();
+  });
+
+  it('offers Use now on resting rows only, naming the component', () => {
+    renderDetails({ rows: ROWS });
+
+    expect(screen.getAllByRole('button', { name: /^Use now/ }).map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Use now: Bar tape Supacaz Super Sticky Kush (Red)',
+      'Use now: Chain Shimano CN-M8100 (B)',
+    ]);
+    expect(within(screen.getByRole('list', { name: 'In use' })).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('asks the rider to choose when a type has components but none in use', () => {
+    renderDetails({ rows: [CHAIN_RESTING_ROW, WHEEL_IN_USE_ROW, TAPE_RESTING_ROW] });
+
+    expect(screen.getAllByRole('alert').map((alert) => alert.textContent)).toEqual([
+      'Chain: none in use. Choose one under Resting with Use now.',
+      'Bar tape: none in use. Choose one under Resting with Use now.',
+    ]);
+  });
+
+  it('shows no notice when every type has one in use', () => {
+    renderDetails({ rows: [CHAIN_IN_USE_ROW, CHAIN_RESTING_ROW] });
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('opens the use dialog with the component to replace preselected when its type is full', async () => {
+    const { onStartComponent } = renderDetails({ bicycle: { ...BICYCLES[0], odometer: 4500 }, rows: ROWS });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Use now: Chain Shimano CN-M8100 (B)' }));
+    const dialog = screen.getByRole('dialog', { name: 'Put component in use' });
+    expect(within(dialog).getByRole('combobox', { name: 'Replaces' })).toHaveValue(CHAIN_IN_USE_ROW.component.id);
+    expect(within(dialog).getByRole('textbox', { name: 'Odometer' })).toHaveValue('4500');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Use now' }));
+
+    expect(onStartComponent).toHaveBeenCalledExactlyOnceWith(
+      CHAIN_RESTING_ROW.component.id,
+      expect.objectContaining({ odometer: 4500, replaces: CHAIN_IN_USE_ROW.component.id }),
+    );
+  });
+
+  it('asks for no replacement when the type has room', async () => {
+    renderDetails({ rows: ROWS });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Use now: Bar tape Supacaz Super Sticky Kush (Red)' }));
+
+    expect(screen.getByRole('dialog', { name: 'Put component in use' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Replaces' })).not.toBeInTheDocument();
+  });
+
+  it('names the readings the store accepts for the component and the chosen replacement', async () => {
+    const getStartRange = vi.fn<BicycleDetailsProps['getStartRange']>(() => ({ min: 1500, max: 4500 }));
+    renderDetails({
+      rows: ROWS,
+      getStartRange,
+      onStartComponent: () => ({ ok: false, errors: [{ field: 'odometer', code: 'outOfRange' }] }),
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Use now: Chain Shimano CN-M8100 (B)' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Use now' }));
+
+    expect(getStartRange).toHaveBeenCalledExactlyOnceWith(CHAIN_RESTING_ROW.component.id, CHAIN_IN_USE_ROW.component.id);
+    expect(screen.getByRole('textbox', { name: 'Odometer' })).toHaveAccessibleDescription(
+      'The odometer must be from 1,500 to 4,500 km.',
+    );
+  });
+
+  it("moves focus to the component's row after a swap, and rests the replaced one", async () => {
+    render(<StatefulDetails initialRows={ROWS} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Use now: Chain Shimano CN-M8100 (B)' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Use now' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(readList('In use')).toEqual(['Wheel DT Swiss G 1800', 'Chain Shimano CN-M8100 (B)']);
+    expect(readList('Resting')).toEqual(['Chain Shimano CN-M8100 (A)', 'Bar tape Supacaz Super Sticky Kush (Red)']);
+    const [, started] = within(screen.getByRole('list', { name: 'In use' })).getAllByRole('listitem');
+    await waitFor(() => expect(started).toHaveFocus());
+  });
+
+  it('returns focus to Use now when the use dialog is closed with Escape, without starting', async () => {
+    const { onStartComponent } = renderDetails({ rows: ROWS });
+    const useNow = screen.getByRole('button', { name: 'Use now: Chain Shimano CN-M8100 (B)' });
+
+    await userEvent.click(useNow);
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(useNow).toHaveFocus());
+    expect(onStartComponent).not.toHaveBeenCalled();
   });
 
   it('says so when the bicycle has no components', () => {

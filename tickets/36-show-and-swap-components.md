@@ -1,7 +1,7 @@
 # [FEATURE] Show and swap components on bicycle details
 
 > **Ticket type:** Feature
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Priority:** P1
 > **Epic:** [plan.md](./plan.md) (batch #24)
 > **Sprint:** `24-ui-implement-add-component-screen`
@@ -32,11 +32,11 @@ Show which components are in use and which rest, with their distances, and let t
 **So that** I know what is on the bicycle
 
 **Acceptance Criteria:**
-- [ ] Two lists, **In use** and **Resting**; an empty one is not shown. Without components, the current message shows.
-- [ ] A row shows type, model, label, and distance. Rows in use add the distance since installed.
-- [ ] Chain rows show lubricant and stretch, lubrication, and cleaning against their limits. Text, not color alone, says
+- [x] Two lists, **In use** and **Resting**; an empty one is not shown. Without components, the current message shows.
+- [x] A row shows type, model, label, and distance. Rows in use add the distance since installed.
+- [x] Chain rows show lubricant and stretch, lubrication, and cleaning against their limits. Text, not color alone, says
       when a limit is reached (the value is at or above the limit). Unknown values read "Not specified".
-- [ ] A type with components but none in use shows a notice that asks the rider to choose.
+- [x] A type with components but none in use shows a notice that asks the rider to choose.
 
 **Out of scope:** notifications.
 
@@ -48,12 +48,12 @@ Show which components are in use and which rest, with their distances, and let t
 **So that** it collects distance from that moment
 
 **Acceptance Criteria:**
-- [ ] **Use now** on a resting row opens a dialog with date (today), odometer (current), and, when the type is full, the
+- [x] **Use now** on a resting row opens a dialog with date (today), odometer (current), and, when the type is full, the
       component to replace (preselected when there is one).
-- [ ] A late reading splits the distance there. A rejected reading shows the allowed range.
-- [ ] When no chain is in use and none has usage periods (the state #29's three-chains fixture produces), a reading of 0
+- [x] A late reading splits the distance there. A rejected reading shows the allowed range.
+- [x] When no chain is in use and none has usage periods (the state #29's three-chains fixture produces), a reading of 0
       credits the chosen chain with everything since then. Covered by a React test on that state.
-- [ ] Cancel, Escape, and a click outside drop the draft. After a save, focus moves to the component's row.
+- [x] Cancel, Escape, and a click outside drop the draft. After a save, focus moves to the component's row.
 
 **Out of scope:** undo (#38).
 
@@ -93,13 +93,13 @@ No mockups; follow the existing screens and the MUI theme.
 
 ## 7. Definition of Done
 
-- [ ] All acceptance criteria met
-- [ ] React tests passing; desktop and mobile stories added or updated, with the a11y check passing
-- [ ] All new text goes through `t()`, with keys in the English file
-- [ ] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
-- [ ] JSDoc on every function and type; docs updated
-- [ ] `code-reviewer` subagent run and findings addressed
-- [ ] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 36)`
+- [x] All acceptance criteria met
+- [x] React tests passing; desktop and mobile stories added or updated, with the a11y check passing
+- [x] All new text goes through `t()`, with keys in the English file
+- [x] `npm run typecheck`, `npm run lint`, `npm run test:all` pass
+- [x] JSDoc on every function and type; docs updated
+- [x] `code-reviewer` subagent run and findings addressed
+- [x] Committed on `24-ui-implement-add-component-screen` as `feat: #24 <description> (ticket 36)`
 
 ---
 

@@ -3,6 +3,7 @@ import Box from '@mui/material/Box';
 import { expect, fn, waitFor, within } from 'storybook/test';
 
 import type { BicycleResult } from '@store/bicycle/types';
+import type { ComponentUsageResult, StartRange } from '@store/components/types';
 import type { BicycleComponentResult } from '@store/types';
 import {
   ALL_TYPE_COMPONENTS,
@@ -10,6 +11,14 @@ import {
   LONG_MODEL_COMPONENT,
   SPARE_COMPONENTS,
 } from '@ui/components/ComponentList/__mocks__/components';
+import {
+  CHAIN_IN_USE_ROW,
+  CHAIN_RESTING_ROW,
+  LONG_ROW,
+  ROWS,
+  toRow,
+  WHEEL_IN_USE_ROW,
+} from '@ui/components/ComponentList/__mocks__/rows';
 
 import { BICYCLES, LONG_NAME_BICYCLE } from '../Home/__mocks__/bicycles';
 import { IDENTICAL_CHAIN_SPARES, SPARES } from './__mocks__/spareComponents';
@@ -35,6 +44,27 @@ const acceptSpare = (): BicycleComponentResult => ({ ok: true, component: SPARE_
  * @returns A successful result.
  */
 const acceptOdometer = (): BicycleResult => ({ ok: true, bicycle: BICYCLES[0] });
+
+/**
+ * Stands in for a store that accepts every start.
+ *
+ * @returns A successful result.
+ */
+const acceptStart = (): ComponentUsageResult => ({ ok: true, component: CHAIN_RESTING_ROW.component });
+
+/**
+ * Stands in for a store that rejects a reading before the replaced chain's start.
+ *
+ * @returns A failed result.
+ */
+const rejectStart = (): ComponentUsageResult => ({ ok: false, errors: [{ field: 'odometer', code: 'outOfRange' }] });
+
+/**
+ * Stands in for `getStartRange` on a bicycle at 3,100.5 km whose chain went in use at 1,500 km.
+ *
+ * @returns The accepted readings.
+ */
+const startRange = (): StartRange => ({ min: 1500, max: 3100.5 });
 
 /**
  * Stands in for a store that rejects a total below the latest usage boundary, and the date.
@@ -104,25 +134,39 @@ const meta = {
       odometer: 3100.5,
       odometerDate: '2026-04-12',
     },
-    components: COMPONENTS,
+    rows: ROWS,
     spareComponents: SPARES,
     minimumOdometer: 1500,
     onSetOdometer: fn(acceptOdometer),
     onCreateComponent: fn(acceptNew),
     onIncludeComponent: fn(acceptSpare),
+    onStartComponent: fn(acceptStart),
+    getStartRange: fn(startRange),
   },
   play: async ({ args, canvas, canvasElement }) => {
     const heading = canvas.getByRole('heading', { level: 2, name: args.bicycle.name });
     await expect(heading).toBeVisible();
-    await expect(canvas.getAllByRole('term')).toHaveLength(7);
+    // The bicycle's own terms; component rows have their own.
+    await expect(canvas.getAllByRole('term').filter((term) => !term.closest('li'))).toHaveLength(7);
     await expect(canvas.getByRole('region', { name: 'Distance' })).toBeVisible();
     await expect(canvas.getByRole('button', { name: 'Update distance' })).toBeVisible();
     await expect(canvas.getByRole('button', { name: 'Include component' })).toBeVisible();
 
-    if (args.components.length > 0) {
-      const list = canvas.getByRole('list', { name: 'Components' });
-      await expect(within(list).getAllByRole('listitem')).toHaveLength(args.components.length);
-    } else {
+    const inUseCount = args.rows.filter(({ usage }) => usage.isInUse).length;
+    const restingCount = args.rows.length - inUseCount;
+
+    for (const [name, count] of [
+      ['In use', inUseCount],
+      ['Resting', restingCount],
+    ] as const) {
+      if (count > 0) {
+        await expect(within(canvas.getByRole('list', { name })).getAllByRole('listitem')).toHaveLength(count);
+      } else {
+        await expect(canvas.queryByRole('list', { name })).not.toBeInTheDocument();
+      }
+    }
+
+    if (args.rows.length === 0) {
       await expect(canvas.getByText('No components on this bicycle yet.')).toBeVisible();
     }
 
@@ -186,7 +230,7 @@ export const Dark: Story = {
 /** A bicycle with only the required fields and no components. */
 export const Empty: Story = {
   globals: { viewport: { value: 'mobile1', isRotated: false } },
-  args: { bicycle: BICYCLES[1], components: [] },
+  args: { bicycle: BICYCLES[1], rows: [] },
 };
 
 /** The longest allowed name (40 characters) and model (60 characters, no spaces) on the narrowest phone. */
@@ -194,14 +238,115 @@ export const LongTexts: Story = {
   globals: { viewport: { value: 'mobile1', isRotated: false } },
   args: {
     bicycle: { ...LONG_NAME_BICYCLE, frameGeometry: 'geometry'.repeat(60) },
-    components: [LONG_MODEL_COMPONENT],
+    rows: [LONG_ROW, toRow({ ...LONG_MODEL_COMPONENT, label: 'L'.repeat(20) }, { distance: 123456.7 })],
   },
 };
 
-/** More components than fit on a phone screen. */
+/** More components than fit on a phone screen, all in use. */
 export const ManyComponents: Story = {
   globals: { viewport: { value: 'mobile1', isRotated: false } },
-  args: { components: ALL_TYPE_COMPONENTS },
+  args: {
+    rows: ALL_TYPE_COMPONENTS.map((component) =>
+      toRow(component, { isInUse: true, distance: 1234.5, distanceSinceInstalled: 1234.5 }),
+    ),
+  },
+};
+
+/**
+ * Three identical chains and none in use, as the migration leaves a bicycle that listed three: a notice asks the rider
+ * to choose one.
+ */
+export const NoneInUse: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  args: {
+    rows: [
+      toRow({ ...CHAIN_RESTING_ROW.component, id: 'chain-a', label: 'A' }),
+      toRow({ ...CHAIN_RESTING_ROW.component, id: 'chain-b', label: 'B' }),
+      toRow({ ...CHAIN_RESTING_ROW.component, id: 'chain-c', label: 'C' }),
+      WHEEL_IN_USE_ROW,
+    ],
+  },
+  play: async (context) => {
+    await meta.play(context);
+    await expect(context.canvas.getByRole('alert')).toHaveTextContent(
+      'Chain: none in use. Choose one under Resting with Use now.',
+    );
+    await expect(context.canvas.getAllByRole('button', { name: /^Use now/ })).toHaveLength(3);
+  },
+};
+
+/**
+ * Opens the use dialog for resting chain B, whose type is full, and checks its defaults.
+ *
+ * @param context - The story context.
+ * @returns Queries bound to the dialog.
+ */
+async function openUseDialog(context: Parameters<NonNullable<Story['play']>>[0]) {
+  const dialog = await openNamedDialog(context, 'Use now: Chain Shimano CN-M8100 (B)', 'Put component in use');
+  await expect(dialog.getByRole('combobox', { name: 'Replaces' })).toHaveValue(CHAIN_IN_USE_ROW.component.id);
+  await expect(dialog.getByRole('textbox', { name: 'Odometer' })).toHaveValue('3100.5');
+  await expect(dialog.getByLabelText('Date')).not.toHaveValue('');
+  await expectNoOverflow(context.canvasElement);
+
+  return dialog;
+}
+
+/** The use dialog for a swap: the chain in use is preselected, and the reading defaults to the odometer. */
+export const UseDialogDesktop: Story = {
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  play: async (context) => {
+    const dialog = await openUseDialog(context);
+
+    await context.userEvent.click(dialog.getByRole('button', { name: 'Use now' }));
+    await expect(context.args.onStartComponent).toHaveBeenCalledWith(
+      CHAIN_RESTING_ROW.component.id,
+      expect.objectContaining({ odometer: 3100.5, replaces: CHAIN_IN_USE_ROW.component.id }),
+    );
+  },
+};
+
+export const UseDialogMobile: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  play: async (context) => {
+    await openUseDialog(context);
+  },
+};
+
+/** The use dialog in dark mode, for the a11y contrast check. */
+export const UseDialogDark: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false }, colorScheme: 'dark' },
+  play: async (context) => {
+    await waitFor(() => expect(context.canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
+    await openUseDialog(context);
+  },
+};
+
+/** A reading before the replaced chain's start names the readings the store accepts. */
+export const UseDialogErrors: Story = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  args: { onStartComponent: fn(rejectStart) },
+  play: async (context) => {
+    const dialog = await openUseDialog(context);
+    const odometer = dialog.getByRole('textbox', { name: 'Odometer' });
+
+    await context.userEvent.clear(odometer);
+    await context.userEvent.type(odometer, '1000');
+    await context.userEvent.click(dialog.getByRole('button', { name: 'Use now' }));
+
+    await expect(dialog.getByText('The odometer must be from 1,500 to 3,100.5 km.')).toBeVisible();
+    await expect(odometer).toHaveFocus();
+    await expectNoOverflow(context.canvasElement);
+  },
+};
+
+/** The rejected use dialog in dark mode, for the contrast of the error text. */
+export const UseDialogErrorsDark: Story = {
+  ...UseDialogErrors,
+  globals: { viewport: { value: 'mobile1', isRotated: false }, colorScheme: 'dark' },
+  play: async (context) => {
+    await waitFor(() => expect(context.canvasElement.ownerDocument.documentElement).toHaveClass('dark'));
+    await UseDialogErrors.play?.(context);
+  },
 };
 
 /** The dialog with spare components to choose from. */

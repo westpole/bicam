@@ -59,6 +59,25 @@
         "limit": "Enter a number above 0 and up to {{max, number}}."
       },
       "rejected": "This value cannot be used."
+    },
+    "lubricants": {
+      "oil": "Oil",
+      "wax": "Wax"
+    },
+    "list": {
+      "label": "Label",
+      "distance": "Distance",
+      "sinceInstalled": "Since installed",
+      "lubricant": "Lubricant",
+      "stretch": "Stretch",
+      "sinceLubrication": "Since lubrication",
+      "sinceCleaning": "Since cleaning",
+      "notSpecified": "Not specified",
+      "km": "{{value, number}} km",
+      "kmOfLimit": "{{value, number}} of {{limit, number}} km",
+      "percent": "{{value, number}} %",
+      "percentOfLimit": "{{value, number}} of {{limit, number}} %",
+      "limitReached": "{{value}}, limit reached"
     }
   },
   "screens": {
@@ -117,7 +136,12 @@
       "components": {
         "title": "Components",
         "empty": "No components on this bicycle yet.",
-        "include": "Include component"
+        "include": "Include component",
+        "inUse": "In use",
+        "resting": "Resting",
+        "noneInUse": "{{type}}: none in use. Choose one under Resting with Use now.",
+        "useNow": "Use now",
+        "useNowLabel": "Use now: {{name}}"
       },
       "includeComponent": {
         "title": "Include component",
@@ -175,6 +199,40 @@
           "invalidNumber": "Enter a number, for example 1500.",
           "outOfRange": "The total must be from {{min, number}} to {{max, number}} km.",
           "outOfRangeRide": "The ride must bring the total to between {{min, number}} and {{max, number}} km.",
+          "invalidDate": "Enter a complete date with a four-digit year, or leave it empty.",
+          "rejected": "This value cannot be used."
+        }
+      },
+      "componentName": "{{type}} {{model}}",
+      "componentNameWithLabel": "{{type}} {{model}} ({{label}})",
+      "useComponent": {
+        "title": "Put component in use",
+        "save": "Use now",
+        "cancel": "Cancel",
+        "component": "{{name}}, {{distance, number}} km",
+        "chooseReplaced": "Choose a component",
+        "replacedComponent": "{{model}}, {{distance, number}} km",
+        "replacedComponentWithLabel": "{{model}} ({{label}}), {{distance, number}} km",
+        "fields": {
+          "replaces": {
+            "label": "Replaces",
+            "hint": "This bicycle has no room for another one of this type."
+          },
+          "date": {
+            "label": "Date",
+            "hint": "Date of the swap. Leave empty when unknown."
+          },
+          "odometer": {
+            "label": "Odometer",
+            "hint": "The bicycle's total at the swap. Lower it for a swap entered late."
+          }
+        },
+        "unit": "km",
+        "errors": {
+          "form": "The component could not be put in use.",
+          "required": "Choose the component to replace.",
+          "invalidNumber": "Enter a number, for example 1500.",
+          "outOfRange": "The odometer must be from {{min, number}} to {{max, number}} km.",
           "invalidDate": "Enter a complete date with a four-digit year, or leave it empty.",
           "rejected": "This value cannot be used."
         }

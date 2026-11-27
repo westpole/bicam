@@ -233,6 +233,12 @@ also allowed when there is room. Both change in one `set`.
 The second check is exact for types with two in use: a late front-wheel swap does not block a later rear one. For a
 type with one, changes must be entered in order.
 
+`getStartRange(bicycles, components, bicycleId, componentId, replaces)` (`utilities/getStartRange.ts`) returns the
+readings rule 4 accepts, `{ min, max }`, so a form can name them after `outOfRange`. `max` is the bicycle's odometer.
+`min` is the lowest reading where `planComponentStart` raises no `odometer` error; only 0 and the boundaries of the
+type's periods on the bicycle are tried, because between two boundaries the answer is the same as at the lower one. It
+returns `null` for an unknown id or when no reading is accepted.
+
 **Rule 5:** a stop at reading `r` is between the period's own start and the bicycle's odometer.
 
 **Rule 6:** the odometer cannot go below the latest boundary on the bicycle (`setBicycleOdometer`, see
